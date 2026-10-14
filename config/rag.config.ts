@@ -62,20 +62,30 @@ export const loadRagConfig = (env: NodeJS.ProcessEnv = process.env): RagConfig =
 
   if (!embeddingApiUrl) invalidConfiguration('RAG_EMBEDDING_API_URL is required')
 
+  let parsedEmbeddingApiUrl: URL
   try {
-    new URL(embeddingApiUrl)
+    parsedEmbeddingApiUrl = new URL(embeddingApiUrl)
   } catch {
     invalidConfiguration('RAG_EMBEDDING_API_URL must be a valid URL')
+  }
+
+  if (!['http:', 'https:'].includes(parsedEmbeddingApiUrl.protocol)) {
+    invalidConfiguration('RAG_EMBEDDING_API_URL must use HTTP or HTTPS')
   }
 
   const chunkingApiUrl = env.RAG_CHUNKING_API_URL?.trim()
 
   if (!chunkingApiUrl) invalidConfiguration('RAG_CHUNKING_API_URL is required')
 
+  let parsedChunkingApiUrl: URL
   try {
-    new URL(chunkingApiUrl)
+    parsedChunkingApiUrl = new URL(chunkingApiUrl)
   } catch {
     invalidConfiguration('RAG_CHUNKING_API_URL must be a valid URL')
+  }
+
+  if (!['http:', 'https:'].includes(parsedChunkingApiUrl.protocol)) {
+    invalidConfiguration('RAG_CHUNKING_API_URL must use HTTP or HTTPS')
   }
 
   const serviceAuthSecret = env.RAG_SERVICE_AUTH_SECRET?.trim() ?? ''

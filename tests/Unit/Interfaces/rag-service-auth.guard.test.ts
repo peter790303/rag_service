@@ -44,13 +44,15 @@ const routeContextFor = (
   headers: Record<string, string>,
   method = 'GET',
   path = `/v1/projects/${projectId}/jobs/job-id`,
+  body: Record<string, unknown> = {},
+  query: Record<string, unknown> = {},
 ): ExecutionContext => {
   const request = {
-    body: {},
+    body,
     method,
     params: { projectId },
     path,
-    query: {},
+    query,
     header: (name: string) => headers[name],
   }
 
@@ -130,5 +132,46 @@ test('accepts a retry request signed for its route projectId', () => {
       ),
     ),
     true,
+  )
+})
+
+test('rejects a correctly signed route request with a conflicting query project scope', () => {
+  const issuedAt = String(Date.now())
+
+  assert.throws(
+    () =>
+      guard.canActivate(
+        routeContextFor(
+          'project-a',
+          routeSignedHeaders('project-a', issuedAt),
+          'GET',
+          undefined,
+          {},
+          {
+            projectId: 'project-b',
+          },
+        ),
+      ),
+    UnauthorizedException,
+  )
+})
+
+test('rejects a correctly signed retry body with a conflicting route project scope', () => {
+  const issuedAt = String(Date.now())
+  const path = '/v1/projects/project-a/failed-jobs/job-id/retry'
+  const body = { projectId: 'project-b' }
+  const payloadHash = createHash('sha256').update(JSON.stringify(body)).digest('hex')
+  const signature = createHmac('sha256', secret)
+    .update(['POST', path, issuedAt, 'project-a', payloadHash].join('\n'))
+    .digest('hex')
+  const headers = {
+    'x-rag-project-id': 'project-a',
+    'x-rag-issued-at': issuedAt,
+    'x-rag-signature': signature,
+  }
+
+  assert.throws(
+    () => guard.canActivate(routeContextFor('project-a', headers, 'POST', path, body)),
+    UnauthorizedException,
   )
 })

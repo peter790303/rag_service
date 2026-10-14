@@ -1,15 +1,9 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { IsNull, type EntityManager, Repository } from 'typeorm'
+import { IsNull, LessThanOrEqual, type EntityManager, Repository } from 'typeorm'
 
-import { packRetryPayload } from './rag-retry-payload.js'
+import type { RagFailedJobArchive } from '../../../Application/KnowledgeBases/Contracts/rag-job-claim-transaction.js'
 import { RagFailedJobModel } from '../Models/rag-failed-job.model.js'
-import type { RagJobModel } from '../Models/rag-job.model.js'
-
-type ExpiredRagJob = Pick<
-  RagJobModel,
-  'id' | 'knowledgeBaseId' | 'documentId' | 'documentIndexId' | 'generation' | 'attempts' | 'payload' | 'executionState'
->
 
 type FailedRagJobAttributes = {
   jobId: string
@@ -31,8 +25,13 @@ type FailedRagJobAttributes = {
 export class TypeOrmRagFailedJobRepository {
   constructor(@InjectRepository(RagFailedJobModel) private readonly failedJobs: Repository<RagFailedJobModel>) {}
 
-  async findByIdOrJobId(idOrJobId: string): Promise<RagFailedJobModel | null> {
-    return this.failedJobs.findOne({ where: [{ id: idOrJobId }, { jobId: idOrJobId }] })
+  async findByIdOrJobIdInProject(idOrJobId: string, projectId: string): Promise<RagFailedJobModel | null> {
+    return this.failedJobs.findOne({
+      where: [
+        { id: idOrJobId, knowledgeBase: { projectId } },
+        { jobId: idOrJobId, knowledgeBase: { projectId } },
+      ],
+    })
   }
 
   async lockById(manager: EntityManager, failedJobId: string): Promise<RagFailedJobModel | null> {
@@ -62,6 +61,10 @@ export class TypeOrmRagFailedJobRepository {
     return manager.getRepository(RagFailedJobModel).save(failedJob)
   }
 
+  async markRetried(manager: EntityManager, failedJobId: string, retriedAt: Date): Promise<void> {
+    await manager.getRepository(RagFailedJobModel).update({ id: failedJobId }, { retriedAt, updatedAt: retriedAt })
+  }
+
   async createAndSave(manager: EntityManager, attributes: FailedRagJobAttributes): Promise<RagFailedJobModel> {
     const failedJobRepository = manager.getRepository(RagFailedJobModel)
 
@@ -72,37 +75,11 @@ export class TypeOrmRagFailedJobRepository {
     return manager.getRepository(RagFailedJobModel).save(failedJobs)
   }
 
-  async archiveExpiredLeases(
-    manager: EntityManager,
-    exhaustedJobs: ReadonlyArray<ExpiredRagJob>,
-    failedAt: Date,
-  ): Promise<void> {
+  async createAndSaveMany(manager: EntityManager, attributes: ReadonlyArray<RagFailedJobArchive>): Promise<void> {
+    if (attributes.length === 0) return
+
     const failedJobRepository = manager.getRepository(RagFailedJobModel)
-    await failedJobRepository.save(
-      exhaustedJobs.map((exhaustedJob) =>
-        failedJobRepository.create({
-          jobId: exhaustedJob.id,
-          knowledgeBaseId: exhaustedJob.knowledgeBaseId,
-          documentId: exhaustedJob.documentId,
-          documentIndexId: exhaustedJob.documentIndexId,
-          generation: exhaustedJob.generation,
-          attempts: exhaustedJob.attempts,
-          errorCode: 'INDEXING_LEASE_EXPIRED',
-          errorMessage: 'Indexing worker lease expired after the final attempt',
-          blockedReasons: [],
-          retryPayload: packRetryPayload(exhaustedJob.payload, {
-            ...(exhaustedJob.executionState ?? {}),
-            lastError: {
-              code: 'INDEXING_LEASE_EXPIRED',
-              message: 'Indexing worker lease expired after the final attempt',
-              failedAt: failedAt.toISOString(),
-            },
-          }),
-          failedAt,
-          retriedAt: null,
-        }),
-      ),
-    )
+    await failedJobRepository.save(failedJobRepository.create([...attributes]))
   }
 
   async findByDocumentTarget(
@@ -125,30 +102,44 @@ export class TypeOrmRagFailedJobRepository {
     return manager.getRepository(RagFailedJobModel).findOneBy({ id })
   }
 
+  async countForDocumentIn(manager: EntityManager, documentId: string): Promise<number> {
+    return manager.getRepository(RagFailedJobModel).countBy({ documentId })
+  }
+
   async countForIndex(manager: EntityManager, documentIndexId: string): Promise<number> {
     return manager.getRepository(RagFailedJobModel).countBy({ documentIndexId })
   }
 
-  async deleteExpiredUnreferenced(manager: EntityManager, cutoff: Date): Promise<number> {
-    const schema = (manager.connection.options as { schema?: string }).schema ?? 'public'
-    const qualifiedSchema = `"${schema.replaceAll('"', '""')}"`
-    const [, deletedCount] = (await manager.query(
-      `WITH eligible AS (
-         SELECT failed.id
-         FROM ${qualifiedSchema}.failed_jobs AS failed
-         WHERE failed.failed_at <= $1
-           AND NOT EXISTS (
-             SELECT 1 FROM ${qualifiedSchema}.jobs AS job WHERE job.retry_of_failed_job_id = failed.id
-           )
-         FOR UPDATE SKIP LOCKED
-       )
-       DELETE FROM ${qualifiedSchema}.failed_jobs AS failed
-       USING eligible
-       WHERE failed.id = eligible.id
-       RETURNING failed.id`,
-      [cutoff],
-    )) as [Array<{ id: string }>, number]
+  async findGarbageCandidates(
+    manager: EntityManager,
+    cutoff: Date,
+  ): Promise<Array<{ failedJobId: string; documentId: string; failedAt: Date }>> {
+    const candidates = await manager.getRepository(RagFailedJobModel).find({
+      where: { failedAt: LessThanOrEqual(cutoff) },
+      select: { id: true, documentId: true, failedAt: true },
+    })
 
-    return deletedCount
+    return candidates.map(({ id, documentId, failedAt }) => ({ failedJobId: id, documentId, failedAt }))
+  }
+
+  async lockForGarbageCollection(
+    manager: EntityManager,
+    failedJobId: string,
+  ): Promise<{ failedJobId: string; documentId: string; failedAt: Date } | null> {
+    const failedJob = await manager
+      .getRepository(RagFailedJobModel)
+      .createQueryBuilder('failed')
+      .where('failed.id = :failedJobId', { failedJobId })
+      .setLock('pessimistic_write')
+      .setOnLocked('skip_locked')
+      .getOne()
+
+    return failedJob
+      ? { failedJobId: failedJob.id, documentId: failedJob.documentId, failedAt: failedJob.failedAt }
+      : null
+  }
+
+  async removeForGarbageCollection(manager: EntityManager, failedJobId: string): Promise<void> {
+    await manager.getRepository(RagFailedJobModel).delete({ id: failedJobId })
   }
 }

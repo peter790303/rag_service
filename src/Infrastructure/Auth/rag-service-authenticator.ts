@@ -3,22 +3,18 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
 
 import { RAG_CONFIG, type RagConfig } from '../../../config/rag.config.js'
+import {
+  RagServiceAuthenticatorPort,
+  type RagServiceAuthCredentials,
+} from '../../Application/KnowledgeBases/Contracts/rag-service-authenticator.js'
 
 const MAX_CLOCK_SKEW_MS = 300_000
 
-export type RagServiceAuthCredentials = {
-  body: unknown
-  headerProjectId: string
-  issuedAt: string
-  method: string
-  path: string
-  projectId: string
-  signature: string
-}
-
 @Injectable()
-export class RagServiceAuthenticator {
-  constructor(@Inject(RAG_CONFIG) private readonly config: RagConfig) {}
+export class RagServiceAuthenticator extends RagServiceAuthenticatorPort {
+  constructor(@Inject(RAG_CONFIG) private readonly config: RagConfig) {
+    super()
+  }
 
   authenticate(credentials: RagServiceAuthCredentials): boolean {
     const timestamp = Number(credentials.issuedAt)

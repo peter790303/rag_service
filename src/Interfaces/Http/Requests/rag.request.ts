@@ -1,16 +1,17 @@
 import {
   IsArray,
+  ArrayMinSize,
   IsBoolean,
   IsEnum,
   IsInt,
   IsNumber,
   IsObject,
-  IsOptional,
   IsString,
   IsUUID,
   Max,
   Min,
   MinLength,
+  ValidateIf,
 } from 'class-validator'
 
 import type {
@@ -18,6 +19,8 @@ import type {
   RagSourceDocumentDto,
 } from '../../../Application/KnowledgeBases/DataTransferObjects/rag.dto.js'
 import { RagSourceTypeEnum } from '../../../Domain/Knowledge/Enums/rag-source-type.enum.js'
+
+const isPresent = (_object: unknown, value: unknown): boolean => value !== undefined
 
 export class RagSourceDocumentRequest implements RagSourceDocumentDto {
   @IsUUID() knowledgeBaseId!: string
@@ -32,15 +35,15 @@ export class RagSourceDocumentRequest implements RagSourceDocumentDto {
 
   @IsString() sourcePath!: string
 
-  @IsOptional() @IsString() title?: string
+  @ValidateIf(isPresent) @IsString() title?: string
 
   @IsString() content!: string
 
-  @IsOptional() @IsObject() payload?: Record<string, unknown>
+  @ValidateIf(isPresent) @IsObject() payload?: Record<string, unknown>
 
-  @IsOptional() @IsBoolean() isEntry?: boolean
+  @ValidateIf(isPresent) @IsBoolean() isEntry?: boolean
 
-  @IsOptional() @IsBoolean() alwaysIncludeFullContent?: boolean
+  @ValidateIf(isPresent) @IsBoolean() alwaysIncludeFullContent?: boolean
 
   toDTO(): RagSourceDocumentDto {
     return {
@@ -62,21 +65,25 @@ export class RagSourceDocumentRequest implements RagSourceDocumentDto {
 }
 
 export class HybridRetrieveRequest implements HybridRetrieveDto {
-  @IsString() projectId!: string
+  @IsString() @MinLength(1) projectId!: string
 
   @IsString() @MinLength(1) queryText!: string
 
-  @IsOptional() @IsArray() @IsNumber({ allowNaN: false, allowInfinity: false }, { each: true }) queryVector?: number[]
+  @ValidateIf(isPresent)
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsNumber({ allowNaN: false, allowInfinity: false }, { each: true })
+  queryVector?: number[]
 
-  @IsOptional() @IsString() embeddingModelId?: string
+  @ValidateIf(isPresent) @IsString() embeddingModelId?: string
 
-  @IsOptional() @IsInt() @Min(1) @Max(100) topK?: number
+  @ValidateIf(isPresent) @IsInt() @Min(1) @Max(100) topK?: number
 
-  @IsOptional() @IsInt() @Min(1) @Max(100) limit?: number
+  @ValidateIf(isPresent) @IsInt() @Min(1) @Max(100) limit?: number
 
-  @IsOptional() @IsString() documentReference?: string
+  @ValidateIf(isPresent) @IsString() documentReference?: string
 
-  @IsOptional() @IsBoolean() includeNonEffective?: boolean
+  @ValidateIf(isPresent) @IsBoolean() includeNonEffective?: boolean
 
   toDTO(): HybridRetrieveDto {
     return {
@@ -97,7 +104,7 @@ export class PruneMembershipsRequest {
 
   @IsArray() @IsString({ each: true }) documentIds!: string[]
 
-  toDTO(): { projectId: string; documentIds: string[] } {
-    return { projectId: this.projectId, documentIds: this.documentIds }
+  toDTO(knowledgeBaseId: string): { projectId: string; knowledgeBaseId: string; documentIds: string[] } {
+    return { projectId: this.projectId, knowledgeBaseId, documentIds: this.documentIds }
   }
 }

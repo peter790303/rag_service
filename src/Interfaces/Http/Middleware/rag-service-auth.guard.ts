@@ -1,6 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
 
-import { RagServiceAuthenticator } from '../../../Infrastructure/Auth/rag-service-authenticator.js'
+import { RagServiceAuthenticatorPort } from '../../../Application/KnowledgeBases/Contracts/rag-service-authenticator.js'
 
 type ScopedRequest = {
   readonly body?: unknown
@@ -16,7 +16,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 @Injectable()
 export class RagServiceAuthGuard implements CanActivate {
-  constructor(private readonly authenticator: RagServiceAuthenticator) {}
+  constructor(private readonly authenticator: RagServiceAuthenticatorPort) {}
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<ScopedRequest>()
@@ -37,11 +37,17 @@ export class RagServiceAuthGuard implements CanActivate {
   }
 
   private projectIdFor(request: ScopedRequest): string {
-    const routeProjectId = typeof request.params.projectId === 'string' ? request.params.projectId : ''
-    const bodyProjectId =
-      isRecord(request.body) && typeof request.body.projectId === 'string' ? request.body.projectId : ''
-    const queryProjectId = typeof request.query.projectId === 'string' ? request.query.projectId : ''
+    const projectIds = [
+      request.params.projectId,
+      isRecord(request.body) ? request.body.projectId : undefined,
+      request.query.projectId,
+    ].filter((value) => value !== undefined)
+    const projectId = projectIds[0]
 
-    return routeProjectId || bodyProjectId || queryProjectId
+    if (typeof projectId !== 'string' || projectId.length === 0) return ''
+
+    if (projectIds.some((value) => value !== projectId)) return ''
+
+    return projectId
   }
 }

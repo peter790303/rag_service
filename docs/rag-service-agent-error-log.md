@@ -21,9 +21,11 @@
 13. **未變動文件仍重複排入索引工作。** 同 revision、pipeline 的 ready 索引應直接重用；不得再次呼叫 chunk 模型或 embedding，也不得新增重複 job。跨專案共用 ready 索引要在資料庫交易中協調鎖與成員指標。
 14. **清理流程曾忽略外鍵與共享引用。** prune／GC 的刪除順序必須符合 job／failed job／關係／chunk／index 外鍵，並在 transaction 中重新檢查其他專案引用與有效 worker lease；未通過實際資料庫測試前不可宣稱完成。先前的自動審核拒絕是歷史事件；使用者已明確授權限定 `rag_service` DB 的清理範圍與並行／回滾測試。授權不代表實作或驗證完成，詳見 [SESSION_HANDOFF](SESSION_HANDOFF.md)。
 15. **命名與目錄再次偏離規範。** Application 使用單數 `Knowledge`，且多處使用 `base`、`doc`、`member`、`selected`、`fallback`、`state` 等承載業務狀態的模糊名稱。已改用 `KnowledgeBases` 目錄，其餘命名依具體語義逐檔修正，並以 lint/typecheck/unit test 驗證。
+16. **分層 review 未攔住長 UseCase、Repository 業務計算與大型 Assembler。** 前輪成果將檢索選擇／關聯展開留在 `RetrieveRagUseCase`，將重試、目標狀態等判斷放在 TypeORM Repository；review 只追到部分功能與局部規範，沒有逐個 UseCase／Repository 核對責任。這輪搬移時又出現資料計算 `for` 與過度集中的 `RetrievalQueryAssembler`，表示先前糾正沒有落成明確驗收條件。先依專案 `MEMORY.md` 拆分並逐檔搜尋新增／修改的迴圈，再由獨立 Standards／Spec reviewer 與 Grok CLI 核對；未通過前不得宣稱架構收斂。先前 Luna 是否完整讀過 Obsidian 沒有可驗證的閱讀紀錄，不把推測寫成事實；本輪已要求 coding agent 先提供規範條文與行號。
+17. **Repository 的 join 未逐一審核。** `typeorm-rag-document-index.repository.ts` 已以 `documentIndexIds` 篩選，卻在載入 revision、chunk、relation 與 lexical candidate 時反覆 join 回 index；`typeorm-rag-job.repository.ts` 的 `jobStatus()` 手寫 `knowledge_bases` 表名 join 篩選專案，並在同一方法計算 target state。`typeorm-rag-membership.repository.ts` 的多組跨表 join 也須逐一確認是必要資料篩選、關聯載入或應移到 Application Reader 的跨聚合讀取。先前 review 將「Repository 可以 query」當成通行證，未辨識冗餘 join、手寫關聯與業務運算混入。按專案 `MEMORY.md` 逐項審核與修正，不能機械式刪除導致專案範圍或檢索結果錯誤；目前尚未驗收。
 
 ## 收尾核對
 
 - 逐項對照上面的具體路徑、Docker/Compose/.env、TypeScript 設定及啟動腳本，修正後再標記完成。
 - 跑實際 scripts 與可執行的容器/資料庫驗證；未執行、失敗、受 sandbox 阻擋的項目明確記錄，不宣稱 PASS。
-- 依任務開始前 fixed point 進行獨立 Standards / Spec dual-agent review，另以 Grok 4.7 CLI review，修正 findings 後再 commit。
+- 依 fixed point 進行獨立 Standards / Spec dual-agent review，另以 Grok 4.7 CLI review；本輪依使用者指示，review 後停止，不 commit。

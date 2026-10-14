@@ -3,10 +3,8 @@ import { createHash, createHmac } from 'node:crypto'
 import test from 'node:test'
 
 import type { RagConfig } from '../../../config/rag.config.js'
-import {
-  RagServiceAuthenticator,
-  type RagServiceAuthCredentials,
-} from '../../../src/Infrastructure/Auth/rag-service-authenticator.js'
+import type { RagServiceAuthCredentials } from '../../../src/Application/KnowledgeBases/Contracts/rag-service-authenticator.js'
+import { RagServiceAuthenticator } from '../../../src/Infrastructure/Auth/rag-service-authenticator.js'
 
 const secret = 'a-test-secret-that-is-at-least-32-characters-long'
 const body = { projectId: 'project-a', documents: [] }

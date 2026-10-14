@@ -1,17 +1,6 @@
 import 'reflect-metadata'
 import { DataSource } from 'typeorm'
 
-const entities = [
-  RagKnowledgeBaseModel,
-  RagMembershipModel,
-  RagDocumentModel,
-  RagDocumentRevisionModel,
-  RagDocumentIndexModel,
-  RagChunkModel,
-  RagDocumentRelationModel,
-  RagJobModel,
-  RagFailedJobModel,
-]
 import { EnableVectorExtension1729000000000 } from './migrations/1729000000000-enable-vector-extension.js'
 import { CreateKnowledgeBases1729000000001 } from './migrations/1729000000001-create-knowledge-bases.js'
 import { CreateDocuments1729000000002 } from './migrations/1729000000002-create-documents.js'
@@ -32,6 +21,18 @@ import { RagFailedJobModel } from '../src/Infrastructure/Persistence/Models/rag-
 import { RagJobModel } from '../src/Infrastructure/Persistence/Models/rag-job.model.js'
 import { RagKnowledgeBaseModel } from '../src/Infrastructure/Persistence/Models/rag-knowledge-base.model.js'
 import { RagMembershipModel } from '../src/Infrastructure/Persistence/Models/rag-membership.model.js'
+
+const entities = [
+  RagKnowledgeBaseModel,
+  RagMembershipModel,
+  RagDocumentModel,
+  RagDocumentRevisionModel,
+  RagDocumentIndexModel,
+  RagChunkModel,
+  RagDocumentRelationModel,
+  RagJobModel,
+  RagFailedJobModel,
+]
 
 export const createDataSource = (schema?: string): DataSource => {
   const activeConfig = loadRagDatabaseConfig()

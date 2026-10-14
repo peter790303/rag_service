@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, HttpStatus, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 
 import type {
   RagIndexRequestResult,
@@ -12,7 +12,15 @@ import { RetrieveRagUseCase } from '../../../Application/KnowledgeBases/UseCases
 import { RetryFailedRagJobUseCase } from '../../../Application/KnowledgeBases/UseCases/retry-failed-rag-job.use-case.js'
 import { RagServiceAuthGuard } from '../Middleware/rag-service-auth.guard.js'
 import { HybridRetrieveRequest, PruneMembershipsRequest, RagSourceDocumentRequest } from '../Requests/rag.request.js'
-import { RagIndexRequestResource, RagJobStatusResource, RetryFailedJobResource } from '../Resources/rag.resource.js'
+import {
+  HybridRetrievalResource,
+  PruneMembershipsResource,
+  RagIndexRequestResource,
+  RagJobStatusResource,
+  RetryFailedJobResource,
+} from '../Resources/rag.resource.js'
+
+const uuidParamPipe = new ParseUUIDPipe({ version: 'all', errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY })
 
 @Controller()
 export class RagController {
@@ -37,27 +45,31 @@ export class RagController {
 
   @Post('v1/retrieve/hybrid')
   @UseGuards(RagServiceAuthGuard)
-  retrieve(@Body() body: HybridRetrieveRequest): Promise<unknown> {
-    return this.retrieveRag.execute(body.toDTO())
+  async retrieve(@Body() body: HybridRetrieveRequest): ReturnType<RetrieveRagUseCase['execute']> {
+    return HybridRetrievalResource.from(await this.retrieveRag.execute(body.toDTO()))
   }
 
   @Get('v1/projects/:projectId/jobs/:id')
   @UseGuards(RagServiceAuthGuard)
-  async job(@Param('projectId') projectId: string, @Param('id') id: string): Promise<RagJobStatusDto> {
+  async job(@Param('projectId') projectId: string, @Param('id', uuidParamPipe) id: string): Promise<RagJobStatusDto> {
     return RagJobStatusResource.from(await this.getJobStatus.execute(projectId, id))
   }
 
   @Post('v1/projects/:projectId/failed-jobs/:id/retry')
   @UseGuards(RagServiceAuthGuard)
-  async retry(@Param('projectId') projectId: string, @Param('id') id: string): Promise<RetryFailedJobDto> {
+  async retry(
+    @Param('projectId') projectId: string,
+    @Param('id', uuidParamPipe) id: string,
+  ): Promise<RetryFailedJobDto> {
     return RetryFailedJobResource.from(await this.retryFailedJob.execute(projectId, id))
   }
 
   @Post('v1/knowledge-bases/:id/memberships/prune')
   @UseGuards(RagServiceAuthGuard)
-  prune(@Param('id') id: string, @Body() body: PruneMembershipsRequest): Promise<unknown> {
-    const dto = body.toDTO()
-
-    return this.pruneMemberships.execute(dto.projectId, id, dto.documentIds)
+  async prune(
+    @Param('id', uuidParamPipe) id: string,
+    @Body() body: PruneMembershipsRequest,
+  ): ReturnType<PruneRagMembershipsUseCase['execute']> {
+    return PruneMembershipsResource.from(await this.pruneMemberships.execute(body.toDTO(id)))
   }
 }

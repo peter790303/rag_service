@@ -15,6 +15,7 @@ import { RagDocumentIndexModel } from './rag-document-index.model.js'
 import { RagDocumentModel } from './rag-document.model.js'
 import { RagFailedJobModel } from './rag-failed-job.model.js'
 import { RagKnowledgeBaseModel } from './rag-knowledge-base.model.js'
+import type { RagJobStatus } from '../../../Domain/Knowledge/rag-job.js'
 
 @Entity('jobs')
 @Unique('UQ_rag_jobs_idempotency_key', ['idempotencyKey'])
@@ -51,7 +52,7 @@ export class RagJobModel {
   declare generation: string
 
   @Column({ type: 'text' })
-  declare status: string
+  declare status: RagJobStatus
 
   @Column({ type: 'integer', default: 0 })
   declare attempts: number

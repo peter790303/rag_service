@@ -2,7 +2,8 @@ import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { EntityManager, Repository } from 'typeorm'
 
-import { KnowledgeBaseProjectMismatchException } from '../../../Domain/Knowledge/Exceptions/knowledge-base-project-mismatch.exception.js'
+import type { RagKnowledgeBase } from '../../../Domain/Knowledge/rag-knowledge-base.js'
+import { RagKnowledgeBaseFactory } from '../Factories/rag-knowledge-base.factory.js'
 import { RagKnowledgeBaseModel } from '../Models/rag-knowledge-base.model.js'
 
 @Injectable()
@@ -12,19 +13,22 @@ export class TypeOrmRagKnowledgeBaseRepository {
     private readonly knowledgeBases: Repository<RagKnowledgeBaseModel>,
   ) {}
 
-  async ensureProject(knowledgeBaseId: string, projectId: string, projectName: string): Promise<RagKnowledgeBaseModel> {
-    const knowledgeBase = await this.knowledgeBases.findOneBy({ id: knowledgeBaseId })
+  async lockByIdIn(manager: EntityManager, knowledgeBaseId: string): Promise<RagKnowledgeBase | null> {
+    const repository = manager.getRepository(RagKnowledgeBaseModel)
+    const knowledgeBase = await repository.findOne({
+      where: { id: knowledgeBaseId },
+      lock: { mode: 'pessimistic_write' },
+    })
 
-    if (!knowledgeBase)
-      return this.knowledgeBases.save(this.knowledgeBases.create({ id: knowledgeBaseId, projectId, projectName }))
+    return knowledgeBase ? RagKnowledgeBaseFactory.toDomain(knowledgeBase) : null
+  }
 
-    if (knowledgeBase.projectId !== projectId) throw new KnowledgeBaseProjectMismatchException()
+  async createIn(manager: EntityManager, knowledgeBase: RagKnowledgeBase): Promise<void> {
+    await manager.getRepository(RagKnowledgeBaseModel).insert(RagKnowledgeBaseFactory.toPersistence(knowledgeBase))
+  }
 
-    if (knowledgeBase.projectName === projectName) return knowledgeBase
-
-    knowledgeBase.projectName = projectName
-
-    return this.knowledgeBases.save(knowledgeBase)
+  async saveIn(manager: EntityManager, knowledgeBase: RagKnowledgeBase): Promise<void> {
+    await manager.getRepository(RagKnowledgeBaseModel).save(RagKnowledgeBaseFactory.toPersistence(knowledgeBase))
   }
 
   async belongsToProject(manager: EntityManager, knowledgeBaseId: string, projectId: string): Promise<boolean> {
@@ -38,5 +42,9 @@ export class TypeOrmRagKnowledgeBaseRepository {
 
   async findByIdIn(manager: EntityManager, id: string): Promise<RagKnowledgeBaseModel | null> {
     return manager.getRepository(RagKnowledgeBaseModel).findOneBy({ id })
+  }
+
+  async findByProjectIdIn(manager: EntityManager, projectId: string): Promise<RagKnowledgeBaseModel | null> {
+    return manager.getRepository(RagKnowledgeBaseModel).findOneBy({ projectId })
   }
 }

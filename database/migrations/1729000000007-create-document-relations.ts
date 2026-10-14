@@ -22,7 +22,7 @@ export class CreateDocumentRelations1729000000007 implements MigrationInterface 
         target_document_id uuid REFERENCES documents(id) ON DELETE RESTRICT,
         target_reference text NOT NULL,
         target_anchor text,
-        relation_type text NOT NULL CHECK (relation_type IN ('references', 'requires', 'applies_to', 'overrides')),
+        relation_type text NOT NULL CHECK (relation_type IN ('markdown_link', 'wiki_link', 'references', 'requires', 'applies_to', 'overrides')),
         evidence_block_start integer NOT NULL CHECK (evidence_block_start >= 0),
         evidence_block_end integer NOT NULL CHECK (evidence_block_end > evidence_block_start),
         evidence_text text NOT NULL

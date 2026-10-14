@@ -1,23 +1,34 @@
 import { Injectable } from '@nestjs/common'
-import { type EntityManager, Repository } from 'typeorm'
+import { type EntityManager, In } from 'typeorm'
 
-import type { MarkdownPlan } from '../../../Domain/Knowledge/markdown-chunk.factory.js'
+import type { PlannedRelation } from '../../../Domain/Knowledge/markdown-chunk.factory.js'
 import { RagDocumentRelationModel } from '../Models/rag-document-relation.model.js'
 
 /** Relation-primary persistence operations. */
 @Injectable()
 export class TypeOrmRagDocumentRelationRepository {
-  async replaceForIndex(manager: EntityManager, documentIndexId: string, plan: MarkdownPlan): Promise<void> {
-    const relationRepository: Repository<RagDocumentRelationModel> = manager.getRepository(RagDocumentRelationModel)
-    const existingRelations = await relationRepository.findBy({ sourceIndexId: documentIndexId })
+  async savePlannedIn(
+    manager: EntityManager,
+    documentIndexId: string,
+    relations: readonly PlannedRelation[],
+  ): Promise<void> {
+    if (!relations.length) return
 
-    if (existingRelations.length) await relationRepository.remove(existingRelations)
-
-    const plannedRelations = plan.relations.map((plannedRelation) =>
-      relationRepository.create({ sourceIndexId: documentIndexId, targetDocumentId: null, ...plannedRelation }),
+    const repository = manager.getRepository(RagDocumentRelationModel)
+    await repository.save(
+      relations.map((relation) =>
+        repository.create({
+          sourceIndexId: documentIndexId,
+          targetDocumentId: null,
+          targetReference: relation.targetReference,
+          targetAnchor: relation.targetAnchor,
+          relationType: relation.relationType,
+          evidenceBlockStart: relation.evidenceBlockStart,
+          evidenceBlockEnd: relation.evidenceBlockEnd,
+          evidenceText: relation.evidenceText,
+        }),
+      ),
     )
-
-    if (plannedRelations.length) await relationRepository.save(plannedRelations)
   }
 
   async findForIndex(manager: EntityManager, documentIndexId: string): Promise<RagDocumentRelationModel[]> {
@@ -29,5 +40,18 @@ export class TypeOrmRagDocumentRelationRepository {
     const indexRelations = await relationRepository.findBy({ sourceIndexId: documentIndexId })
 
     if (indexRelations.length) await relationRepository.remove(indexRelations)
+  }
+
+  async countTargetDocumentReferencesIn(manager: EntityManager, documentId: string): Promise<number> {
+    return manager.getRepository(RagDocumentRelationModel).countBy({ targetDocumentId: documentId })
+  }
+
+  async findForSourceIndexIdsIn(manager: EntityManager, sourceIndexIds: string[]): Promise<RagDocumentRelationModel[]> {
+    if (!sourceIndexIds.length) return []
+
+    return manager.getRepository(RagDocumentRelationModel).find({
+      where: { sourceIndexId: In(sourceIndexIds) },
+      order: { id: 'ASC' },
+    })
   }
 }

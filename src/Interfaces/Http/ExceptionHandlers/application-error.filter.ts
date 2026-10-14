@@ -4,12 +4,14 @@ import { KnowledgeBaseProjectMismatchException } from '../../../Domain/Knowledge
 import { KnowledgeEmbeddingUnavailableException } from '../../../Domain/Knowledge/Exceptions/knowledge-embedding-unavailable.exception.js'
 import { KnowledgeIndexPendingException } from '../../../Domain/Knowledge/Exceptions/knowledge-index-pending.exception.js'
 import { KnowledgeJobNotFoundException } from '../../../Domain/Knowledge/Exceptions/knowledge-job-not-found.exception.js'
+import { KnowledgeMembershipPruneConflictException } from '../../../Domain/Knowledge/Exceptions/knowledge-membership-prune-conflict.exception.js'
 
 @Catch(
   KnowledgeIndexPendingException,
   KnowledgeBaseProjectMismatchException,
   KnowledgeJobNotFoundException,
   KnowledgeEmbeddingUnavailableException,
+  KnowledgeMembershipPruneConflictException,
 )
 export class ApplicationErrorFilter implements ExceptionFilter {
   catch(
@@ -17,7 +19,8 @@ export class ApplicationErrorFilter implements ExceptionFilter {
       | KnowledgeIndexPendingException
       | KnowledgeBaseProjectMismatchException
       | KnowledgeJobNotFoundException
-      | KnowledgeEmbeddingUnavailableException,
+      | KnowledgeEmbeddingUnavailableException
+      | KnowledgeMembershipPruneConflictException,
     host: ArgumentsHost,
   ): void {
     const status =

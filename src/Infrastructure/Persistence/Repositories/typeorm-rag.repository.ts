@@ -1,63 +1,94 @@
-import { createHash } from 'node:crypto'
-
-import { Inject, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
-import { IsNull, Not, Repository } from 'typeorm'
+import { Repository, type EntityManager } from 'typeorm'
 
-import { RagIndexingStore, type ClaimedRagIndexJob, type RagJobProgress } from './Contracts/rag-indexing-store.js'
+import { unpackRetryPayload } from './rag-retry-payload.js'
+import { TypeOrmRagChunkRepository } from './typeorm-rag-chunk.repository.js'
+import { TypeOrmRagDocumentIndexRepository } from './typeorm-rag-document-index.repository.js'
+import { TypeOrmRagDocumentRelationRepository } from './typeorm-rag-document-relation.repository.js'
+import { TypeOrmRagDocumentRevisionRepository } from './typeorm-rag-document-revision.repository.js'
+import { TypeOrmRagDocumentRepository } from './typeorm-rag-document.repository.js'
+import { TypeOrmRagFailedJobRepository } from './typeorm-rag-failed-job.repository.js'
+import { TypeOrmRagJobClaimRepository } from './typeorm-rag-job-claim.repository.js'
+import { TypeOrmRagJobRepository } from './typeorm-rag-job.repository.js'
+import { TypeOrmRagKnowledgeBaseRepository } from './typeorm-rag-knowledge-base.repository.js'
+import { TypeOrmRagMembershipRepository } from './typeorm-rag-membership.repository.js'
+import type {
+  RagIndexChunkReplacementStore,
+  RagIndexChunkReplacementOperations,
+} from '../../../Application/KnowledgeBases/Contracts/rag-index-chunk-replacement-store.js'
 import {
+  RagIndexCompletionTransactionRepository,
+  type RagIndexCompletionTransaction,
+} from '../../../Application/KnowledgeBases/Contracts/rag-index-completion-transaction.js'
+import {
+  RagIndexRequestTransactionRepository,
+  type RagIndexRequestIndex,
+  type RagIndexRequestTransaction,
+} from '../../../Application/KnowledgeBases/Contracts/rag-index-request-transaction.js'
+import {
+  RagIndexProcessingRepository,
+  type RagJobProgressContract,
+  type RagJobFailureStore,
+  type RagJobFailureTransaction,
+} from '../../../Application/KnowledgeBases/Contracts/rag-indexing-repository.js'
+import type {
+  ClaimedRagIndexJobContract,
+  RagJobClaimTransaction,
+  RagJobClaimTransactionBoundary,
+} from '../../../Application/KnowledgeBases/Contracts/rag-job-claim-transaction.js'
+import {
+  RAG_FAILED_JOB_RETRY_TRANSACTION_STATUS,
   RagFailedJobRetryStore,
   RagJobStatusReader,
   type RetryContext,
   type RetryFailedJobAtomicallyInput,
   type RetryFailedJobAtomicallyResult,
-} from './Contracts/rag-job-management.js'
+  type RagJobStatusFacts,
+} from '../../../Application/KnowledgeBases/Contracts/rag-job-management.js'
 import {
   GarbageCollectionTransaction,
   MembershipPruneTransaction,
+  type GarbageIndexCandidate,
+  type GarbageDocumentCandidate,
+  type GarbageRevisionCandidate,
+  type MembershipPruneRecord,
+} from '../../../Application/KnowledgeBases/Contracts/rag-retention-operations.js'
+import {
   RagGarbageCollectionStore,
   RagMembershipPruningStore,
-  type GarbageIndexCandidate,
-  type MembershipPruneJob,
-  type MembershipPruneRecord,
-} from './Contracts/rag-retention-store.js'
+} from '../../../Application/KnowledgeBases/Contracts/rag-retention-store.js'
 import {
   RagRetrievalStore,
-  type HybridCandidate,
   type HybridSnapshotResult,
-  type RetrievalChunk,
+  type HybridSnapshotSelection,
+  type RagRetrievalContextCriteria,
+  type RagRetrievalCriteria,
+  type RagRetrievalLimits,
   type RetrievalSnapshot,
-} from './Contracts/rag-retrieval-store.js'
-import { packRetryPayload, unpackRetryPayload } from './rag-retry-payload.js'
-import { TypeOrmRagDocumentIndexRepository } from './typeorm-rag-document-index.repository.js'
-import { TypeOrmRagDocumentRevisionRepository } from './typeorm-rag-document-revision.repository.js'
-import { TypeOrmRagDocumentRepository } from './typeorm-rag-document.repository.js'
-import { TypeOrmRagFailedJobRepository } from './typeorm-rag-failed-job.repository.js'
-import { TypeOrmRagJobRepository } from './typeorm-rag-job.repository.js'
-import { TypeOrmRagKnowledgeBaseRepository } from './typeorm-rag-knowledge-base.repository.js'
-import { TypeOrmRagMembershipRepository } from './typeorm-rag-membership.repository.js'
-import { RAG_CONFIG, type RagConfig } from '../../../../config/rag.config.js'
-import { EmbeddingProvider } from '../../../Application/KnowledgeBases/Contracts/embedding-provider.js'
-import type {
-  HybridRetrieveDto,
-  PreparedRagIndexRequest,
-  RagIndexRequestResult,
-  RagJobStatusDto,
-  RagSourceDocumentDto,
-} from '../../../Application/KnowledgeBases/DataTransferObjects/rag.dto.js'
-import { RagIndexTargetStateEnum } from '../../../Domain/Knowledge/Enums/rag-index-target-state.enum.js'
-import { RagSourceTypeEnum } from '../../../Domain/Knowledge/Enums/rag-source-type.enum.js'
-import { KnowledgeIndexPendingException } from '../../../Domain/Knowledge/Exceptions/knowledge-index-pending.exception.js'
-import { MarkdownChunkFactory, type MarkdownPlan } from '../../../Domain/Knowledge/markdown-chunk.factory.js'
-import { LEXICAL_PROFILE_VERSION } from '../../../Domain/Knowledge/ValueObjects/lexical-profile.js'
-import { calculateRagPipelineHash } from '../../../Domain/Knowledge/ValueObjects/rag-pipeline-hash.js'
-import { RagDocumentIndexModel } from '../../../Infrastructure/Persistence/Models/rag-document-index.model.js'
+} from '../../../Application/KnowledgeBases/Contracts/rag-retrieval-store.js'
+import { InvalidRagJobLeaseException } from '../../../Domain/Knowledge/Exceptions/invalid-rag-job-lease.exception.js'
+import { KnowledgeJobNotFoundException } from '../../../Domain/Knowledge/Exceptions/knowledge-job-not-found.exception.js'
+import { RAG_JOB_STATUS } from '../../../Domain/Knowledge/rag-job.js'
+import { TypeOrmRagRetrievalSnapshotAdapter } from '../Adapters/typeorm-rag-retrieval-snapshot.adapter.js'
+import { RagDocumentIndexFactory } from '../Factories/rag-document-index.factory.js'
+import { RagJobFactory } from '../Factories/rag-job.factory.js'
+import { RagDocumentIndexModel } from '../Models/rag-document-index.model.js'
+import { RagDocumentModel } from '../Models/rag-document.model.js'
+import { RagFailedJobModel } from '../Models/rag-failed-job.model.js'
+import { RagJobModel } from '../Models/rag-job.model.js'
+import { RagMembershipModel } from '../Models/rag-membership.model.js'
+import { TypeOrmRagJobClaimTransaction } from '../typeorm-rag-job-claim-transaction.js'
 
-const sha256Hex = (text: string): string => createHash('sha256').update(text).digest('hex')
 @Injectable()
 export class TypeOrmRagRepository
   implements
-    RagIndexingStore,
+    RagIndexRequestTransactionRepository,
+    RagIndexCompletionTransactionRepository,
+    RagIndexChunkReplacementStore,
+    RagJobClaimTransactionBoundary,
+    RagIndexProcessingRepository,
+    RagJobFailureStore,
     RagRetrievalStore,
     RagJobStatusReader,
     RagFailedJobRetryStore,
@@ -66,8 +97,6 @@ export class TypeOrmRagRepository
 {
   constructor(
     @InjectRepository(RagDocumentIndexModel) private readonly indexes: Repository<RagDocumentIndexModel>,
-    private readonly embeddingProvider: EmbeddingProvider,
-    @Inject(RAG_CONFIG) private readonly config: RagConfig,
     private readonly jobRepository: TypeOrmRagJobRepository,
     private readonly membershipRepository: TypeOrmRagMembershipRepository,
     private readonly documentIndexRepository: TypeOrmRagDocumentIndexRepository,
@@ -75,652 +104,671 @@ export class TypeOrmRagRepository
     private readonly documentRepository: TypeOrmRagDocumentRepository,
     private readonly documentRevisionRepository: TypeOrmRagDocumentRevisionRepository,
     private readonly failedJobRepository: TypeOrmRagFailedJobRepository,
+    private readonly chunks: TypeOrmRagChunkRepository,
+    private readonly relations: TypeOrmRagDocumentRelationRepository,
+    private readonly claimRepository: TypeOrmRagJobClaimRepository,
   ) {}
 
-  async prepareIndexRequest(input: RagSourceDocumentDto): Promise<PreparedRagIndexRequest> {
-    const knowledgeBase = await this.knowledgeBaseRepository.ensureProject(
-      input.knowledgeBaseId,
-      input.projectId,
-      input.projectName,
+  async withClaimTransaction<T>(work: (transaction: RagJobClaimTransaction) => Promise<T>): Promise<T> {
+    return this.claimRepository.manager.transaction((manager) =>
+      work(
+        new TypeOrmRagJobClaimTransaction(
+          manager,
+          this.claimRepository,
+          this.documentRepository,
+          this.membershipRepository,
+          this.documentIndexRepository,
+          this.failedJobRepository,
+        ),
+      ),
     )
-    const document = await this.documentRepository.ensureSource(
-      input.sourceType,
-      input.sourceKey,
-      input.sourcePath,
-      input.title,
-    )
-    let membership = await this.membershipRepository.findForSource(knowledgeBase.id, document.id)
-
-    if (!membership) membership = await this.membershipRepository.createForSource(knowledgeBase.id, document.id)
-
-    if (input.isEntry !== undefined) membership.isEntry = input.isEntry
-
-    if (input.alwaysIncludeFullContent !== undefined)
-      membership.alwaysIncludeFullContent = input.alwaysIncludeFullContent
-
-    await this.membershipRepository.saveRequest(membership)
-
-    const contentSha256 = sha256Hex(input.content)
-    const chunkingProfile = MarkdownChunkFactory.chunkingProfile
-    const embeddingProfile = `mean-pooling-normalized:${this.config.embeddingDimensions}`
-    const pipelineHash = calculateRagPipelineHash({
-      contentSha256,
-      embeddingModel: this.embeddingProvider.modelId,
-      embeddingDimensions: this.config.embeddingDimensions,
-      chunkingModel: this.config.chunkingModel,
-      context: input.payload,
-    })
-    const prepared = await this.indexes.manager.transaction(async (manager) => {
-      const lockedDocument = await this.documentRepository.lockById(manager, document.id)
-
-      if (!lockedDocument) {
-        throw new KnowledgeIndexPendingException('Document is no longer available')
-      }
-
-      const revision = await this.documentRevisionRepository.findOrCreate(
-        manager,
-        document.id,
-        contentSha256,
-        input.title ?? null,
-        input.content,
-      )
-      let index = await this.documentIndexRepository.findByRevisionAndPipeline(manager, revision.id, pipelineHash)
-
-      if (!index) {
-        index = await this.documentIndexRepository.createBuildingIndex(manager, {
-          documentId: document.id,
-          revisionId: revision.id,
-          pipelineHash,
-          chunkingModel: this.config.chunkingModel,
-          chunkingProfile,
-          embeddingModel: this.embeddingProvider.modelId,
-          embeddingDimensions: this.config.embeddingDimensions,
-          embeddingProfile,
-          lexicalProfile: LEXICAL_PROFILE_VERSION,
-          relationProfile: MarkdownChunkFactory.relationProfile,
-        })
-      }
-
-      const currentGeneration = Number(membership.requestedGeneration)
-      const currentJob = await this.jobRepository.findTarget(
-        manager,
-        knowledgeBase.id,
-        document.id,
-        index.id,
-        membership.requestedGeneration,
-      )
-      const failedJob = await this.failedJobRepository.findCurrentUnretried(
-        manager,
-        knowledgeBase.id,
-        document.id,
-        index.id,
-        membership.requestedGeneration,
-      )
-      const targetState: PreparedRagIndexRequest['targetState'] =
-        index.status === 'ready'
-          ? RagIndexTargetStateEnum.READY
-          : currentJob
-            ? currentJob.status === 'running'
-              ? RagIndexTargetStateEnum.BUILDING
-              : RagIndexTargetStateEnum.QUEUED
-            : failedJob
-              ? RagIndexTargetStateEnum.FAILED_BLOCKED
-              : RagIndexTargetStateEnum.NEEDS_INDEX
-
-      return {
-        documentId: document.id,
-        revisionId: revision.id,
-        documentIndexId: index.id,
-        targetState,
-        currentGeneration,
-        currentJobId: currentJob?.id ?? null,
-        reusedReadyIndex: index.status === 'ready',
-      }
-    })
-
-    return prepared
   }
 
-  async activateReadyIndex(input: {
-    knowledgeBaseId: string
-    documentId: string
-    documentIndexId: string
-    currentGeneration: number
-  }): Promise<RagIndexRequestResult> {
-    return this.indexes.manager.transaction(async (manager) => {
-      const currentMembership = await this.membershipRepository.lockMembership(
-        manager,
-        input.knowledgeBaseId,
-        input.documentId,
-      )
-      const readyIndex = await this.documentIndexRepository.lockById(manager, input.documentIndexId)
+  async withTransaction<T>(operation: (transaction: RagIndexRequestTransaction) => Promise<T>): Promise<T> {
+    return this.indexes.manager.transaction((manager) =>
+      operation({
+        lockKnowledgeBase: (knowledgeBaseId) => this.knowledgeBaseRepository.lockByIdIn(manager, knowledgeBaseId),
+        createKnowledgeBase: async (knowledgeBase) => {
+          await this.knowledgeBaseRepository.createIn(manager, knowledgeBase)
+        },
+        saveKnowledgeBase: async (knowledgeBase) => {
+          await this.knowledgeBaseRepository.saveIn(manager, knowledgeBase)
+        },
+        ensureSource: async ({ sourceType, sourceKey, sourcePath, currentTitle }) => {
+          const document = await this.documentRepository.ensureSourceIn(
+            manager,
+            sourceType,
+            sourceKey,
+            sourcePath,
+            currentTitle,
+          )
 
-      if (!currentMembership || !readyIndex || readyIndex.status !== 'ready') {
-        throw new KnowledgeIndexPendingException('Ready index or membership is no longer available')
-      }
+          return { documentId: document.id }
+        },
+        lockDocument: async (documentId) => (await this.documentRepository.lockById(manager, documentId)) !== null,
+        createMembershipIfMissing: async ({ knowledgeBaseId, documentId, initialState }) => {
+          await manager
+            .createQueryBuilder()
+            .insert()
+            .into(RagMembershipModel)
+            .values({
+              knowledgeBaseId,
+              documentId,
+              ...initialState,
+              requestedGeneration: String(initialState.requestedGeneration),
+            })
+            .orIgnore()
+            .execute()
+        },
+        lockMembership: async (knowledgeBaseId, documentId) => {
+          const membership = await this.membershipRepository.lockMembership(manager, knowledgeBaseId, documentId)
 
-      if (Number(currentMembership.requestedGeneration) !== input.currentGeneration) {
-        throw new KnowledgeIndexPendingException('Membership generation changed before activation')
-      }
+          return membership
+            ? {
+                knowledgeBaseId: membership.knowledgeBaseId,
+                documentId: membership.documentId,
+                requestedGeneration: Number(membership.requestedGeneration),
+                activeDocumentIndexId: membership.activeDocumentIndexId,
+              }
+            : null
+        },
+        updateMembershipOptions: async ({ knowledgeBaseId, documentId, isEntry, alwaysIncludeFullContent }) => {
+          const update = {
+            ...(isEntry === undefined ? {} : { isEntry }),
+            ...(alwaysIncludeFullContent === undefined ? {} : { alwaysIncludeFullContent }),
+          }
 
-      const generation =
-        Number(currentMembership.requestedGeneration) +
-        (currentMembership.activeDocumentIndexId === readyIndex.id ? 0 : 1)
-      const previousIndexId = currentMembership.activeDocumentIndexId
-      currentMembership.requestedGeneration = String(generation)
-      currentMembership.activeDocumentIndexId = readyIndex.id
-      await this.membershipRepository.saveRequestIn(manager, currentMembership)
+          if (Object.keys(update).length)
+            await manager.getRepository(RagMembershipModel).update({ knowledgeBaseId, documentId }, update)
+        },
+        findOrCreateRevision: async ({ documentId, contentSha256, title, content }) => {
+          const revision = await this.documentRevisionRepository.findOrCreate(
+            manager,
+            documentId,
+            contentSha256,
+            title,
+            content,
+          )
 
-      if (previousIndexId && previousIndexId !== readyIndex.id) {
-        await this.documentIndexRepository.markUnreferenced(manager, previousIndexId)
-      }
+          return { revisionId: revision.id }
+        },
+        findOrCreateIndex: async ({ documentId, revisionId, initialState, ...pipeline }) => {
+          let index = await this.documentIndexRepository.findByRevisionAndPipeline(
+            manager,
+            revisionId,
+            pipeline.pipelineHash,
+          )
 
-      return {
-        documentId: input.documentId,
-        revisionId: readyIndex.revisionId,
-        documentIndexId: readyIndex.id,
-        jobId: null,
-        generation,
-        reusedReadyIndex: true,
-        blockedByFailedJob: false,
-      }
-    })
-  }
+          if (!index)
+            index = await this.documentIndexRepository.createBuildingIndex(manager, {
+              documentId,
+              revisionId,
+              ...pipeline,
+              ...initialState,
+            })
 
-  async enqueueIndex(
-    input: RagSourceDocumentDto,
-    prepared: PreparedRagIndexRequest,
-    generation: number,
-  ): Promise<RagIndexRequestResult> {
-    return this.indexes.manager.transaction(async (manager) => {
-      const currentMembership = await this.membershipRepository.lockMembership(
-        manager,
-        input.knowledgeBaseId,
-        prepared.documentId,
-      )
+          return this.toRequestIndex(index)
+        },
+        lockCurrentJob: async (knowledgeBaseId, documentId) => {
+          const job = await this.jobRepository.lockCurrentTarget(manager, knowledgeBaseId, documentId)
 
-      if (!currentMembership) throw new KnowledgeIndexPendingException('Membership disappeared before enqueue')
-
-      const currentGeneration = Number(currentMembership.requestedGeneration)
-
-      if (currentGeneration !== prepared.currentGeneration) {
-        throw new KnowledgeIndexPendingException('Membership generation changed before enqueue')
-      }
-
-      const currentJob = await this.jobRepository.findCurrentTarget(manager, input.knowledgeBaseId, prepared.documentId)
-
-      if (
-        currentJob &&
-        currentJob.documentIndexId === prepared.documentIndexId &&
-        Number(currentJob.generation) === currentGeneration
-      ) {
-        return {
-          documentId: prepared.documentId,
-          revisionId: prepared.revisionId,
-          documentIndexId: prepared.documentIndexId,
-          jobId: currentJob.id,
-          generation: currentGeneration,
-          reusedReadyIndex: false,
-          blockedByFailedJob: false,
-        }
-      }
-
-      const failedTarget = await this.failedJobRepository.findCurrentUnretried(
-        manager,
-        input.knowledgeBaseId,
-        prepared.documentId,
-        prepared.documentIndexId,
-        String(generation),
-      )
-
-      if (failedTarget) {
-        return {
-          documentId: prepared.documentId,
-          revisionId: prepared.revisionId,
-          documentIndexId: prepared.documentIndexId,
-          jobId: null,
+          return job
+            ? {
+                id: job.id,
+                documentIndexId: job.documentIndexId,
+                generation: Number(job.generation),
+                status: job.status,
+              }
+            : null
+        },
+        hasUnretriedFailure: async ({ knowledgeBaseId, documentId, documentIndexId, generation }) =>
+          (await this.failedJobRepository.findCurrentUnretried(
+            manager,
+            knowledgeBaseId,
+            documentId,
+            documentIndexId,
+            String(generation),
+          )) !== null,
+        lockIndexesById: async (documentIndexIds) =>
+          (await this.documentIndexRepository.lockManyById(manager, documentIndexIds)).map((index) =>
+            this.toRequestIndex(index),
+          ),
+        updateMembershipRequest: async ({
+          knowledgeBaseId,
+          documentId,
+          requestedGeneration,
+          activeDocumentIndexId,
+        }) => {
+          await manager
+            .getRepository(RagMembershipModel)
+            .update(
+              { knowledgeBaseId, documentId },
+              { requestedGeneration: String(requestedGeneration), activeDocumentIndexId },
+            )
+        },
+        removeCurrentJob: async (jobId) => {
+          await manager.getRepository(RagJobModel).delete(jobId)
+        },
+        enqueueJob: async ({
+          knowledgeBaseId,
+          documentId,
+          documentIndexId,
           generation,
-          reusedReadyIndex: false,
-          blockedByFailedJob: true,
-        }
-      }
+          status,
+          attempts,
+          availableAt,
+          payload,
+        }) => {
+          const job = await this.jobRepository.saveQueuedTarget(manager, {
+            knowledgeBaseId,
+            documentId,
+            documentIndexId,
+            generation: String(generation),
+            status,
+            attempts,
+            availableAt,
+            idempotencyKey: null,
+            retryOfFailedJobId: null,
+            payload,
+            executionState: null,
+            executionVerification: null,
+          })
 
-      if (currentJob) await this.jobRepository.remove(manager, currentJob)
+          return { jobId: job.id }
+        },
+        updateIndexUnreferencedSince: (documentIndexId, value) =>
+          this.documentIndexRepository.setUnreferencedSince(manager, documentIndexId, value),
+      }),
+    )
+  }
 
-      currentMembership.requestedGeneration = String(generation)
-      await this.membershipRepository.saveRequestIn(manager, currentMembership)
-      const queuedJob = await this.jobRepository.saveQueuedTarget(manager, {
-        knowledgeBaseId: input.knowledgeBaseId,
-        documentId: prepared.documentId,
-        documentIndexId: prepared.documentIndexId,
-        generation: String(generation),
-        idempotencyKey: null,
-        retryOfFailedJobId: null,
-        payload: { title: input.title ?? '', content: input.content, payload: input.payload ?? {} },
-        executionState: null,
-        executionVerification: null,
-      })
+  private toRequestIndex(index: RagDocumentIndexModel): RagIndexRequestIndex {
+    return {
+      id: index.id,
+      documentId: index.documentId,
+      revisionId: index.revisionId,
+      status: index.status,
+    }
+  }
+
+  async heartbeat(
+    job: ClaimedRagIndexJobContract,
+    progress: RagJobProgressContract,
+    now: Date,
+    leaseExpiresAt: Date,
+  ): Promise<void> {
+    await this.indexes.manager.transaction(async (manager) => {
+      const document = await this.documentRepository.lockById(manager, job.documentId)
+      const membership = await this.membershipRepository.lockMembership(manager, job.knowledgeBaseId, job.documentId)
+
+      if (!document || membership?.requestedGeneration !== job.generation) throw new InvalidRagJobLeaseException()
+
+      await this.jobRepository.heartbeat(manager, job, progress, now, leaseExpiresAt)
+    })
+  }
+
+  async loadSnapshot(input: RagRetrievalCriteria, limits: RagRetrievalLimits): Promise<RetrievalSnapshot> {
+    void limits
+
+    return this.indexes.manager.transaction('REPEATABLE READ', async (manager) => {
+      await manager.query('SET TRANSACTION READ ONLY')
+      const reader = this.retrievalSnapshotIn(manager)
+      const snapshot = await reader.loadFacts(input.projectId)
+      const chunks = await reader.findChunks(snapshot.indexes.map((index) => index.id))
+
+      return { ...snapshot, chunks }
+    })
+  }
+
+  async loadHybridSnapshot<TSelection>(
+    input: RagRetrievalCriteria,
+    select: (snapshot: RetrievalSnapshot) => HybridSnapshotSelection<TSelection>,
+    selectCandidates: (
+      chunks: import('../../../Application/KnowledgeBases/Contracts/rag-chunk-repository.port.js').RagChunkRepositoryPort,
+      selection: TSelection,
+    ) => Promise<import('./Contracts/rag-retrieval-store.js').HybridCandidate[]>,
+    selectContextCriteria: (
+      candidates: import('./Contracts/rag-retrieval-store.js').HybridCandidate[],
+      selection: TSelection,
+    ) => RagRetrievalContextCriteria,
+  ): Promise<HybridSnapshotResult<TSelection>> {
+    return this.indexes.manager.transaction('REPEATABLE READ', async (manager) => {
+      await manager.query('SET TRANSACTION READ ONLY')
+      const reader = this.retrievalSnapshotIn(manager)
+      const facts = await reader.loadFacts(input.projectId)
+      const selection = select(facts)
+      const chunks = await reader.findChunks(selection.requiredIndexIds)
+      const candidates = await selectCandidates(reader, selection.value)
+      const contextCriteria = selectContextCriteria(candidates, selection.value)
+      const contextChunks = await reader.findContext(contextCriteria, selection.retrievalIndexIds)
+      const relationTargetChunks = await reader.findChunks(selection.relationTargetIndexIds)
 
       return {
-        documentId: prepared.documentId,
-        revisionId: prepared.revisionId,
-        documentIndexId: prepared.documentIndexId,
-        jobId: queuedJob.id,
-        generation,
-        reusedReadyIndex: false,
-        blockedByFailedJob: false,
+        snapshot: { ...facts, chunks },
+        candidates,
+        contextChunks,
+        relationTargetChunks,
+        selection: selection.value,
       }
     })
   }
 
-  async heartbeat(job: ClaimedRagIndexJob, progress: RagJobProgress): Promise<void> {
-    await this.jobRepository.heartbeat(job, progress)
-  }
-
-  async loadSnapshot(input: HybridRetrieveDto): Promise<RetrievalSnapshot> {
-    return this.membershipRepository.loadSnapshot(input)
-  }
-
-  async loadHybridSnapshot(
-    input: HybridRetrieveDto,
-    queryVector: number[],
-    limits: { vectorLimit: number; lexicalLimit: number },
-  ): Promise<HybridSnapshotResult> {
-    return this.membershipRepository.loadHybridSnapshot(input, queryVector, limits)
-  }
-
-  async findHybridCandidates(
-    input: HybridRetrieveDto,
-    queryVector: number[],
-    activeIndexIds: string[],
-    limits: { vectorLimit: number; lexicalLimit: number },
-  ): Promise<HybridCandidate[]> {
-    return this.membershipRepository.findHybridCandidates(input, queryVector, activeIndexIds, limits)
-  }
-
-  async loadCandidateContext(
-    input: HybridRetrieveDto,
-    selectedChunkIds: string[],
-    activeIndexIds: string[],
-  ): Promise<RetrievalChunk[]> {
-    return this.membershipRepository.loadCandidateContext(input, selectedChunkIds, activeIndexIds)
-  }
-
-  async claimNext(): Promise<ClaimedRagIndexJob | null> {
-    return this.jobRepository.claimNext()
+  private retrievalSnapshotIn(manager: EntityManager): TypeOrmRagRetrievalSnapshotAdapter {
+    return new TypeOrmRagRetrievalSnapshotAdapter(
+      manager,
+      this.knowledgeBaseRepository,
+      this.membershipRepository,
+      this.documentRepository,
+      this.documentIndexRepository,
+      this.documentRevisionRepository,
+      this.chunks,
+      this.relations,
+    )
   }
 
   async loadContent(documentIndexId: string): Promise<string> {
     return this.documentIndexRepository.loadContent(documentIndexId)
   }
 
-  async jobStatus(projectId: string, id: string): Promise<RagJobStatusDto> {
-    return this.jobRepository.jobStatus(projectId, id)
+  async jobStatus(projectId: string, id: string): Promise<RagJobStatusFacts> {
+    const activeJob = await this.jobRepository.findByIdInProject(projectId, id)
+    const failedJob = activeJob ? null : await this.failedJobRepository.findByIdOrJobIdInProject(id, projectId)
+    const knowledgeBaseId = activeJob?.knowledgeBaseId ?? failedJob?.knowledgeBaseId
+    const documentId = activeJob?.documentId ?? failedJob?.documentId
+    const targetIndexId = activeJob?.documentIndexId ?? failedJob?.documentIndexId
+    const targetGeneration = activeJob?.generation ?? failedJob?.generation
+
+    if (!knowledgeBaseId || !documentId || !targetIndexId || !targetGeneration)
+      throw new KnowledgeJobNotFoundException(id)
+
+    const membership = await this.membershipRepository.findForSource(knowledgeBaseId, documentId)
+    const activeIndex = membership?.activeDocumentIndexId
+      ? await this.documentIndexRepository.findById(membership.activeDocumentIndexId)
+      : null
+    const targetIndex = await this.documentIndexRepository.findById(targetIndexId)
+
+    return {
+      activeIndex: activeIndex
+        ? { id: activeIndex.id, status: activeIndex.status, readyAt: activeIndex.readyAt }
+        : null,
+      requestedTarget: {
+        indexId: targetIndexId,
+        generation: targetGeneration,
+        targetStateFacts: {
+          requestedGeneration: membership?.requestedGeneration ?? null,
+          targetGeneration,
+          activeJobStatus: activeJob?.status ?? null,
+          hasFailedJob: failedJob !== null,
+          targetIndexStatus: targetIndex?.status ?? null,
+        },
+        jobId: activeJob?.id ?? null,
+        failedJobId: failedJob?.id ?? null,
+        attempts: activeJob?.attempts ?? failedJob?.attempts ?? null,
+        errorCode: failedJob?.errorCode ?? null,
+        errorMessage: failedJob?.errorMessage ?? null,
+        executionVerification: RagJobFactory.toExecutionVerification(activeJob?.executionVerification ?? null),
+      },
+    }
   }
 
-  async savePlan(job: ClaimedRagIndexJob, plan: MarkdownPlan, vectors: number[][]): Promise<void> {
-    await this.indexes.manager.transaction(async (manager) => {
-      const jobRecord = await this.jobRepository.lockById(manager, job.id)
-      this.jobRepository.assertLeaseOwnership(jobRecord, job)
-      await this.documentIndexRepository.replacePlan(manager, job.documentIndexId, plan, vectors)
+  async withReplacementTransaction<T>(
+    operation: (transaction: RagIndexChunkReplacementOperations) => Promise<T>,
+  ): Promise<T> {
+    return this.indexes.manager.transaction((manager) =>
+      operation({
+        lockDocument: async (documentId) => (await this.documentRepository.lockById(manager, documentId)) !== null,
+        lockMembership: async (knowledgeBaseId, documentId) => {
+          const membership = await this.membershipRepository.lockMembership(manager, knowledgeBaseId, documentId)
+
+          return membership ? { requestedGeneration: Number(membership.requestedGeneration) } : null
+        },
+        lockClaimedJob: async (job, now) => {
+          const jobRecord = await this.jobRepository.lockById(manager, job.id)
+          this.jobRepository.assertLeaseOwnership(jobRecord, job, now)
+        },
+        lockDocumentIndex: async (documentIndexId) => {
+          const index = await this.documentIndexRepository.lockById(manager, documentIndexId)
+
+          return index ? RagDocumentIndexFactory.toDomain(index) : null
+        },
+        deleteChunksForIndex: (documentIndexId) => this.chunks.removeForIndex(manager, documentIndexId),
+        saveChunks: (rows) => this.chunks.saveRowsIn(manager, rows),
+        deleteRelationsForIndex: (documentIndexId) => this.relations.removeForIndex(manager, documentIndexId),
+        saveRelations: (documentIndexId, relations) =>
+          this.relations.savePlannedIn(manager, documentIndexId, relations),
+      }),
+    )
+  }
+
+  async withCompletionTransaction<T>(
+    operation: (transaction: RagIndexCompletionTransaction) => Promise<T>,
+  ): Promise<T> {
+    return this.indexes.manager.transaction((manager) => {
+      let membershipRecord: RagMembershipModel | null = null
+      let claimedJobRecord: RagJobModel | null = null
+
+      return operation({
+        lockDocument: async (documentId) => (await this.documentRepository.lockById(manager, documentId)) !== null,
+        lockMembership: async (knowledgeBaseId, documentId) => {
+          membershipRecord = await this.membershipRepository.lockMembership(manager, knowledgeBaseId, documentId)
+
+          return membershipRecord
+            ? {
+                requestedGeneration: Number(membershipRecord.requestedGeneration),
+                activeDocumentIndexId: membershipRecord.activeDocumentIndexId,
+              }
+            : null
+        },
+        lockClaimedJob: async (job: ClaimedRagIndexJobContract, now) => {
+          claimedJobRecord = await this.jobRepository.lockById(manager, job.id)
+          this.jobRepository.assertLeaseOwnership(claimedJobRecord, job, now)
+        },
+        lockIndexesById: async (documentIndexIds) =>
+          (await this.documentIndexRepository.lockManyById(manager, documentIndexIds)).map((index) => index.id),
+        markIndexReady: async (documentIndexId, readyAt) => {
+          await this.documentIndexRepository.markReady(manager, documentIndexId, readyAt)
+        },
+        activateMembership: async (knowledgeBaseId, documentId, documentIndexId) => {
+          if (
+            !membershipRecord ||
+            membershipRecord.knowledgeBaseId !== knowledgeBaseId ||
+            membershipRecord.documentId !== documentId
+          ) {
+            throw new Error('Membership must be locked before it can be activated')
+          }
+
+          membershipRecord.activeDocumentIndexId = documentIndexId
+          await this.membershipRepository.saveRequestIn(manager, membershipRecord)
+        },
+        markIndexUnreferenced: (documentIndexId, unreferencedSince) =>
+          this.documentIndexRepository.markUnreferenced(manager, documentIndexId, unreferencedSince),
+        removeClaimedJob: async (job) => {
+          if (!claimedJobRecord || claimedJobRecord.id !== job.id) {
+            throw new Error('Claimed job must be locked before it can be removed')
+          }
+
+          await this.jobRepository.removeClaimed(manager, claimedJobRecord)
+        },
+      })
     })
   }
 
-  async complete(job: ClaimedRagIndexJob): Promise<void> {
-    await this.indexes.manager.transaction(async (manager) => {
-      const jobRecord = await this.jobRepository.lockById(manager, job.id)
-      this.jobRepository.assertLeaseOwnership(jobRecord, job)
-      const index = await this.documentIndexRepository.lockById(manager, job.documentIndexId)
+  async withFailureTransaction<T>(operation: (transaction: RagJobFailureTransaction) => Promise<T>): Promise<T> {
+    return this.indexes.manager.transaction((manager) => {
+      let claimedRecord: RagJobModel | null = null
 
-      if (!index) throw new KnowledgeIndexPendingException('Index disappeared before completion')
+      return operation({
+        lockDocument: async (documentId) => (await this.documentRepository.lockById(manager, documentId)) !== null,
+        lockMembership: async (knowledgeBaseId, documentId) => {
+          const membership = await this.membershipRepository.lockMembership(manager, knowledgeBaseId, documentId)
 
-      const membershipActivation = await this.membershipRepository.activateIndex(
-        manager,
-        job.knowledgeBaseId,
-        job.documentId,
-        index.id,
-        job.generation,
-      )
-      await this.documentIndexRepository.markReady(manager, index.id)
+          return membership ? { requestedGeneration: Number(membership.requestedGeneration) } : null
+        },
+        lockClaimedJob: async (job, now) => {
+          claimedRecord = await this.jobRepository.lockById(manager, job.id)
+          this.jobRepository.assertLeaseOwnership(claimedRecord, job, now)
 
-      if (membershipActivation.activated) {
-        const previousIndexId = membershipActivation.previousDocumentIndexId
+          return RagJobFactory.toExpiredLeaseFact(
+            claimedRecord,
+            RagJobFactory.toRunningDomain(claimedRecord).leaseExpiresAt,
+          )
+        },
+        lockIndex: async (documentIndexId) =>
+          (await this.documentIndexRepository.lockManyById(manager, [documentIndexId])).length === 1,
+        queueRetry: async (jobId, availableAt, executionState) => {
+          if (!claimedRecord || claimedRecord.id !== jobId) throw new InvalidRagJobLeaseException()
 
-        if (previousIndexId && previousIndexId !== index.id) {
-          await this.documentIndexRepository.markUnreferenced(manager, previousIndexId)
-        }
-      }
+          claimedRecord.status = RAG_JOB_STATUS.QUEUED
+          claimedRecord.availableAt = availableAt
+          claimedRecord.reservedAt = null
+          claimedRecord.leaseToken = null
+          claimedRecord.executionVerification = null
+          claimedRecord.executionState = executionState
+          await this.jobRepository.save(manager, claimedRecord)
+        },
+        archiveFailedJob: async (archive) => {
+          await this.failedJobRepository.createAndSave(manager, archive)
+        },
+        markIndexUnreferenced: (documentIndexId, at) =>
+          this.documentIndexRepository.markUnreferenced(manager, documentIndexId, at),
+        removeClaimedJob: async (jobId) => {
+          if (!claimedRecord || claimedRecord.id !== jobId) throw new InvalidRagJobLeaseException()
 
-      await this.jobRepository.removeClaimed(manager, jobRecord)
+          await this.jobRepository.removeClaimed(manager, claimedRecord)
+        },
+      })
     })
   }
 
-  async fail(
-    job: ClaimedRagIndexJob,
-    error: { errorCode: string; errorMessage: string; retryAt: Date | null; terminal: boolean } | unknown,
-  ): Promise<void> {
-    await this.indexes.manager.transaction(async (manager) => {
-      const jobRecord = await this.jobRepository.lockById(manager, job.id)
-      this.jobRepository.assertLeaseOwnership(jobRecord, job)
-      jobRecord.reservedAt = null
-      jobRecord.leaseToken = null
-      jobRecord.executionVerification = null
-
-      const errorCode =
-        typeof error === 'object' && error !== null && 'errorCode' in error
-          ? String((error as Record<string, unknown>).errorCode)
-          : 'INDEXING_FAILED'
-      const errorMessage =
-        typeof error === 'object' && error !== null && 'errorMessage' in error
-          ? String((error as Record<string, unknown>).errorMessage)
-          : error instanceof Error
-            ? error.message
-            : 'indexing failed'
-      const isTerminal =
-        typeof error === 'object' && error !== null && 'terminal' in error
-          ? Boolean((error as Record<string, unknown>).terminal)
-          : jobRecord.attempts >= 4
-      const retryAt =
-        typeof error === 'object' &&
-        error !== null &&
-        'retryAt' in error &&
-        (error as Record<string, unknown>).retryAt instanceof Date
-          ? ((error as Record<string, unknown>).retryAt as Date)
-          : new Date(Date.now() + Math.min(60_000, 1000 * 2 ** jobRecord.attempts))
-
-      jobRecord.executionState = {
-        ...(jobRecord.executionState ?? {}),
-        lastError: { code: errorCode, message: errorMessage, failedAt: new Date().toISOString() },
-      }
-
-      if (isTerminal || jobRecord.attempts >= 4) {
-        await this.failedJobRepository.createAndSave(manager, {
-          jobId: jobRecord.id,
-          knowledgeBaseId: jobRecord.knowledgeBaseId,
-          documentId: jobRecord.documentId,
-          documentIndexId: jobRecord.documentIndexId,
-          generation: jobRecord.generation,
-          attempts: jobRecord.attempts,
-          errorCode,
-          errorMessage,
-          blockedReasons: [],
-          retryPayload: packRetryPayload(jobRecord.payload, jobRecord.executionState),
-          failedAt: new Date(),
-          retriedAt: null,
-        })
-        await this.jobRepository.removeClaimed(manager, jobRecord)
-      } else {
-        jobRecord.status = 'queued'
-        jobRecord.availableAt = retryAt
-        await this.jobRepository.save(manager, jobRecord)
-      }
-    })
-  }
-
-  async readRetryContext(projectId: string, failedJobId: string): Promise<RetryContext | null> {
+  async readRetryContext(failedJobId: string): Promise<RetryContext | null> {
     return this.indexes.manager.transaction(async (manager) => {
       const failedJob = await this.failedJobRepository.findByIdIn(manager, failedJobId)
 
       if (!failedJob) return null
 
-      const knowledgeBase = await this.knowledgeBaseRepository.findByIdIn(manager, failedJob.knowledgeBaseId)
-
-      if (!knowledgeBase || knowledgeBase.projectId !== projectId) return null
-
-      const document = await this.documentRepository.findByIdIn(manager, failedJob.documentId)
-
-      if (!document) return null
-
-      const latestRevision = await this.documentRevisionRepository.findLatestForDocument(manager, failedJob.documentId)
-      const currentTitle = document.currentTitle
-      const membership = await this.membershipRepository.findForSourceIn(
-        manager,
-        failedJob.knowledgeBaseId,
-        failedJob.documentId,
-      )
-      const documentIndex = await this.documentIndexRepository.findByIdIn(manager, failedJob.documentIndexId)
-      const activeJob = await this.jobRepository.findActiveTarget(
-        manager,
-        failedJob.knowledgeBaseId,
-        failedJob.documentId,
-      )
-
-      return {
-        failedJob: {
-          id: failedJob.id,
-          knowledgeBaseId: failedJob.knowledgeBaseId,
-          documentId: failedJob.documentId,
-          documentIndexId: failedJob.documentIndexId,
-          generation: Number(failedJob.generation),
-          retryOfFailedJobId: null,
-          retriedAt: failedJob.retriedAt,
-          retryPayload: (failedJob.retryPayload as Record<string, unknown>) ?? {},
-        },
-        knowledgeBase: {
-          id: knowledgeBase.id,
-          projectId: knowledgeBase.projectId,
-        },
-        document: {
-          id: document.id,
-          latestRevision: latestRevision
-            ? {
-                id: latestRevision.id,
-                contentSha256: latestRevision.contentSha256,
-                content: latestRevision.content,
-              }
-            : null,
-        },
-        membership: membership
-          ? {
-              activeDocumentIndexId: membership.activeDocumentIndexId,
-              requestedGeneration: Number(membership.requestedGeneration),
-            }
-          : null,
-        documentIndex: documentIndex
-          ? {
-              id: documentIndex.id,
-              documentRevisionId: documentIndex.revisionId,
-              pipelineHash: documentIndex.pipelineHash,
-              status: documentIndex.status,
-              readyAt: documentIndex.readyAt,
-            }
-          : null,
-        activeJob: activeJob
-          ? {
-              id: activeJob.id,
-              status: activeJob.status,
-              leaseExpiresAt: activeJob.reservedAt
-                ? new Date(activeJob.reservedAt.getTime() + this.config.workerLeaseSeconds * 1000)
-                : null,
-            }
-          : null,
-        currentSource:
-          latestRevision &&
-          (document.sourceType === RagSourceTypeEnum.OBSIDIAN || document.sourceType === RagSourceTypeEnum.REPOSITORY)
-            ? {
-                knowledgeBaseId: knowledgeBase.id,
-                projectId,
-                projectName: knowledgeBase.projectName,
-                sourceType: document.sourceType,
-                sourceKey: document.sourceKey,
-                sourcePath: document.sourcePath,
-                ...(currentTitle === null ? {} : { title: currentTitle }),
-                content: latestRevision.content,
-                payload:
-                  (unpackRetryPayload(failedJob.retryPayload).input.payload as Record<string, unknown> | undefined) ??
-                  {},
-                isEntry: membership?.isEntry ?? false,
-                alwaysIncludeFullContent: membership?.alwaysIncludeFullContent ?? false,
-              }
-            : null,
-      }
+      return this.loadRetryContext(manager, failedJob)
     })
+  }
+
+  private async loadRetryContext(
+    manager: EntityManager,
+    failedJob: RagFailedJobModel,
+    lockedTarget?: { document: RagDocumentModel | null; membership: RagMembershipModel | null },
+  ): Promise<RetryContext | null> {
+    const knowledgeBase = await this.knowledgeBaseRepository.findByIdIn(manager, failedJob.knowledgeBaseId)
+
+    if (!knowledgeBase) return null
+
+    const document = lockedTarget
+      ? lockedTarget.document
+      : await this.documentRepository.findByIdIn(manager, failedJob.documentId)
+    const membership = lockedTarget
+      ? lockedTarget.membership
+      : await this.membershipRepository.findForSourceIn(manager, failedJob.knowledgeBaseId, failedJob.documentId)
+    const documentIndex = await this.documentIndexRepository.findByIdIn(manager, failedJob.documentIndexId)
+    const activeJob = await this.jobRepository.findActiveTarget(
+      manager,
+      failedJob.knowledgeBaseId,
+      failedJob.documentId,
+    )
+    const targetRevision = documentIndex
+      ? await this.documentRevisionRepository.findByIdForDocument(
+          manager,
+          failedJob.documentId,
+          documentIndex.revisionId,
+        )
+      : null
+
+    return {
+      failedJob: {
+        id: failedJob.id,
+        knowledgeBaseId: failedJob.knowledgeBaseId,
+        documentId: failedJob.documentId,
+        documentIndexId: failedJob.documentIndexId,
+        generation: Number(failedJob.generation),
+        attempts: failedJob.attempts,
+        retryOfFailedJobId: null,
+        retriedAt: failedJob.retriedAt,
+        retryPayload: unpackRetryPayload(failedJob.retryPayload),
+      },
+      knowledgeBase: { id: knowledgeBase.id, projectId: knowledgeBase.projectId },
+      document: document
+        ? {
+            id: document.id,
+            sourceType: document.sourceType,
+            sourceKey: document.sourceKey,
+            sourcePath: document.sourcePath,
+            currentTitle: document.currentTitle,
+            targetRevision: targetRevision
+              ? {
+                  id: targetRevision.id,
+                  contentSha256: targetRevision.contentSha256,
+                  content: targetRevision.content,
+                }
+              : null,
+          }
+        : null,
+      membership: membership
+        ? {
+            activeDocumentIndexId: membership.activeDocumentIndexId,
+            requestedGeneration: Number(membership.requestedGeneration),
+          }
+        : null,
+      documentIndex: documentIndex
+        ? {
+            id: documentIndex.id,
+            documentRevisionId: documentIndex.revisionId,
+            pipelineHash: documentIndex.pipelineHash,
+            status: documentIndex.status,
+            readyAt: documentIndex.readyAt,
+          }
+        : null,
+      activeJob: activeJob ? { id: activeJob.id, status: activeJob.status } : null,
+    }
   }
 
   async retryFailedJobAtomically(input: RetryFailedJobAtomicallyInput): Promise<RetryFailedJobAtomicallyResult> {
     return this.indexes.manager.transaction(async (manager) => {
+      // Discover immutable target identifiers first, then acquire parent and child locks
+      // in the shared document -> membership -> job order.
+      const candidate = await this.failedJobRepository.findByIdIn(manager, input.failedJobId)
+      const candidateBelongsToProject = candidate
+        ? await this.knowledgeBaseRepository.belongsToProject(manager, candidate.knowledgeBaseId, input.projectId)
+        : false
+      const lockedDocument =
+        candidate && candidateBelongsToProject
+          ? await this.documentRepository.lockById(manager, candidate.documentId)
+          : null
+      const lockedMembership =
+        candidate && candidateBelongsToProject && lockedDocument
+          ? await this.membershipRepository.lockMembership(manager, candidate.knowledgeBaseId, candidate.documentId)
+          : null
       const failedJob = await this.failedJobRepository.lockById(manager, input.failedJobId)
+      const belongsToProject = failedJob
+        ? await this.knowledgeBaseRepository.belongsToProject(manager, failedJob.knowledgeBaseId, input.projectId)
+        : false
+      const membership =
+        failedJob &&
+        belongsToProject &&
+        lockedDocument !== null &&
+        candidate?.knowledgeBaseId === failedJob.knowledgeBaseId &&
+        candidate.documentId === failedJob.documentId
+          ? lockedMembership
+          : null
+      const context =
+        !failedJob || !belongsToProject
+          ? null
+          : await this.loadRetryContext(manager, failedJob, {
+              document: lockedDocument,
+              membership,
+            })
 
-      if (!failedJob) return { status: 'not-found' }
+      if (!context || !failedJob) return { status: RAG_FAILED_JOB_RETRY_TRANSACTION_STATUS.NOT_FOUND }
 
-      if (!(await this.knowledgeBaseRepository.belongsToProject(manager, failedJob.knowledgeBaseId, input.projectId))) {
-        return { status: 'not-found' }
-      }
-
-      if (failedJob.retriedAt) return { status: 'already-retried' }
-
-      if (
-        failedJob.knowledgeBaseId !== input.expectedKnowledgeBaseId ||
-        failedJob.documentId !== input.expectedDocumentId ||
-        failedJob.documentIndexId !== input.expectedDocumentIndexId ||
-        Number(failedJob.generation) !== input.expectedGeneration
-      ) {
-        return { status: 'stale' }
-      }
-
-      const membership = await this.membershipRepository.lockMembership(
-        manager,
-        failedJob.knowledgeBaseId,
-        failedJob.documentId,
-      )
-
-      if (!membership) return { status: 'not-current' }
-
-      const activeJob = await this.jobRepository.findActiveTarget(
-        manager,
-        failedJob.knowledgeBaseId,
-        failedJob.documentId,
-      )
-
-      if (activeJob) return { status: 'active-job-exists' }
-
-      const [latestRevision, documentIndex] = await Promise.all([
-        this.documentRevisionRepository.findLatestForDocument(manager, failedJob.documentId),
-        this.documentIndexRepository.findByIdIn(manager, failedJob.documentIndexId),
-      ])
+      const { expected } = input
 
       if (
-        Number(membership.requestedGeneration) !== input.expectedGeneration ||
-        !latestRevision ||
-        latestRevision.id !== input.expectedRevisionId ||
-        !documentIndex ||
-        documentIndex.revisionId !== latestRevision.id ||
-        documentIndex.pipelineHash !== input.expectedPipelineHash
+        context.failedJob.knowledgeBaseId !== expected.knowledgeBaseId ||
+        context.failedJob.documentId !== expected.documentId ||
+        context.failedJob.documentIndexId !== expected.documentIndexId ||
+        context.failedJob.generation !== expected.generation ||
+        context.failedJob.attempts !== expected.attempts ||
+        context.failedJob.retriedAt !== expected.retriedAt ||
+        context.document?.id !== expected.documentId ||
+        context.document.sourceType !== expected.sourceType ||
+        context.document.targetRevision?.id !== expected.revisionId ||
+        context.documentIndex?.id !== expected.documentIndexId ||
+        context.documentIndex.documentRevisionId !== expected.revisionId ||
+        context.documentIndex.pipelineHash !== expected.pipelineHash ||
+        context.membership?.requestedGeneration !== expected.membership.requestedGeneration ||
+        context.membership.activeDocumentIndexId !== expected.membership.activeDocumentIndexId ||
+        context.activeJob !== expected.activeJobId
       ) {
-        return { status: 'stale' }
+        return { status: RAG_FAILED_JOB_RETRY_TRANSACTION_STATUS.STALE }
       }
 
-      const retryPayload = unpackRetryPayload(failedJob.retryPayload)
-      const reusableProgress = { ...(retryPayload.executionState ?? {}) }
-      delete reusableProgress.lastError
       const created = await this.jobRepository.createRetry(manager, {
         knowledgeBaseId: failedJob.knowledgeBaseId,
         documentId: failedJob.documentId,
         documentIndexId: failedJob.documentIndexId,
         generation: failedJob.generation,
-        status: 'queued',
-        attempts: 0,
+        status: input.retry.status,
+        attempts: input.retry.attempts,
         availableAt: input.now,
         reservedAt: null,
         leaseToken: null,
         idempotencyKey: input.idempotencyKey,
         retryOfFailedJobId: failedJob.id,
-        payload: retryPayload.input,
-        executionState: Object.keys(reusableProgress).length ? reusableProgress : null,
+        payload: input.retry.payload,
+        executionState: input.retry.executionState,
         executionVerification: null,
       })
 
-      failedJob.retriedAt = input.now
-      await this.failedJobRepository.save(manager, failedJob)
+      await this.failedJobRepository.markRetried(manager, failedJob.id, input.now)
 
-      return { status: 'retried', jobId: created.id }
+      return { status: RAG_FAILED_JOB_RETRY_TRANSACTION_STATUS.RETRIED, jobId: created.id }
     })
   }
 
   async withPruneTransaction<T>(work: (transaction: MembershipPruneTransaction) => Promise<T>): Promise<T> {
     return this.indexes.manager.transaction(async (manager) => {
       const transactionImpl: MembershipPruneTransaction = {
-        findMembershipPruneRecords: async (
-          projectId: string,
-          knowledgeBaseId: string,
-          documentIds: string[],
-        ): Promise<MembershipPruneRecord[]> => {
-          if (!(await this.knowledgeBaseRepository.belongsToProject(manager, knowledgeBaseId, projectId))) {
-            return []
-          }
+        isKnowledgeBaseInProject: (projectId, knowledgeBaseId) =>
+          this.knowledgeBaseRepository.belongsToProject(manager, knowledgeBaseId, projectId),
+        findMembershipPruneRecords: async (knowledgeBaseId): Promise<MembershipPruneRecord[]> => {
+          const memberships = await this.membershipRepository.findForKnowledgeBase(manager, knowledgeBaseId)
 
-          const retainedDocumentIds = new Set(documentIds)
-          const allMemberships = await this.membershipRepository.lockForKnowledgeBase(manager, knowledgeBaseId)
-          const candidates = allMemberships.filter((m) => !retainedDocumentIds.has(m.documentId))
-
-          return Promise.all(
-            candidates.map(async (candidate) => {
-              const relatedJobs = await this.jobRepository.findForTarget(
-                manager,
-                knowledgeBaseId,
-                candidate.documentId,
-                true,
-              )
-              const jobs: MembershipPruneJob[] = relatedJobs.map((job) => ({
-                id: job.id,
-                status: job.status,
-                leaseExpiresAt: job.reservedAt
-                  ? new Date(job.reservedAt.getTime() + this.config.workerLeaseSeconds * 1000)
-                  : null,
-              }))
-
-              return {
-                membershipId: `${candidate.knowledgeBaseId}:${candidate.documentId}`,
-                knowledgeBaseId: candidate.knowledgeBaseId,
-                documentId: candidate.documentId,
-                activeDocumentIndexId: candidate.activeDocumentIndexId,
-                jobs,
-              }
-            }),
-          )
+          return memberships.map(({ knowledgeBaseId, documentId }) => ({ knowledgeBaseId, documentId }))
         },
-        clearActiveIndex: async (membershipId: string): Promise<boolean> => {
-          const parts = membershipId.split(':')
-          const knowledgeBaseId = parts[0]
-          const documentId = parts[1]
+        lockDocumentForPrune: async (documentId) =>
+          Boolean(await this.documentRepository.lockById(manager, documentId)),
+        lockMembershipForPrune: async (knowledgeBaseId, documentId) => {
+          const membership = await this.membershipRepository.lockMembership(manager, knowledgeBaseId, documentId)
 
-          if (!knowledgeBaseId || !documentId) return false
-
+          return membership ? { activeDocumentIndexId: membership.activeDocumentIndexId } : null
+        },
+        clearActiveIndex: async (knowledgeBaseId, documentId) => {
           const membership = await this.membershipRepository.lockMembership(manager, knowledgeBaseId, documentId)
 
           if (!membership) return false
 
-          const previousIndexId = membership.activeDocumentIndexId
           membership.activeDocumentIndexId = null
           await this.membershipRepository.saveRequestIn(manager, membership)
 
-          if (previousIndexId) {
-            await this.documentIndexRepository.markUnreferenced(manager, previousIndexId)
-          }
-
           return true
         },
-        removeMembership: async (membershipId: string): Promise<boolean> => {
-          const parts = membershipId.split(':')
-          const knowledgeBaseId = parts[0]
-          const documentId = parts[1]
-
-          if (!knowledgeBaseId || !documentId) return false
-
+        markIndexUnreferenced: (documentIndexId, unreferencedSince) =>
+          this.documentIndexRepository.markUnreferenced(manager, documentIndexId, unreferencedSince),
+        removeMembership: async (knowledgeBaseId, documentId) => {
           const membership = await this.membershipRepository.lockMembership(manager, knowledgeBaseId, documentId)
 
           if (!membership) return false
 
-          const relatedJobs = await this.jobRepository.findForTarget(manager, knowledgeBaseId, documentId, true)
-          await this.jobRepository.removeMany(manager, relatedJobs)
           await this.membershipRepository.remove(manager, membership)
 
           return true
         },
-        cancelJobsForDocument: async (knowledgeBaseId: string, documentId: string): Promise<void> => {
-          const relatedJobs = await this.jobRepository.findForTarget(manager, knowledgeBaseId, documentId, true)
-          await this.jobRepository.removeMany(manager, relatedJobs)
+        cancelJobsForDocument: async (knowledgeBaseId, documentId) => {
+          const jobs = await this.jobRepository.findForTarget(manager, knowledgeBaseId, documentId, true)
+          await this.jobRepository.removeMany(manager, jobs)
+
+          return jobs.map((job) => job.documentIndexId)
         },
+        lockIndexForPrune: async (documentIndexId) =>
+          Boolean(await this.documentIndexRepository.lockById(manager, documentIndexId)),
+        countMembershipsForIndex: (documentIndexId) =>
+          this.membershipRepository.countActiveReferences(manager, documentIndexId),
+        countJobsForIndex: (documentIndexId) => this.jobRepository.countForIndex(manager, documentIndexId),
+        countMembershipsForDocument: (documentId) => this.membershipRepository.countForDocumentIn(manager, documentId),
+        countRevisionsForDocument: (documentId) =>
+          this.documentRevisionRepository.countForDocumentIn(manager, documentId),
+        countIndexesForDocument: (documentId) => this.documentIndexRepository.countForDocumentIn(manager, documentId),
+        countJobsForDocument: (documentId) => this.jobRepository.countForDocumentIn(manager, documentId),
+        countFailedJobsForDocument: (documentId) => this.failedJobRepository.countForDocumentIn(manager, documentId),
+        countRelationsTargetingDocument: (documentId) =>
+          this.relations.countTargetDocumentReferencesIn(manager, documentId),
+        markDocumentUnreferenced: (documentId, unreferencedSince) =>
+          this.documentRepository.markUnreferencedIn(manager, documentId, unreferencedSince),
       }
 
       return work(transactionImpl)
@@ -732,62 +780,104 @@ export class TypeOrmRagRepository
   ): Promise<T> {
     return this.indexes.manager.transaction(async (manager) => {
       const transactionImpl: GarbageCollectionTransaction = {
-        deleteExpiredUnreferencedFailedJobs: (cutoff: Date): Promise<number> =>
-          this.failedJobRepository.deleteExpiredUnreferenced(manager, cutoff),
-        findGarbageIndexCandidates: async (): Promise<GarbageIndexCandidate[]> => {
-          const indexRecords = await manager.getRepository(RagDocumentIndexModel).find({
-            where: { status: 'ready', unreferencedSince: Not(IsNull()) },
-          })
+        findGarbageFailedJobCandidates: (cutoff) => this.failedJobRepository.findGarbageCandidates(manager, cutoff),
+        lockFailedJobForRetention: (failedJobId) =>
+          this.failedJobRepository.lockForGarbageCollection(manager, failedJobId),
+        countRetriesForFailedJob: (failedJobId) => this.jobRepository.countRetriesForFailedJob(manager, failedJobId),
+        removeFailedJob: (failedJobId) => this.failedJobRepository.removeForGarbageCollection(manager, failedJobId),
+        findGarbageIndexCandidates: async (cutoff): Promise<GarbageIndexCandidate[]> => {
+          const indexes = await this.documentIndexRepository.findGarbageCandidatesIn(manager, cutoff)
 
-          return Promise.all(
-            indexRecords.map(async (index) => {
-              const membershipCount = await this.membershipRepository.countActiveReferences(manager, index.id)
-              const jobCount = await this.jobRepository.countForIndex(manager, index.id)
-              const failedJobCount = await this.failedJobRepository.countForIndex(manager, index.id)
-              const runningJobs = await this.jobRepository.findForIndex(manager, index.id, true)
-              const activeLeaseCount = runningJobs.filter((job) => this.jobRepository.hasActiveLease(job)).length
+          return indexes.map((index) => ({
+            documentIndexId: index.id,
+            documentId: index.documentId,
+            status: index.status,
+            unreferencedSince: index.unreferencedSince,
+            readyAt: index.readyAt,
+          }))
+        },
+        findIndexRelationTargets: async (documentIndexIds) => {
+          const relations = await this.relations.findForSourceIndexIdsIn(manager, documentIndexIds)
 
-              return {
+          return relations.flatMap((relation) =>
+            relation.targetDocumentId
+              ? [
+                  {
+                    documentIndexId: relation.sourceIndexId,
+                    documentId: relation.targetDocumentId,
+                  },
+                ]
+              : [],
+          )
+        },
+        lockGarbageIndex: async (documentIndexId): Promise<GarbageIndexCandidate | null> => {
+          const index = await this.documentIndexRepository.lockById(manager, documentIndexId)
+
+          return index
+            ? {
                 documentIndexId: index.id,
                 documentId: index.documentId,
                 status: index.status,
                 unreferencedSince: index.unreferencedSince,
                 readyAt: index.readyAt,
-                membershipCount,
-                jobCount,
-                failedJobCount,
-                activeLeaseCount,
               }
-            }),
-          )
+            : null
         },
-        deleteIfUnreferenced: async (documentIndexId: string, cutoff: Date): Promise<boolean> => {
-          const candidateIndex = await this.documentIndexRepository.lockGarbageCandidate(
-            manager,
-            documentIndexId,
-            cutoff,
-          )
+        countMembershipsForIndex: (documentIndexId) =>
+          this.membershipRepository.countActiveReferences(manager, documentIndexId),
+        countJobsForIndex: (documentIndexId) => this.jobRepository.countForIndex(manager, documentIndexId),
+        countFailedJobsForIndex: (documentIndexId) => this.failedJobRepository.countForIndex(manager, documentIndexId),
+        removeRelationsForIndex: (documentIndexId) => this.relations.removeForIndex(manager, documentIndexId),
+        removeChunksForIndex: (documentIndexId) => this.chunks.removeForIndex(manager, documentIndexId),
+        removeGarbageIndex: (documentIndexId) => this.documentIndexRepository.deleteByIdIn(manager, documentIndexId),
+        findGarbageRevisionCandidates: async (cutoff): Promise<GarbageRevisionCandidate[]> => {
+          const revisions = await this.documentRevisionRepository.findGarbageCandidatesIn(manager, cutoff)
 
-          if (!candidateIndex) return false
-
-          const activeMembership = await this.membershipRepository.findActiveReferenceIn(manager, candidateIndex.id)
-
-          if (activeMembership) return false
-
-          const relatedJobs = await this.jobRepository.findForIndex(manager, candidateIndex.id, true)
-
-          if (relatedJobs.some((job) => this.jobRepository.hasActiveLease(job))) return false
-
-          const relatedFailedJobs = await this.failedJobRepository.findByIndex(manager, candidateIndex.id)
-
-          if (relatedFailedJobs.length > 0) return false
-
-          await this.jobRepository.removeMany(manager, relatedJobs)
-          await this.documentIndexRepository.removePlan(manager, candidateIndex.id)
-          await this.documentIndexRepository.remove(manager, candidateIndex)
-
-          return true
+          return revisions.map((revision) => ({
+            documentRevisionId: revision.id,
+            documentId: revision.documentId,
+            createdAt: revision.createdAt,
+          }))
         },
+        lockGarbageRevision: async (documentRevisionId): Promise<GarbageRevisionCandidate | null> => {
+          const revision = await this.documentRevisionRepository.lockByIdIn(manager, documentRevisionId)
+
+          return revision
+            ? {
+                documentRevisionId: revision.id,
+                documentId: revision.documentId,
+                createdAt: revision.createdAt,
+              }
+            : null
+        },
+        countIndexesForRevision: (documentRevisionId) =>
+          this.documentIndexRepository.countForRevisionIn(manager, documentRevisionId),
+        removeGarbageRevision: (documentRevisionId) =>
+          this.documentRevisionRepository.deleteByIdIn(manager, documentRevisionId),
+        findGarbageDocumentCandidates: async (cutoff): Promise<GarbageDocumentCandidate[]> => {
+          const documents = await this.documentRepository.findGarbageCandidatesIn(manager, cutoff)
+
+          return documents.map((document) => ({
+            documentId: document.id,
+            unreferencedSince: document.unreferencedSince,
+          }))
+        },
+        lockGarbageDocument: async (documentId): Promise<GarbageDocumentCandidate | null> => {
+          const document = await this.documentRepository.lockById(manager, documentId)
+
+          return document ? { documentId: document.id, unreferencedSince: document.unreferencedSince } : null
+        },
+        countMembershipsForDocument: (documentId) => this.membershipRepository.countForDocumentIn(manager, documentId),
+        countRevisionsForDocument: (documentId) =>
+          this.documentRevisionRepository.countForDocumentIn(manager, documentId),
+        countIndexesForDocument: (documentId) => this.documentIndexRepository.countForDocumentIn(manager, documentId),
+        countJobsForDocument: (documentId) => this.jobRepository.countForDocumentIn(manager, documentId),
+        countFailedJobsForDocument: (documentId) => this.failedJobRepository.countForDocumentIn(manager, documentId),
+        countRelationsTargetingDocument: (documentId) =>
+          this.relations.countTargetDocumentReferencesIn(manager, documentId),
+        markDocumentUnreferenced: (documentId, unreferencedSince) =>
+          this.documentRepository.markUnreferencedIn(manager, documentId, unreferencedSince),
+        removeGarbageDocument: (documentId) => this.documentRepository.deleteByIdIn(manager, documentId),
       }
 
       return work(transactionImpl)

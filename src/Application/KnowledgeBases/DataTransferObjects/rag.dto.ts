@@ -12,14 +12,23 @@ export type RagSourceDocumentDto = {
   alwaysIncludeFullContent?: boolean
 }
 
+export type RankedCandidate<T> = {
+  candidate: T
+  score: number
+  rank: number
+}
+
 export type PreparedRagIndexRequest = {
   documentId: string
   revisionId: string
   documentIndexId: string
-  targetState: RagIndexTargetStateEnum
   currentGeneration: number
+  activeDocumentIndexId: string | null
+  currentGenerationJobDocumentIndexId: string | null
   currentJobId: string | null
-  reusedReadyIndex: boolean
+  indexStatus: RagDocumentIndexStatus
+  currentJobStatus: RagJobStatus | null
+  hasCurrentUnretriedFailure: boolean
 }
 
 export type RagIndexRequestResult = {
@@ -30,6 +39,12 @@ export type RagIndexRequestResult = {
   generation: number
   reusedReadyIndex: boolean
   blockedByFailedJob: boolean
+}
+
+export type PruneRagMembershipsDto = {
+  projectId: string
+  knowledgeBaseId: string
+  documentIds: string[]
 }
 
 export type HybridRetrieveDto = {
@@ -55,7 +70,7 @@ export type RagExecutionVerification = {
 export type RagJobStatusDto = {
   activeIndex: {
     id: string
-    status: string
+    status: RagDocumentIndexStatus
     readyAt: Date | null
   } | null
   requestedTarget: {
@@ -77,7 +92,8 @@ export type RetryFailedJobDto = {
   status: RagJobTargetStateEnum
   retryOfFailedJobId: string
 }
+import type { RagDocumentIndexStatus } from '../../../Domain/Knowledge/Enums/rag-document-index-status.enum.js'
 import { RagExecutionStageEnum } from '../../../Domain/Knowledge/Enums/rag-execution-stage.enum.js'
-import { RagIndexTargetStateEnum } from '../../../Domain/Knowledge/Enums/rag-index-target-state.enum.js'
 import { RagJobTargetStateEnum } from '../../../Domain/Knowledge/Enums/rag-job-target-state.enum.js'
 import { RagSourceTypeEnum } from '../../../Domain/Knowledge/Enums/rag-source-type.enum.js'
+import type { RagJobStatus } from '../../../Domain/Knowledge/rag-job.js'

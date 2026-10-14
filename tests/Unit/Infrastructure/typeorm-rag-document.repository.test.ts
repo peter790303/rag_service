@@ -6,7 +6,13 @@ import type { Repository } from 'typeorm'
 import { RagDocumentModel } from '../../../src/Infrastructure/Persistence/Models/rag-document.model.js'
 import { TypeOrmRagDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-document.repository.js'
 
-type InsertValues = { sourceType: string; sourceKey: string; sourcePath: string; currentTitle?: string | null }
+type InsertValues = {
+  sourceType: string
+  sourceKey: string
+  sourcePath: string
+  unreferencedSince: Date | null
+  currentTitle?: string | null
+}
 
 const createDocumentRepository = (document: RagDocumentModel) => {
   let values: InsertValues | undefined
@@ -59,9 +65,13 @@ test('ensureSource preserves an existing title when no title is supplied', async
     sourceType: 'repository',
     sourceKey: 'repo-a',
     sourcePath: 'docs/page.md',
+    unreferencedSince: null,
   })
-  assert.equal(mock.wasIgnored(), true)
-  assert.equal(mock.update(), undefined)
+  assert.equal(mock.wasIgnored(), false)
+  assert.deepEqual(mock.update(), {
+    overwrite: ['source_path', 'unreferenced_since'],
+    conflictTarget: ['source_type', 'source_key', 'source_path'],
+  })
 })
 
 test('ensureSource updates the mutable title while keeping the source identity conflict target', async () => {
@@ -76,10 +86,11 @@ test('ensureSource updates the mutable title while keeping the source identity c
     sourceType: 'repository',
     sourceKey: 'repo-a',
     sourcePath: 'docs/page.md',
+    unreferencedSince: null,
     currentTitle: 'renamed title',
   })
   assert.deepEqual(mock.update(), {
-    overwrite: ['current_title'],
+    overwrite: ['source_path', 'current_title', 'unreferenced_since'],
     conflictTarget: ['source_type', 'source_key', 'source_path'],
   })
   assert.equal(mock.wasIgnored(), false)
@@ -92,9 +103,10 @@ test('ensureSource treats an explicit null title as a request to clear it', asyn
 
   await repository.ensureSource('repository', 'repo-a', 'docs/page.md', null)
 
+  assert.equal(mock.values()?.unreferencedSince, null)
   assert.equal(mock.values()?.currentTitle, null)
   assert.deepEqual(mock.update(), {
-    overwrite: ['current_title'],
+    overwrite: ['source_path', 'current_title', 'unreferenced_since'],
     conflictTarget: ['source_type', 'source_key', 'source_path'],
   })
 })

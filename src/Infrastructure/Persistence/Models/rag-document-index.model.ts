@@ -17,6 +17,7 @@ import { RagDocumentModel } from './rag-document.model.js'
 import { RagFailedJobModel } from './rag-failed-job.model.js'
 import { RagJobModel } from './rag-job.model.js'
 import { RagMembershipModel } from './rag-membership.model.js'
+import type { RagDocumentIndexStatus } from '../../../Domain/Knowledge/Enums/rag-document-index-status.enum.js'
 
 @Entity('document_indexes')
 @Unique('UQ_document_indexes_revision_pipeline', ['revisionId', 'pipelineHash'])
@@ -81,7 +82,7 @@ export class RagDocumentIndexModel {
   declare relationProfile: string
 
   @Column({ type: 'text' })
-  declare status: string
+  declare status: RagDocumentIndexStatus
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   declare createdAt: Date

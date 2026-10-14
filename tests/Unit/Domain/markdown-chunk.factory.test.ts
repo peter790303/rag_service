@@ -55,7 +55,7 @@ describe('MarkdownChunkFactory', () => {
     assert.deepEqual(MarkdownChunkFactory.plan(''), { chunks: [], relations: [] })
   })
 
-  it('records ordinary links as references with their raw target, anchor, and evidence', () => {
+  it('preserves Markdown and wiki link source types with their raw target, anchor, and evidence', () => {
     const source =
       '# Main\n\nSee [[Target Page#Section|label]] and [guide](../guide.md#Start).\n\n`[[inline-code]]`\n\n```md\n[[fenced-code]]\n```\n'
     const plan = MarkdownChunkFactory.plan(source)
@@ -70,12 +70,12 @@ describe('MarkdownChunkFactory', () => {
         {
           targetReference: 'Target Page',
           targetAnchor: 'Section',
-          relationType: 'references',
+          relationType: 'wiki_link',
         },
         {
           targetReference: '../guide.md',
           targetAnchor: 'Start',
-          relationType: 'references',
+          relationType: 'markdown_link',
         },
       ],
     )
