@@ -2,40 +2,43 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import test from 'node:test'
 
-import { QueryFailedError, type EntityManager } from 'typeorm'
+import { QueryFailedError } from 'typeorm'
 
-import type { ClaimedRagIndexJob } from '../../../src/Application/KnowledgeBases/DataTransferObjects/rag-index-job.dto.js'
-import { ReplaceIndexChunkUseCase } from '../../../src/Application/KnowledgeBases/UseCases/replace-index-chunk.use-case.js'
-import { RAG_DOCUMENT_INDEX_STATUS } from '../../../src/Domain/Knowledge/Enums/rag-document-index-status.enum.js'
-import { RagExecutionStageEnum } from '../../../src/Domain/Knowledge/Enums/rag-execution-stage.enum.js'
-import { InvalidRagJobLeaseException } from '../../../src/Domain/Knowledge/Exceptions/invalid-rag-job-lease.exception.js'
-import type { MarkdownPlan, PlannedRelation } from '../../../src/Domain/Knowledge/markdown-chunk.factory.js'
-import { RAG_JOB_STATUS } from '../../../src/Domain/Knowledge/rag-job.js'
-import { PersistenceRagLexicalSearchFormatter } from '../../../src/Infrastructure/Persistence/Formatters/rag-lexical-search.formatter.js'
-import { RagChunkModel } from '../../../src/Infrastructure/Persistence/Models/rag-chunk.model.js'
-import { RagDocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/rag-document-index.model.js'
-import { RagDocumentRelationModel } from '../../../src/Infrastructure/Persistence/Models/rag-document-relation.model.js'
-import { RagDocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/rag-document-revision.model.js'
-import { RagDocumentModel } from '../../../src/Infrastructure/Persistence/Models/rag-document.model.js'
-import { RagFailedJobModel } from '../../../src/Infrastructure/Persistence/Models/rag-failed-job.model.js'
-import { RagJobModel } from '../../../src/Infrastructure/Persistence/Models/rag-job.model.js'
-import { RagKnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/rag-knowledge-base.model.js'
-import { RagMembershipModel } from '../../../src/Infrastructure/Persistence/Models/rag-membership.model.js'
-import { TypeOrmRagChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-chunk.repository.js'
-import { TypeOrmRagDocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-document-index.repository.js'
-import { TypeOrmRagDocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-document-relation.repository.js'
-import { TypeOrmRagDocumentRevisionRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-document-revision.repository.js'
-import { TypeOrmRagDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-document.repository.js'
-import { TypeOrmRagFailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-failed-job.repository.js'
-import { TypeOrmRagJobClaimRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-job-claim.repository.js'
-import { TypeOrmRagJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-job.repository.js'
-import { TypeOrmRagKnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-knowledge-base.repository.js'
-import { TypeOrmRagMembershipRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag-membership.repository.js'
-import { TypeOrmRagRepository } from '../../../src/Infrastructure/Persistence/Repositories/typeorm-rag.repository.js'
-import { createTestDatabase } from '../test-database.js'
+import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
+import type { ClaimedIndexJobDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/index-job.dto.ts'
+import { IndexJobExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/index-job-execution-stage.enum.ts'
+import { InvalidIndexJobLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-index-job-lease.exception.ts'
+import { INDEX_JOB_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/index-job-lifecycle.helper.ts'
+import { PrepareChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/prepare-chunk-replacement.use-case.ts'
+import type { SavePlannedDocumentRelationsQueryObject } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
+import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
+import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
+import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
+import { Chunk } from '../../../src/Domain/Chunk/chunk.ts'
+import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
+import { MarkdownSourceAdapter } from '../../../src/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
+import { LexicalSearchQueryAdapter } from '../../../src/Infrastructure/Persistence/Adapters/lexical-search-query.adapter.ts'
+import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
+import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
+import { DocumentRelationModel } from '../../../src/Infrastructure/Persistence/Models/document-relation.model.ts'
+import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
+import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
+import { IndexJobModel } from '../../../src/Infrastructure/Persistence/Models/index-job.model.ts'
+import { KnowledgeBaseDocumentMembershipModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
+import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
+import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
+import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
+import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
+import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
+import { IndexJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/index-job.repository.ts'
+import { KnowledgeBaseDocumentMembershipRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document-membership.repository.ts'
+import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
+import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
-const lexicalFormatter = new PersistenceRagLexicalSearchFormatter()
-const replacementPlan: MarkdownPlan = {
+const lexicalFormatter = new LexicalSearchQueryAdapter()
+const replacementPlan: MarkdownChunkPlan = {
   chunks: [{ content: 'New replacement body', headingPath: ['New'], blockStart: 0, blockEnd: 2, tokenCount: 4 }],
   relations: [
     {
@@ -50,19 +53,22 @@ const replacementPlan: MarkdownPlan = {
 }
 
 /** Injects a real PostgreSQL CHECK failure after the replacement rows have been written. */
-class ConstraintFailingRelationRepository extends TypeOrmRagDocumentRelationRepository {
+class ConstraintFailingRelationRepository extends DocumentRelationRepository {
   observedReplacement = false
 
-  override async savePlannedIn(
-    manager: EntityManager,
-    documentIndexId: string,
-    relations: readonly PlannedRelation[],
-  ): Promise<void> {
+  constructor(private readonly testTransaction: PersistenceTransaction) {
+    super(testTransaction)
+  }
+
+  override async savePlanned(savePlannedDocumentRelationsQO: SavePlannedDocumentRelationsQueryObject): Promise<void> {
+    const documentIndexId = savePlannedDocumentRelationsQO.relations[0]?.sourceIndexId
+    assert.ok(documentIndexId)
+    const manager = this.testTransaction.manager
     assert.equal(manager.queryRunner?.isTransactionActive, true)
-    await super.savePlannedIn(manager, documentIndexId, relations)
-    const chunks = await manager.getRepository(RagChunkModel).findBy({ documentIndexId })
-    const relationRepository = manager.getRepository(RagDocumentRelationModel)
-    const writtenRelations = await relationRepository.findBy({ sourceIndexId: documentIndexId })
+    await super.savePlanned(savePlannedDocumentRelationsQO)
+    const chunks = await manager.getRepository(ChunkModel).findBy({ documentIndexId })
+    const documentRelationModelRepository = manager.getRepository(DocumentRelationModel)
+    const writtenRelations = await documentRelationModelRepository.findBy({ sourceIndexId: documentIndexId })
     assert.deepEqual(
       chunks.map((chunk) => chunk.content),
       ['New replacement body'],
@@ -73,8 +79,8 @@ class ConstraintFailingRelationRepository extends TypeOrmRagDocumentRelationRepo
     )
     this.observedReplacement = true
 
-    await relationRepository.save(
-      relationRepository.create({
+    await documentRelationModelRepository.save(
+      documentRelationModelRepository.create({
         sourceIndexId: documentIndexId,
         targetDocumentId: null,
         targetReference: 'Invalid.md',
@@ -92,41 +98,45 @@ test(
   'replacement guards preserve persisted rows and a relation constraint failure rolls back all replacement writes',
   { skip: !process.env.RAG_DATABASE_URL },
   async (t) => {
-    const { schema, dataSource, cleanup } = await createTestDatabase()
+    const { schema, dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
+    const persistenceTransaction = new PersistenceTransaction(dataSource)
     try {
       assert.match(schema, /^test_[a-f0-9]+$/)
       assert.ok(dataSource.options.type === 'postgres')
       assert.equal(dataSource.options.schema, schema)
-      const knowledgeBases = dataSource.getRepository(RagKnowledgeBaseModel)
-      const documents = dataSource.getRepository(RagDocumentModel)
-      const revisions = dataSource.getRepository(RagDocumentRevisionModel)
-      const indexes = dataSource.getRepository(RagDocumentIndexModel)
-      const memberships = dataSource.getRepository(RagMembershipModel)
-      const jobs = dataSource.getRepository(RagJobModel)
-      const chunks = dataSource.getRepository(RagChunkModel)
-      const relations = dataSource.getRepository(RagDocumentRelationModel)
+      const knowledgeBaseModelRepository = dataSource.getRepository(KnowledgeBaseModel)
+      const documentModelRepository = dataSource.getRepository(DocumentModel)
+      const documentRevisionModelRepository = dataSource.getRepository(DocumentRevisionModel)
+      const documentIndexModelRepository = dataSource.getRepository(DocumentIndexModel)
+      const membershipModelRepository = dataSource.getRepository(KnowledgeBaseDocumentMembershipModel)
+      const indexJobModelRepository = dataSource.getRepository(IndexJobModel)
+      const chunkModelRepository = dataSource.getRepository(ChunkModel)
+      const documentRelationModelRepository = dataSource.getRepository(DocumentRelationModel)
       const testKey = randomUUID()
-      const base = await knowledgeBases.save(
-        knowledgeBases.create({ projectId: `replacement-${testKey}`, projectName: `replacement-${testKey}` }),
+      const base = await knowledgeBaseModelRepository.save(
+        knowledgeBaseModelRepository.create({
+          projectId: `replacement-${testKey}`,
+          projectName: `replacement-${testKey}`,
+        }),
       )
-      const document = await documents.save(
-        documents.create({
+      const document = await documentModelRepository.save(
+        documentModelRepository.create({
           sourceType: 'repository',
           sourceKey: testKey,
           sourcePath: `${testKey}.md`,
           unreferencedSince: null,
         }),
       )
-      const revision = await revisions.save(
-        revisions.create({
+      const revision = await documentRevisionModelRepository.save(
+        documentRevisionModelRepository.create({
           documentId: document.id,
           contentSha256: 'a'.repeat(64),
           title: 'replacement rollback',
           content: 'Original persisted body',
         }),
       )
-      const index = await indexes.save(
-        indexes.create({
+      const index = await documentIndexModelRepository.save(
+        documentIndexModelRepository.create({
           documentId: document.id,
           revisionId: revision.id,
           pipelineHash: 'b'.repeat(64),
@@ -137,13 +147,13 @@ test(
           embeddingProfile: 'test',
           lexicalProfile: lexicalFormatter.format('original').profileVersion,
           relationProfile: 'test',
-          status: RAG_DOCUMENT_INDEX_STATUS.BUILDING,
+          status: DocumentIndexStatusEnum.BUILDING,
           readyAt: null,
           unreferencedSince: null,
         }),
       )
-      const membership = await memberships.save(
-        memberships.create({
+      const membership = await membershipModelRepository.save(
+        membershipModelRepository.create({
           knowledgeBaseId: base.id,
           documentId: document.id,
           activeDocumentIndexId: null,
@@ -155,17 +165,18 @@ test(
       const leaseToken = randomUUID()
       const leaseExpiresAt = new Date(Date.now() + 300_000)
       const verification = { claim_token: leaseToken, lease_expires_at: leaseExpiresAt.toISOString() }
-      const jobRecord = await jobs.save(
-        jobs.create({
+      const jobRecord = await indexJobModelRepository.save(
+        indexJobModelRepository.create({
           knowledgeBaseId: base.id,
           documentId: document.id,
           documentIndexId: index.id,
           generation: '1',
-          status: RAG_JOB_STATUS.RUNNING,
+          status: INDEX_JOB_STATUS.RUNNING,
           attempts: 1,
           availableAt: new Date(),
           reservedAt: new Date(),
           leaseToken,
+          leaseExpiresAt,
           idempotencyKey: null,
           retryOfFailedJobId: null,
           payload: {},
@@ -173,7 +184,7 @@ test(
           executionVerification: verification,
         }),
       )
-      const job: ClaimedRagIndexJob = {
+      const job: ClaimedIndexJobDto = {
         id: jobRecord.id,
         knowledgeBaseId: base.id,
         documentId: document.id,
@@ -183,14 +194,14 @@ test(
         leaseToken,
         leaseExpiresAt,
         executionVerification: {
-          stage: RagExecutionStageEnum.CLAIMED,
+          stage: IndexJobExecutionStageEnum.CLAIMED,
           completedUnits: 0,
           totalUnits: null,
           verifiedAt: null,
         },
       }
-      await chunks.save(
-        chunks.create({
+      await chunkModelRepository.save(
+        chunkModelRepository.create({
           documentIndexId: index.id,
           ordinal: 0,
           headingPath: ['Original'],
@@ -202,8 +213,8 @@ test(
           searchVector: lexicalFormatter.format('original persisted body').searchText,
         }),
       )
-      await relations.save(
-        relations.create({
+      await documentRelationModelRepository.save(
+        documentRelationModelRepository.create({
           sourceIndexId: index.id,
           targetDocumentId: null,
           targetReference: 'Original.md',
@@ -214,78 +225,81 @@ test(
           evidenceText: '[[Original.md]]',
         }),
       )
-      const originalChunks = await chunks.findBy({ documentIndexId: index.id })
-      const originalRelations = await relations.findBy({ sourceIndexId: index.id })
+      const originalChunks = await chunkModelRepository.findBy({ documentIndexId: index.id })
+      const originalRelations = await documentRelationModelRepository.findBy({ sourceIndexId: index.id })
       const assertOriginalRows = async () => {
-        assert.deepEqual(await chunks.findBy({ documentIndexId: index.id }), originalChunks)
-        assert.deepEqual(await relations.findBy({ sourceIndexId: index.id }), originalRelations)
-        assert.equal(await chunks.count(), 1)
-        assert.equal(await relations.count(), 1)
+        assert.deepEqual(await chunkModelRepository.findBy({ documentIndexId: index.id }), originalChunks)
+        assert.deepEqual(await documentRelationModelRepository.findBy({ sourceIndexId: index.id }), originalRelations)
+        assert.equal(await chunkModelRepository.count(), 1)
+        assert.equal(await documentRelationModelRepository.count(), 1)
       }
-      const createUseCase = (relationRepository = new TypeOrmRagDocumentRelationRepository()) =>
+      const createUseCase = (relationRepository = new DocumentRelationRepository(persistenceTransaction)) =>
         new ReplaceIndexChunkUseCase(
-          new TypeOrmRagRepository(
-            indexes,
-            new TypeOrmRagJobRepository(jobs),
-            new TypeOrmRagMembershipRepository(memberships),
-            new TypeOrmRagDocumentIndexRepository(indexes),
-            new TypeOrmRagKnowledgeBaseRepository(knowledgeBases),
-            new TypeOrmRagDocumentRepository(documents),
-            new TypeOrmRagDocumentRevisionRepository(revisions),
-            new TypeOrmRagFailedJobRepository(dataSource.getRepository(RagFailedJobModel)),
-            new TypeOrmRagChunkRepository(),
-            relationRepository,
-            new TypeOrmRagJobClaimRepository(jobs),
+          persistenceTransaction,
+          new PrepareChunkReplacementUseCase(
+            new ReserveDocumentForIndexingUseCase(new DocumentRepository(persistenceTransaction)),
+            new ReserveMembershipForIndexingUseCase(
+              new KnowledgeBaseDocumentMembershipRepository(persistenceTransaction),
+            ),
+            new IndexJobRepository(persistenceTransaction),
+            new DocumentIndexRepository(persistenceTransaction),
           ),
+          new ChunkRepository(persistenceTransaction, retrievalDataSource),
+          new ReplacePlannedDocumentRelationsUseCase(relationRepository),
         )
       const replace = (useCase: ReplaceIndexChunkUseCase, claimedJob = job) =>
-        useCase.execute(
-          claimedJob,
-          replacementPlan,
-          [Array.from({ length: 384 }, () => 0.5)],
-          [lexicalFormatter.format('new replacement body').searchText],
-          new Date(),
-        )
+        useCase.execute({
+          indexJob: claimedJob,
+          markdownChunkPlan: replacementPlan,
+          chunkEmbeddings: [Array.from({ length: 384 }, () => 0.5)],
+          lexicalSearchTexts: [lexicalFormatter.format('new replacement body').searchText],
+          now: new Date(),
+        })
 
       await t.test('wrong claim token leaves old rows intact', async () => {
         await assert.rejects(
           replace(createUseCase(), { ...job, leaseToken: randomUUID() }),
-          InvalidRagJobLeaseException,
+          InvalidIndexJobLeaseException,
         )
         await assertOriginalRows()
       })
       await t.test('expired persisted lease leaves old rows intact', async () => {
-        await jobs.update(job.id, {
-          executionVerification: { ...verification, lease_expires_at: new Date(Date.now() - 1_000).toISOString() },
+        const expiredLeaseExpiresAt = new Date(Date.now() - 1_000)
+        await indexJobModelRepository.update(job.id, {
+          leaseExpiresAt: expiredLeaseExpiresAt,
+          executionVerification: { ...verification, lease_expires_at: expiredLeaseExpiresAt.toISOString() },
         })
-        await assert.rejects(replace(createUseCase()), InvalidRagJobLeaseException)
+        await assert.rejects(replace(createUseCase()), InvalidIndexJobLeaseException)
         await assertOriginalRows()
-        await jobs.update(job.id, { executionVerification: verification })
+        await indexJobModelRepository.update(job.id, { executionVerification: verification, leaseExpiresAt })
       })
       await t.test('superseded membership generation leaves old rows intact', async () => {
-        await memberships.update(
+        await membershipModelRepository.update(
           { knowledgeBaseId: membership.knowledgeBaseId, documentId: membership.documentId },
           { requestedGeneration: '2' },
         )
-        await assert.rejects(replace(createUseCase()), InvalidRagJobLeaseException)
+        await assert.rejects(replace(createUseCase()), InvalidIndexJobLeaseException)
         await assertOriginalRows()
-        await memberships.update(
+        await membershipModelRepository.update(
           { knowledgeBaseId: membership.knowledgeBaseId, documentId: membership.documentId },
           { requestedGeneration: '1' },
         )
       })
       await t.test('READY index remains immutable with a valid claim', async () => {
         const readyAt = new Date()
-        await indexes.update(index.id, { status: RAG_DOCUMENT_INDEX_STATUS.READY, readyAt })
+        await documentIndexModelRepository.update(index.id, { status: DocumentIndexStatusEnum.READY, readyAt })
         await replace(createUseCase())
         await assertOriginalRows()
-        const readyIndex = await indexes.findOneByOrFail({ id: index.id })
-        assert.equal(readyIndex.status, RAG_DOCUMENT_INDEX_STATUS.READY)
+        const readyIndex = await documentIndexModelRepository.findOneByOrFail({ id: index.id })
+        assert.equal(readyIndex.status, DocumentIndexStatusEnum.READY)
         assert.deepEqual(readyIndex.readyAt, readyAt)
-        await indexes.update(index.id, { status: RAG_DOCUMENT_INDEX_STATUS.BUILDING, readyAt: null })
+        await documentIndexModelRepository.update(index.id, {
+          status: DocumentIndexStatusEnum.BUILDING,
+          readyAt: null,
+        })
       })
       await t.test('PostgreSQL relation CHECK failure restores old rows and removes partial new rows', async () => {
-        const relationRepository = new ConstraintFailingRelationRepository()
+        const relationRepository = new ConstraintFailingRelationRepository(persistenceTransaction)
         await assert.rejects(replace(createUseCase(relationRepository)), (error: unknown) => {
           assert.ok(error instanceof QueryFailedError)
           assert.equal(error.driverError.code, '23514')
@@ -294,9 +308,147 @@ test(
         })
         assert.equal(relationRepository.observedReplacement, true)
         await assertOriginalRows()
-        const persistedIndex = await indexes.findOneByOrFail({ id: index.id })
-        assert.equal(persistedIndex.status, RAG_DOCUMENT_INDEX_STATUS.BUILDING)
+        const persistedIndex = await documentIndexModelRepository.findOneByOrFail({ id: index.id })
+        assert.equal(persistedIndex.status, DocumentIndexStatusEnum.BUILDING)
         assert.equal(persistedIndex.readyAt, null)
+      })
+      await t.test('successful replacement persists new chunk identities and restores their source data', async () => {
+        await replace(createUseCase())
+
+        const persistedChunks = await chunkModelRepository.findBy({ documentIndexId: index.id })
+        const restoredChunks = await new ChunkRepository(
+          persistenceTransaction,
+          retrievalDataSource,
+        ).findByDocumentIndexId({ documentIndexId: index.id })
+        const [persistedChunk] = persistedChunks
+        assert.ok(persistedChunk)
+        assert.match(persistedChunk.id, /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i)
+        assert.notEqual(persistedChunk.id, originalChunks[0]?.id)
+        assert.equal(persistedChunks.length, 1)
+        const [restoredChunk] = restoredChunks
+        assert.ok(restoredChunk)
+        assert.ok(restoredChunk instanceof Chunk)
+        restoredChunk.assertBelongsToDocumentIndex(index.id)
+        assert.equal(restoredChunk.id, persistedChunk.id)
+        assert.deepEqual(restoredChunk.embedding, persistedChunk.embedding)
+        assert.equal(restoredChunk.searchVector, persistedChunk.searchVector)
+        assert.deepEqual(restoredChunk.createdAt, persistedChunk.createdAt)
+        assert.deepEqual(
+          restoredChunks.map(
+            ({ documentIndexId, ordinal, content, headingPath, blockStart, blockEnd, tokenCount }) => ({
+              documentIndexId,
+              ordinal,
+              content,
+              headingPath,
+              blockStart,
+              blockEnd,
+              tokenCount,
+            }),
+          ),
+          [{ documentIndexId: index.id, ordinal: 0, ...replacementPlan.chunks[0] }],
+        )
+        assert.deepEqual(
+          {
+            id: restoredChunk.id,
+            documentIndexId: restoredChunk.documentIndexId,
+            ordinal: restoredChunk.ordinal,
+            headingPath: restoredChunk.headingPath,
+            content: restoredChunk.content,
+            blockStart: restoredChunk.blockStart,
+            blockEnd: restoredChunk.blockEnd,
+            tokenCount: restoredChunk.tokenCount,
+            embedding: restoredChunk.embedding,
+            searchVector: restoredChunk.searchVector,
+            createdAt: restoredChunk.createdAt,
+          },
+          {
+            id: persistedChunk.id,
+            documentIndexId: persistedChunk.documentIndexId,
+            ordinal: persistedChunk.ordinal,
+            headingPath: persistedChunk.headingPath,
+            content: persistedChunk.content,
+            blockStart: persistedChunk.blockStart,
+            blockEnd: persistedChunk.blockEnd,
+            tokenCount: persistedChunk.tokenCount,
+            embedding: persistedChunk.embedding,
+            searchVector: persistedChunk.searchVector,
+            createdAt: persistedChunk.createdAt,
+          },
+        )
+        assert.deepEqual(
+          (await documentRelationModelRepository.findBy({ sourceIndexId: index.id })).map((relation) => ({
+            sourceIndexId: relation.sourceIndexId,
+            targetReference: relation.targetReference,
+            targetAnchor: relation.targetAnchor,
+          })),
+          [{ sourceIndexId: index.id, targetReference: 'New.md', targetAnchor: null }],
+        )
+        const persistedIndex = await documentIndexModelRepository.findOneByOrFail({ id: index.id })
+        assert.equal(persistedIndex.status, DocumentIndexStatusEnum.BUILDING)
+        assert.equal(persistedIndex.readyAt, null)
+      })
+      await t.test('skipped heading levels round-trip through replacement and ordered full-entity reads', async () => {
+        const source = '## Claim concurrency\n#### Deep topic\n### Adjacent topic\n## Peer topic'
+        const { blocks } = MarkdownSourceAdapter.scan(source)
+        const markdownChunkPlan = createMarkdownChunkPlan(
+          source,
+          blocks.map((block) => block.id),
+        )
+        const expectedHeadingPaths = [
+          ['Claim concurrency'],
+          ['Claim concurrency', 'Deep topic'],
+          ['Claim concurrency', 'Adjacent topic'],
+          ['Peer topic'],
+        ]
+        const now = new Date()
+
+        await createUseCase().execute({
+          indexJob: job,
+          markdownChunkPlan,
+          chunkEmbeddings: markdownChunkPlan.chunks.map(() => Array.from({ length: 384 }, () => 0.5)),
+          lexicalSearchTexts: markdownChunkPlan.chunks.map(
+            (chunk) => lexicalFormatter.format(chunk.content).searchText,
+          ),
+          now,
+        })
+
+        const persistedChunks = await chunkModelRepository.find({
+          where: { documentIndexId: index.id },
+          order: { ordinal: 'ASC' },
+        })
+        const restoredChunks = await new ChunkRepository(
+          persistenceTransaction,
+          retrievalDataSource,
+        ).findByDocumentIndexIdsOrderByDocumentIndexIdAscAndOrdinalAsc({ documentIndexIds: [index.id] })
+
+        assert.deepEqual(
+          persistedChunks.map((chunk) => chunk.headingPath),
+          expectedHeadingPaths,
+        )
+        assert.deepEqual(
+          restoredChunks.map((chunk) => chunk.headingPath),
+          expectedHeadingPaths,
+        )
+        assert.equal(restoredChunks.map((chunk) => chunk.content).join(''), source)
+        assert.deepEqual(
+          restoredChunks.map((chunk) => ({
+            id: chunk.id,
+            documentIndexId: chunk.documentIndexId,
+            ordinal: chunk.ordinal,
+            headingPath: chunk.headingPath,
+            content: chunk.content,
+            blockStart: chunk.blockStart,
+            blockEnd: chunk.blockEnd,
+            tokenCount: chunk.tokenCount,
+            embedding: chunk.embedding,
+            searchVector: chunk.searchVector,
+            createdAt: chunk.createdAt,
+          })),
+          persistedChunks.map((chunk) => ({ ...chunk })),
+        )
+        assert.ok(
+          restoredChunks.every((chunk) => chunk instanceof Chunk && chunk.createdAt.getTime() === now.getTime()),
+        )
       })
     } finally {
       await cleanup()
