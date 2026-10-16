@@ -11,7 +11,6 @@ import {
 import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
 import type { ReplaceIndexChunkInputDto } from '../../../src/Application/Chunks/DataTransferObjects/replace-index-chunk-input.dto.ts'
 import { ChunkPlanningUnavailableException } from '../../../src/Application/Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
-import { InvalidChunkReplacementTimestampException } from '../../../src/Application/Chunks/Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
 import type { SaveChunksQueryObject } from '../../../src/Application/Chunks/QueryObjects/save-chunks.query-object.ts'
 import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
 import type { DocumentIndexExecutionLeaseDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-lease.dto.ts'
@@ -25,7 +24,6 @@ import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
 import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
-import { ChunkDocumentIndexRequiredException } from '../../../src/Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
 import { InvalidChunkBlockStartException } from '../../../src/Domain/Chunk/Exceptions/invalid-chunk-block-start.exception.ts'
 import { InvalidChunkTokenCountException } from '../../../src/Domain/Chunk/Exceptions/invalid-chunk-token-count.exception.ts'
 import type { DocumentIndex } from '../../../src/Domain/DocumentIndex/document-index.ts'
@@ -461,19 +459,6 @@ test('invalid numeric replacement payloads fail before opening a transaction', a
     )
     assert.deepEqual(chunkReplacementScenario.events, [])
   })
-  await t.test('invalid replacement timestamp', async () => {
-    const chunkReplacementScenario = createChunkReplacementScenario()
-    await assert.rejects(
-      chunkReplacementScenario.useCase.execute({
-        job: claimedJobFixture,
-        markdownChunkPlan: createChunkReplacementPlanFixture(),
-        chunkEmbeddings: [[1]],
-        now: new Date(NaN),
-      }),
-      InvalidChunkReplacementTimestampException,
-    )
-    assert.deepEqual(chunkReplacementScenario.events, [])
-  })
 })
 
 test('missing or sparse replacement inputs fail before locks or destructive writes', async (context) => {
@@ -484,17 +469,6 @@ test('missing or sparse replacement inputs fail before locks or destructive writ
     now: new Date(),
   }
   const scenarios = [
-    { name: 'missing input', input: undefined, exception: ChunkDocumentIndexRequiredException },
-    {
-      name: 'missing index with empty plan',
-      input: {
-        ...validInput,
-        job: { ...claimedJobFixture, documentIndexId: undefined },
-        markdownChunkPlan: { chunks: [], relations: [] },
-        chunkEmbeddings: [],
-      },
-      exception: ChunkDocumentIndexRequiredException,
-    },
     {
       name: 'missing plan',
       input: { ...validInput, markdownChunkPlan: undefined },

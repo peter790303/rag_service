@@ -3,7 +3,6 @@ import { KnowledgeEmbeddingUnavailableException } from '../../KnowledgeBases/Exc
 import type { MarkdownChunkPlan } from '../DataTransferObjects/markdown-chunk-plan.dto.ts'
 import type { PlannedMarkdownChunk } from '../DataTransferObjects/planned-markdown-chunk.dto.ts'
 import { ChunkPlanningUnavailableException } from '../Exceptions/chunk-planning-unavailable.exception.ts'
-import { InvalidChunkReplacementTimestampException } from '../Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
 
 const plannedRelationTypes = new Set(['markdown_link', 'wiki_link', 'requires', 'applies_to', 'overrides'])
 
@@ -66,9 +65,5 @@ export class ReplacementChunkGuard {
       chunkEmbedding.length > 0 &&
       Array.from(chunkEmbedding).every((embeddingComponent) => Number.isFinite(embeddingComponent))
     )
-  }
-
-  static assertValidDate(now: Date): void {
-    if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new InvalidChunkReplacementTimestampException()
   }
 }

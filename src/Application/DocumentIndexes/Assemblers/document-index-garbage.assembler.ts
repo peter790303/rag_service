@@ -1,6 +1,8 @@
 import { ReadDocumentIndexAssembler } from './read-document-index.assembler.ts'
+import { ChunkDocumentIndexRequiredException } from '../../../Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
 import type { IndexChunkGarbageDto } from '../../Chunks/DataTransferObjects/index-chunk-garbage.dto.ts'
+import { InvalidIndexChunkGarbageInputException } from '../../Chunks/Exceptions/invalid-index-chunk-garbage-input.exception.ts'
 import type { CollectDocumentRelationGarbageDto } from '../../DocumentRelations/DataTransferObjects/document-relation-garbage.dto.ts'
 import type { DocumentGarbageCollectionResultDto } from '../../Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
 import type { DocumentGarbageCollectionScopeDto } from '../../Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
@@ -79,6 +81,33 @@ export class DocumentIndexGarbageAssembler {
     documentIndexRecordDTO: DocumentIndexRecordDto,
     documentGarbageCollectionScopeDTO: DocumentGarbageCollectionScopeDto,
   ): IndexChunkGarbageDto {
+    if (typeof documentIndexRecordDTO?.id !== 'string' || !documentIndexRecordDTO.id.trim())
+      throw new ChunkDocumentIndexRequiredException()
+
+    if (typeof documentIndexRecordDTO.documentId !== 'string' || !documentIndexRecordDTO.documentId.trim())
+      throw new InvalidIndexChunkGarbageInputException('documentId')
+
+    if (
+      !Array.isArray(documentGarbageCollectionScopeDTO?.lockedDocumentIds) ||
+      !Array.from(documentGarbageCollectionScopeDTO.lockedDocumentIds).every(
+        (documentId) => typeof documentId === 'string' && documentId.trim().length > 0,
+      )
+    )
+      throw new InvalidIndexChunkGarbageInputException('lockedDocumentIds')
+
+    if (
+      !(documentGarbageCollectionScopeDTO.retentionCutoff instanceof Date) ||
+      !Number.isFinite(documentGarbageCollectionScopeDTO.retentionCutoff.getTime())
+    )
+      throw new InvalidIndexChunkGarbageInputException('retentionCutoff')
+
+    if (
+      documentIndexRecordDTO.unreferencedSince !== null &&
+      (!(documentIndexRecordDTO.unreferencedSince instanceof Date) ||
+        !Number.isFinite(documentIndexRecordDTO.unreferencedSince.getTime()))
+    )
+      throw new InvalidIndexChunkGarbageInputException('unreferencedSince')
+
     return {
       documentIndexId: documentIndexRecordDTO.id,
       documentId: documentIndexRecordDTO.documentId,

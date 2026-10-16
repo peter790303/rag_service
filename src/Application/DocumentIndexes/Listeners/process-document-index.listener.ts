@@ -9,6 +9,7 @@ import { EmbeddingProvider } from '../../KnowledgeBases/Contracts/embedding-prov
 import type { PersistenceTransaction } from '../../KnowledgeBases/Contracts/persistence-transaction.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
 import type { ReserveMembershipForIndexingUseCaseContract } from '../../Memberships/Contracts/reserve-membership-for-indexing.use-case.contract.ts'
+import { ProcessDocumentIndexAssembler } from '../Assemblers/process-document-index.assembler.ts'
 import type { DocumentIndexExecutionQueue } from '../Contracts/document-index-execution.queue.ts'
 import type { DocumentIndexRepository } from '../Contracts/document-index.repository.ts'
 import type { DocumentIndexingDeliveryDto } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
@@ -100,12 +101,9 @@ export class ProcessDocumentIndexListener {
       }
       await this.heartbeat(job, persistingProgress)
       await this.withLeaseRenewal(job, persistingProgress, renewalIntervalMs, () =>
-        this.replaceIndexChunk.execute({
-          job: job,
-          markdownChunkPlan: plan,
-          chunkEmbeddings: vectors,
-          now: new Date(),
-        }),
+        this.replaceIndexChunk.execute(
+          ProcessDocumentIndexAssembler.toReplaceIndexChunkInputDTO(job, plan, vectors, new Date()),
+        ),
       )
       await this.documentIndexed.handle(new DocumentIndexedEvent({ jobDelivery: job, completedAt: new Date() }))
     } catch (error) {

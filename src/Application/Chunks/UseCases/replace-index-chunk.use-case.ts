@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
 import { Chunk } from '../../../Domain/Chunk/chunk.ts'
-import { ChunkDocumentIndexRequiredException } from '../../../Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
 import type { DocumentIndexChunkReplacementRequestedListenerContract } from '../../DocumentIndexes/Contracts/document-index-chunk-replacement-requested.listener.contract.ts'
 import { DocumentIndexChunkReplacementRequestedEvent } from '../../DocumentIndexes/Events/document-index-chunk-replacement-requested.event.ts'
 import type { ReplacePlannedDocumentRelationsUseCaseContract } from '../../DocumentRelations/Contracts/replace-planned-document-relations.use-case.contract.ts'
@@ -23,17 +22,10 @@ export class ReplaceIndexChunkUseCase implements ReplaceIndexChunkUseCaseContrac
   ) {}
 
   async execute(replaceIndexChunkInputDTO: ReplaceIndexChunkInputDto): Promise<void> {
-    if (
-      typeof replaceIndexChunkInputDTO?.job?.documentIndexId !== 'string' ||
-      !replaceIndexChunkInputDTO.job.documentIndexId.trim()
-    )
-      throw new ChunkDocumentIndexRequiredException()
-
     const { job, markdownChunkPlan, chunkEmbeddings, now } = replaceIndexChunkInputDTO
 
     ReplacementChunkGuard.assertValidPlan(markdownChunkPlan)
     ReplacementChunkGuard.assertAlignedOutputs(markdownChunkPlan, chunkEmbeddings)
-    ReplacementChunkGuard.assertValidDate(now)
 
     // Snapshot validated provider output before locks can yield to another task.
     const replacementChunks = markdownChunkPlan.chunks.map((plannedChunk, ordinal) => {
