@@ -65,7 +65,7 @@ test('neighbor queries omit negative ordinals, deduplicate overlaps, group index
   assert.equal(retrievedChunks[0], neighboringChunk)
   assert.ok(retrievedChunks[0] instanceof Chunk)
   assert.equal(retrievedChunks[0].searchVector, 'context')
-  assert.deepEqual(retrievedChunks[0].createdAt, new Date(0))
+  assert.deepEqual(retrievedChunks[0].createdAt.nativeDate, new Date(0))
 })
 
 test('neighbor ordinal deduplication preserves the same ordinal in distinct indexes', async () => {

@@ -280,7 +280,7 @@ test(
             semantic.map((semanticDistance) => semanticDistance.chunkId),
           )
           assert.ok(semanticResult.every((chunk) => chunk instanceof Chunk))
-          assert.ok(semanticResult.every((chunk) => Number.isFinite(chunk.createdAt.getTime())))
+          assert.ok(semanticResult.every((chunk) => Number.isFinite(chunk.createdAt.epochMilliseconds)))
           const semanticChunkAttributes = semanticResult.map((chunk) => ({
             id: chunk.id,
             documentIndexId: chunk.documentIndexId,
@@ -290,7 +290,7 @@ test(
             tokenCount: chunk.tokenCount,
             embedding: chunk.embedding,
             searchVector: chunk.searchVector,
-            createdAt: chunk.createdAt,
+            createdAt: chunk.createdAt.nativeDate,
             blockStart: chunk.blockStart,
             blockEnd: chunk.blockEnd,
           }))
@@ -510,7 +510,7 @@ test(
             tokenCount: chunk.tokenCount,
             embedding: chunk.embedding,
             searchVector: chunk.searchVector,
-            createdAt: chunk.createdAt,
+            createdAt: chunk.createdAt.nativeDate,
             blockStart: chunk.blockStart,
             blockEnd: chunk.blockEnd,
           }))

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
+import { DateTime } from '../../../src/Domain/Document/ValueObjects/date-time.ts'
 
 const resolveRetrievalDocumentRelationTargets = RetrieveKnowledgeBaseContentUseCase.prototype[
   'resolveRelationTargets'
@@ -19,7 +20,7 @@ const resolveDocumentRelationTarget = (
   const indexes = documents.map((document) => ({
     id: `${document.id}-index`,
     documentId: document.id,
-    readyAt: new Date('2026-01-01T00:00:00.000Z'),
+    readyAt: new DateTime(new Date('2026-01-01T00:00:00.000Z')),
   }))
   const projectMembers = documents.map((document) => ({
     documentId: document.id,

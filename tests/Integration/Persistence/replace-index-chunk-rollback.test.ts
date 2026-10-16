@@ -331,7 +331,7 @@ test(
         assert.equal(restoredChunk.id, persistedChunk.id)
         assert.deepEqual(restoredChunk.embedding, persistedChunk.embedding)
         assert.equal(restoredChunk.searchVector, persistedChunk.searchVector)
-        assert.deepEqual(restoredChunk.createdAt, persistedChunk.createdAt)
+        assert.deepEqual(restoredChunk.createdAt.nativeDate, persistedChunk.createdAt)
         assert.deepEqual(
           restoredChunks.map(
             ({ documentIndexId, ordinal, content, headingPath, blockStart, blockEnd, tokenCount }) => ({
@@ -358,7 +358,7 @@ test(
             tokenCount: restoredChunk.tokenCount,
             embedding: restoredChunk.embedding,
             searchVector: restoredChunk.searchVector,
-            createdAt: restoredChunk.createdAt,
+            createdAt: restoredChunk.createdAt.nativeDate,
           },
           {
             id: persistedChunk.id,
@@ -438,12 +438,14 @@ test(
             tokenCount: chunk.tokenCount,
             embedding: chunk.embedding,
             searchVector: chunk.searchVector,
-            createdAt: chunk.createdAt,
+            createdAt: chunk.createdAt.nativeDate,
           })),
           persistedChunks.map((chunk) => ({ ...chunk })),
         )
         assert.ok(
-          restoredChunks.every((chunk) => chunk instanceof Chunk && chunk.createdAt.getTime() === now.getTime()),
+          restoredChunks.every(
+            (chunk) => chunk instanceof Chunk && chunk.createdAt.epochMilliseconds === now.getTime(),
+          ),
         )
       })
     } finally {

@@ -1,3 +1,4 @@
+import type { DateTime } from '../../../Domain/Document/ValueObjects/date-time.ts'
 import { KnowledgeIndexPendingException } from '../../../Domain/DocumentIndex/Exceptions/knowledge-index-pending.exception.ts'
 import { DocumentRelationResolutionEnum } from '../../../Domain/DocumentRelation/Enums/document-relation-resolution.enum.ts'
 import { DocumentRelationTypeEnum } from '../../../Domain/DocumentRelation/Enums/document-relation-type.enum.ts'
@@ -243,7 +244,7 @@ export class RetrieveKnowledgeBaseContentUseCase {
       chunkingProfile: string
       embeddingProfile: string
       relationProfile: string
-      readyAt: Date | null
+      readyAt: DateTime | null
     },
     TRevision extends { id: string; content: string },
   >(
@@ -484,7 +485,7 @@ export class RetrieveKnowledgeBaseContentUseCase {
     },
     TMembership extends { documentId: string; activeDocumentIndexId: string | null },
     TDocument extends { id: string; sourcePath: string },
-    TIndex extends { id: string; documentId: string; readyAt: Date | null },
+    TIndex extends { id: string; documentId: string; readyAt: DateTime | null },
     TChunk extends { documentIndexId: string; headingPath: string[] },
   >(relationTargetFacts: {
     relations: TRelation[]
@@ -892,11 +893,11 @@ export class RetrieveKnowledgeBaseContentUseCase {
     })
   }
 
-  private requireReadyIndex<TIndex extends { readyAt: Date | null }>(
+  private requireReadyIndex<TIndex extends { readyAt: DateTime | null }>(
     index: TIndex | undefined,
     indexId: string,
   ): TIndex {
-    if (!index || !(index.readyAt instanceof Date) || !Number.isFinite(index.readyAt.getTime())) {
+    if (!index?.readyAt) {
       throw new RetrievalReadyIndexMissingException({ indexId })
     }
 

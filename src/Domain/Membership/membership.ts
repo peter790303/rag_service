@@ -1,6 +1,8 @@
 import { InvalidMembershipIndexGenerationException } from './Exceptions/invalid-membership-index-generation.exception.ts'
 import { InvalidMembershipStateException } from './Exceptions/invalid-membership-state.exception.ts'
 import { MembershipReservationEvidenceUnavailableException } from './Exceptions/membership-reservation-evidence-unavailable.exception.ts'
+import { InvalidDateTimeException } from '../Document/Exceptions/invalid-date-time.exception.ts'
+import { DateTime } from '../Document/ValueObjects/date-time.ts'
 
 export interface MembershipState {
   readonly knowledgeBaseId: string
@@ -9,7 +11,7 @@ export interface MembershipState {
   readonly activeDocumentIndexId: string | null
   readonly isEntry: boolean
   readonly alwaysIncludeFullContent: boolean
-  readonly updatedAt: Date
+  readonly updatedAt: Date | DateTime
 }
 
 export class Membership {
@@ -25,7 +27,7 @@ export class Membership {
 
   readonly alwaysIncludeFullContent: boolean
 
-  private readonly updatedAtValue: Date
+  private readonly updatedAtValue: DateTime
 
   private reservationLockAcquired: boolean | undefined
 
@@ -53,8 +55,7 @@ export class Membership {
     if (typeof membershipState.alwaysIncludeFullContent !== 'boolean')
       throw new InvalidMembershipStateException('alwaysIncludeFullContent')
 
-    if (!(membershipState.updatedAt instanceof Date) || !Number.isFinite(membershipState.updatedAt.getTime()))
-      throw new InvalidMembershipStateException('updatedAt')
+    this.updatedAtValue = this.toDateTime(membershipState.updatedAt)
 
     this.knowledgeBaseId = membershipState.knowledgeBaseId
     this.documentId = membershipState.documentId
@@ -62,11 +63,10 @@ export class Membership {
     this.activeDocumentIndexId = membershipState.activeDocumentIndexId
     this.isEntry = membershipState.isEntry
     this.alwaysIncludeFullContent = membershipState.alwaysIncludeFullContent
-    this.updatedAtValue = new Date(membershipState.updatedAt)
   }
 
-  get updatedAt(): Date {
-    return new Date(this.updatedAtValue)
+  get updatedAt(): DateTime {
+    return this.updatedAtValue
   }
 
   /** Evidence belongs only to this reservation attempt; it does not promise future row existence. */
@@ -80,7 +80,10 @@ export class Membership {
     this.reservationLockAcquired = acquired
   }
 
-  configure(options: { isEntry?: boolean; alwaysIncludeFullContent?: boolean }, updatedAt: Date): Membership {
+  configure(
+    options: { isEntry?: boolean; alwaysIncludeFullContent?: boolean },
+    updatedAt: Date | DateTime,
+  ): Membership {
     return this.withState({
       isEntry: options.isEntry === undefined ? this.isEntry : options.isEntry,
       alwaysIncludeFullContent:
@@ -93,7 +96,7 @@ export class Membership {
 
   requestIndex(
     indexRequest: { generation: string; activeDocumentIndexId: string | null },
-    updatedAt = this.updatedAt,
+    updatedAt: Date | DateTime = this.updatedAt,
   ): Membership {
     if (typeof indexRequest.generation !== 'string' || !/^(0|[1-9]\d*)$/.test(indexRequest.generation))
       throw new InvalidMembershipStateException('requestedGeneration')
@@ -114,11 +117,11 @@ export class Membership {
     })
   }
 
-  activateIndex(documentIndexId: string, updatedAt: Date): Membership {
+  activateIndex(documentIndexId: string, updatedAt: Date | DateTime): Membership {
     return this.withState({ activeDocumentIndexId: documentIndexId, updatedAt })
   }
 
-  detachIndex(updatedAt: Date): Membership {
+  detachIndex(updatedAt: Date | DateTime): Membership {
     return this.withState({ activeDocumentIndexId: null, updatedAt })
   }
 
@@ -133,5 +136,15 @@ export class Membership {
       updatedAt: this.updatedAt,
       ...changes,
     })
+  }
+
+  private toDateTime(value: Date | DateTime): DateTime {
+    try {
+      return new DateTime(value)
+    } catch (error) {
+      if (!(error instanceof InvalidDateTimeException)) throw error
+
+      throw new InvalidMembershipStateException('updatedAt')
+    }
   }
 }

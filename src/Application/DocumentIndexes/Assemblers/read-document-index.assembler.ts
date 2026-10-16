@@ -9,8 +9,8 @@ export class ReadDocumentIndexAssembler {
     return {
       id: documentIndex.id,
       status: documentIndex.status,
-      readyAt: documentIndex.readyAt,
-      unreferencedSince: documentIndex.unreferencedSince,
+      readyAt: documentIndex.readyAt?.nativeDate ?? null,
+      unreferencedSince: documentIndex.unreferencedSince?.nativeDate ?? null,
       documentId: restoredDocumentIndexDTO.documentId,
       revisionId: restoredDocumentIndexDTO.revisionId,
       pipelineHash: restoredDocumentIndexDTO.pipelineHash,
@@ -21,7 +21,7 @@ export class ReadDocumentIndexAssembler {
       embeddingProfile: restoredDocumentIndexDTO.embeddingProfile,
       lexicalProfile: restoredDocumentIndexDTO.lexicalProfile,
       relationProfile: restoredDocumentIndexDTO.relationProfile,
-      createdAt: new Date(restoredDocumentIndexDTO.createdAt),
+      createdAt: restoredDocumentIndexDTO.createdAt.nativeDate,
     }
   }
 }

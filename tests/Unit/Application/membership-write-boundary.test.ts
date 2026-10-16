@@ -76,7 +76,7 @@ test('omitted membership configuration is a use-case no-op while false is a comp
       activeDocumentIndexId: null,
       isEntry: false,
       alwaysIncludeFullContent: true,
-      updatedAt: updated.updatedAt,
+      updatedAt: updated.updatedAt.nativeDate,
     },
   ])
 })

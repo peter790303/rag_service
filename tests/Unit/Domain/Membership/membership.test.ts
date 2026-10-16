@@ -26,7 +26,7 @@ test('retaining an index request generation preserves membership identity and se
   assert.equal(requested.activeDocumentIndexId, 'index-2')
   assert.equal(requested.isEntry, true)
   assert.equal(requested.alwaysIncludeFullContent, false)
-  assert.deepEqual(requested.updatedAt, membership.updatedAt)
+  assert.equal(requested.updatedAt.equals(membership.updatedAt), true)
   assert.equal(membership.activeDocumentIndexId, 'index-1')
 })
 
@@ -83,7 +83,7 @@ test('required membership state cannot be erased by a missing field', () => {
   assert.equal(membership.requestedGeneration, '0')
   assert.equal(membership.activeDocumentIndexId, null)
   assert.equal(membership.isEntry, false)
-  assert.equal(membership.updatedAt.getTime(), 0)
+  assert.equal(membership.updatedAt.epochMilliseconds, 0)
 })
 
 test('membership configuration preserves omitted flags, applies false, and rejects null', () => {

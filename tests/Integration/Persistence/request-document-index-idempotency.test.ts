@@ -776,7 +776,7 @@ test(
             revisionId: gcOrphanRevisionId,
           })
         assert.ok(lockedOrphanRevision)
-        assert.ok(lockedOrphanRevision.createdAt.getTime() <= futureCutoff.getTime())
+        assert.ok(lockedOrphanRevision.createdAt.epochMilliseconds <= futureCutoff.getTime())
         assert.deepEqual(
           await documentIndexPersistenceFixture.documentIndexRepository.findByRevisionId({
             revisionId: gcOrphanRevisionId,
@@ -822,7 +822,7 @@ test(
         })
         assert.ok(lockedOrphanDocument)
         assert.ok(lockedOrphanDocument.unreferencedSince)
-        assert.ok(lockedOrphanDocument.unreferencedSince.getTime() <= futureCutoff.getTime())
+        assert.ok(lockedOrphanDocument.unreferencedSince.epochMilliseconds <= futureCutoff.getTime())
         assert.deepEqual(
           {
             membership: await documentIndexPersistenceFixture.membershipRepository.findByDocumentId({

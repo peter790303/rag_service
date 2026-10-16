@@ -40,9 +40,9 @@ test('referencing an existing index clears retention without changing its readin
   assert.equal(referencedIndex.documentId, indexIdentity.documentId)
   assert.equal(referencedIndex.revisionId, indexIdentity.revisionId)
   assert.equal(referencedIndex.pipelineHash, indexIdentity.pipelineHash)
-  assert.deepEqual(referencedIndex.readyAt, readyAt)
+  assert.deepEqual(referencedIndex.readyAt?.nativeDate, readyAt)
   assert.equal(referencedIndex.unreferencedSince, null)
-  assert.deepEqual(unreferencedIndex.unreferencedSince, unreferencedSince)
+  assert.deepEqual(unreferencedIndex.unreferencedSince?.nativeDate, unreferencedSince)
   assert.notEqual(referencedIndex, unreferencedIndex)
 })
 
@@ -60,13 +60,13 @@ test('readiness and retention transitions preserve existing status permissions a
   const readyIndex = retainedIndex.markReady(transitionAt)
   transitionAt.setUTCFullYear(2000)
   const exposedReadyAt = readyIndex.readyAt
-  exposedReadyAt?.setUTCFullYear(2001)
+  exposedReadyAt?.nativeDate.setUTCFullYear(2001)
 
   assert.equal(retainedIndex.status, DocumentIndexStatusEnum.FAILED)
   assert.equal(retainedIndex.readyAt, null)
-  assert.equal(retainedIndex.unreferencedSince?.toISOString(), '2026-10-14T00:00:00.000Z')
+  assert.equal(retainedIndex.unreferencedSince?.isoString, '2026-10-14T00:00:00.000Z')
   assert.equal(readyIndex.status, DocumentIndexStatusEnum.READY)
-  assert.equal(readyIndex.readyAt?.toISOString(), '2026-10-14T00:00:00.000Z')
+  assert.equal(readyIndex.readyAt?.isoString, '2026-10-14T00:00:00.000Z')
   assert.equal(readyIndex.unreferencedSince, null)
   assert.equal(failedIndex.unreferencedSince, null)
 })

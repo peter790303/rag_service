@@ -87,9 +87,13 @@ export class CollectDocumentIndexGarbageUseCase implements CollectDocumentIndexG
 
     if (restoredDocumentIndexDTO === null) return 0
 
-    const index = ReadDocumentIndexAssembler.toDocumentIndexRecordDTO(restoredDocumentIndexDTO)
+    if (
+      !restoredDocumentIndexDTO.unreferencedSince ||
+      restoredDocumentIndexDTO.unreferencedSince.epochMilliseconds > scope.retentionCutoff.getTime()
+    )
+      return 0
 
-    if (!index.unreferencedSince || index.unreferencedSince.getTime() > scope.retentionCutoff.getTime()) return 0
+    const index = ReadDocumentIndexAssembler.toDocumentIndexRecordDTO(restoredDocumentIndexDTO)
 
     if (index.id !== candidate.id || index.documentId !== candidate.documentId) return 0
 

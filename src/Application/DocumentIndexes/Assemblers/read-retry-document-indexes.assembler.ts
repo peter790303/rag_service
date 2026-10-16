@@ -99,7 +99,7 @@ export class ReadRetryDocumentIndexesAssembler {
       documentRevisionId: restoredDocumentIndexDTO.revisionId,
       pipelineHash: restoredDocumentIndexDTO.pipelineHash,
       status: restoredDocumentIndexDTO.status,
-      readyAt: restoredDocumentIndexDTO.readyAt,
+      readyAt: restoredDocumentIndexDTO.readyAt?.nativeDate ?? null,
     }
   }
 

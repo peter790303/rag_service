@@ -2,8 +2,8 @@ import type { DocumentIndexExecutionRecordDto } from '../../../src/Application/D
 import type { DocumentIndexRecordDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-record.dto.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
 import type { DocumentRecordDto } from '../../../src/Application/Documents/DataTransferObjects/document-record.dto.ts'
-import { Document } from '../../../src/Domain/Document/document.ts'
-import { DocumentIndex } from '../../../src/Domain/DocumentIndex/document-index.ts'
+import { Document, type DocumentState } from '../../../src/Domain/Document/document.ts'
+import { DocumentIndex, type DocumentIndexState } from '../../../src/Domain/DocumentIndex/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { Membership, type MembershipState } from '../../../src/Domain/Membership/membership.ts'
 
@@ -33,8 +33,8 @@ export const createMembershipRecordFixture = (overrides: Partial<MembershipState
   ...overrides,
 })
 
-export const createDocumentFixture = (documentOverrides: Partial<DocumentRecordDto> = {}): Document =>
-  new Document(createDocumentRecordFixture(documentOverrides))
+export const createDocumentFixture = (documentOverrides: Partial<DocumentState> = {}): Document =>
+  new Document({ ...createDocumentRecordFixture(), ...documentOverrides })
 
 export const createRestoredMembershipFixture = (membershipOverrides: Partial<MembershipState> = {}): Membership =>
   new Membership(createMembershipRecordFixture(membershipOverrides))
@@ -61,8 +61,8 @@ export const createDocumentIndexRecordFixture = (
 })
 
 export const createRestoredDocumentIndexFixture = (
-  documentIndexOverrides: Partial<DocumentIndexRecordDto> = {},
-): DocumentIndex => new DocumentIndex(createDocumentIndexRecordFixture(documentIndexOverrides))
+  documentIndexOverrides: Partial<DocumentIndexState> = {},
+): DocumentIndex => new DocumentIndex({ ...createDocumentIndexRecordFixture(), ...documentIndexOverrides })
 
 export const createJobRecordFixture = (
   overrides: Partial<DocumentIndexExecutionRecordDto> = {},

@@ -9,8 +9,8 @@ export class IndexingDocumentRevisionAssembler {
       contentSha256: revision.contentSha256,
       title: revision.title,
       content: revision.content,
-      capturedAt: revision.capturedAt,
-      createdAt: revision.createdAt,
+      capturedAt: revision.capturedAt.nativeDate,
+      createdAt: revision.createdAt.nativeDate,
     }
   }
 }

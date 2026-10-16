@@ -51,7 +51,7 @@ const assertChunks = (chunks: Chunk[], persistedChunkModels: ChunkModel[]): void
         tokenCount: chunk.tokenCount,
         embedding: chunk.embedding,
         searchVector: chunk.searchVector,
-        createdAt: chunk.createdAt,
+        createdAt: chunk.createdAt.nativeDate,
       },
       { ...persistedChunkModel },
     )

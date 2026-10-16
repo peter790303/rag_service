@@ -25,6 +25,19 @@
 
 475 項測試與 38 項 integration 的執行僅早於最後一項會被擦除的 TypeScript 回傳型別註記，執行期程式未變。完整記錄位於 `/private/tmp/rag-adapter-boundary-20261016/final-validation.md`。本次提交前已核對全部 `src`／`tests` 與審查凍結快照一致。
 
+## 共用值與日期物件收斂（2026-10-16）
+
+本項以先前 DTO 轉換修正的工作目錄快照為基準，與上方已提交的 Adapter／Exception 修正分開記錄；不代表全專案對齊已完成。
+
+- 日期採單一 `DateTime` 值物件，歸 `Domain/Document/ValueObjects`。Document、DocumentRevision、DocumentIndex、Chunk、Membership 的時間點欄位共用有效性、不可變性、判等與明確表示；DTO／QO／ORM／HTTP 的欄位選擇及 payload 轉換仍留在各自邊界。
+- 來源行號範圍採 `SourceLineRange`，歸 DocumentRevision；Chunk 與 DocumentRelation 單向依賴此值。座標為 0-based、結尾不包含，允許空範圍；Entity 保留既有對外數值 getter 與精準例外分類。
+- 向量暫不合成單一值物件：Chunk 持久化值目前允許空陣列，query 與完成替換的向量要求非空，provider 回應還須符合設定維度。各自責任維持於 Chunk、KnowledgeBases 流程與 Infrastructure；須先明定未生成狀態，才另行評估非空 EmbeddingVector，不能將資料庫固定維度偷渡成共用規則。
+- `DocumentRevision.contentSha256` 與 `DocumentIndex.pipelineHash` 分別識別內容與輸出設定，合法值與大小寫規則也不同，維持各自擁有者與字串契約；既有共用 pipeline serializer 沿用，不新增通用 Hash 包裝或 crypto Adapter。
+- 沿用 `Domain/DocumentRelation/ValueObjects/document-reference.ts` 的 `DocumentReference` 引用正規化與判等，由 KnowledgeBases Application 單向使用。原始 relation reference 與外部 sourcePath 保留原值；相對引用需要來源目錄與連結種類，由使用流程解析後再建立 DocumentReference，不強迫不同路徑語意共用一個值。
+- 共用值不依賴 Entity、Application、ORM 或外部套件物件；日期函式庫或內部儲存可在公開行為不變時替換，不新增空殼 Contract／Adapter，也不建立通用 Common／Shared 目錄。
+- 本項實作與邊界遷移已完成。2026-10-16 本版本 `npm run check` 通過、Unit／Feature 498/498 通過，編譯產物的 Node ESM 載入通過；測試涵蓋無效日期、不可變性、同時間點判等、時區跨日、DST、五個 Entity 的原有例外、DTO／ORM 原生 Date 與 HTTP UTC ISO 相容性。
+- 本版本整合測試實跑 35/38，0 skipped；三項失敗皆為既有 `LEXICAL_RANKING_UNAVAILABLE`，仍依 [全文檢索阻塞](lexical-search-blocker-20261015.md) 處理。本項完成不解除全文檢索或全專案對齊的未完成狀態。
+
 ## 本次執行順序
 
 使用者要求先將整個專案其餘部分對齊已確認的 Chunks，再補齊未完成功能。下方功能需求清單不是跳過收斂步驟的授權。

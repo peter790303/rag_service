@@ -142,7 +142,7 @@ describe('ChunkRepository vector transaction boundaries', () => {
         tokenCount: matchedChunk.tokenCount,
         embedding: matchedChunk.embedding,
         searchVector: matchedChunk.searchVector,
-        createdAt: matchedChunk.createdAt,
+        createdAt: matchedChunk.createdAt.nativeDate,
       },
       {
         id: semanticQueryRowDTO.id,

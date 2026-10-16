@@ -95,16 +95,17 @@ describe('Chunk', () => {
   })
 
   it('owns the complete persisted embedding and creation time defensively', () => {
-    const state = createChunkState()
+    const createdAt = new Date('2026-10-01T00:00:00.000Z')
+    const state = createChunkState({ createdAt })
     const chunk = new Chunk(state)
-    const originalTime = state.createdAt.getTime()
+    const originalTime = createdAt.getTime()
     ;(state.embedding as number[])[0] = 99
-    state.createdAt.setTime(0)
+    createdAt.setTime(0)
     chunk.embedding[0] = 100
-    chunk.createdAt.setTime(1)
+    chunk.createdAt.nativeDate.setTime(1)
 
     assert.deepEqual(chunk.embedding, [0.25, 0.75])
-    assert.equal(chunk.createdAt.getTime(), originalTime)
+    assert.equal(chunk.createdAt.epochMilliseconds, originalTime)
     assert.equal(chunk.searchVector, "'answer':1")
   })
 

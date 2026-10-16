@@ -1,7 +1,9 @@
 import { DocumentSourceTypeEnum } from './Enums/document-source-type.enum.ts'
+import { InvalidDateTimeException } from './Exceptions/invalid-date-time.exception.ts'
 import { InvalidDocumentIdentityException } from './Exceptions/invalid-document-identity.exception.ts'
 import { InvalidDocumentSourceException } from './Exceptions/invalid-document-source.exception.ts'
 import { InvalidDocumentTimestampException } from './Exceptions/invalid-document-timestamp.exception.ts'
+import { DateTime } from './ValueObjects/date-time.ts'
 
 export type DocumentState = {
   readonly id: string
@@ -9,8 +11,8 @@ export type DocumentState = {
   readonly sourceKey: string
   readonly sourcePath: string
   readonly currentTitle: string | null
-  readonly createdAt: Date
-  readonly unreferencedSince: Date | null
+  readonly createdAt: Date | DateTime
+  readonly unreferencedSince: Date | DateTime | null
 }
 
 /** Owns a document identity and the retention period that starts when its references disappear. */
@@ -25,9 +27,9 @@ export class Document {
 
   readonly currentTitle: string | null
 
-  private readonly creationTime: Date
+  private readonly creationTime: DateTime
 
-  private unreferencedTime: Date | null
+  private unreferencedTime: DateTime | null
 
   constructor(state: DocumentState) {
     if (typeof state.id !== 'string' || !state.id.trim()) throw new InvalidDocumentIdentityException()
@@ -43,42 +45,45 @@ export class Document {
     )
       throw new InvalidDocumentSourceException()
 
-    this.requireValidTimestamp(state.createdAt)
-
-    if (state.unreferencedSince !== null) this.requireValidTimestamp(state.unreferencedSince)
-
     this.id = state.id
     this.sourceType = state.sourceType
     this.sourceKey = state.sourceKey
     this.sourcePath = state.sourcePath
     this.currentTitle = state.currentTitle
-    this.creationTime = new Date(state.createdAt.getTime())
-    this.unreferencedTime = state.unreferencedSince === null ? null : new Date(state.unreferencedSince.getTime())
+    this.creationTime = this.toDateTime(state.createdAt)
+    this.unreferencedTime = state.unreferencedSince === null ? null : this.toDateTime(state.unreferencedSince)
   }
 
-  get createdAt(): Date {
-    return new Date(this.creationTime.getTime())
+  get createdAt(): DateTime {
+    return this.creationTime
   }
 
-  get unreferencedSince(): Date | null {
-    return this.unreferencedTime === null ? null : new Date(this.unreferencedTime.getTime())
+  get unreferencedSince(): DateTime | null {
+    return this.unreferencedTime
   }
 
-  startRetention(at: Date): Date {
-    this.requireValidTimestamp(at)
-    this.unreferencedTime ??= new Date(at.getTime())
+  startRetention(at: Date | DateTime): DateTime {
+    const retentionStart = this.toDateTime(at)
+    this.unreferencedTime ??= retentionStart
 
-    return new Date(this.unreferencedTime.getTime())
+    return this.unreferencedTime
   }
 
-  isRetentionExpired(cutoff: Date): boolean {
-    this.requireValidTimestamp(cutoff)
+  isRetentionExpired(cutoff: Date | DateTime): boolean {
+    const retentionCutoff = this.toDateTime(cutoff)
 
-    return this.unreferencedTime !== null && !(this.unreferencedTime.getTime() > cutoff.getTime())
+    return (
+      this.unreferencedTime !== null && this.unreferencedTime.epochMilliseconds <= retentionCutoff.epochMilliseconds
+    )
   }
 
-  private requireValidTimestamp(timestamp: Date): void {
-    if (!(timestamp instanceof Date) || !Number.isFinite(timestamp.getTime()))
+  private toDateTime(value: Date | DateTime): DateTime {
+    try {
+      return new DateTime(value)
+    } catch (cause) {
+      if (!(cause instanceof InvalidDateTimeException)) throw cause
+
       throw new InvalidDocumentTimestampException()
+    }
   }
 }

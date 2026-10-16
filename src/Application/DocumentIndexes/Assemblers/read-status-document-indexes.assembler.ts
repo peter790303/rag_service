@@ -57,7 +57,7 @@ export class ReadStatusDocumentIndexesAssembler {
         : {
             id: activeIndex.id,
             status: activeIndex.status,
-            readyAt: activeIndex.readyAt,
+            readyAt: activeIndex.readyAt?.nativeDate ?? null,
           }
     const requestedTarget = this.toRequestedTargetFacts(source, membership, targetIndex)
 

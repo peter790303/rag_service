@@ -37,7 +37,7 @@ export class PruningMembershipAssembler {
       knowledgeBaseId: membership.knowledgeBaseId,
       documentId: membership.documentId,
       activeDocumentIndexId: membership.activeDocumentIndexId,
-      updatedAt: membership.updatedAt,
+      updatedAt: membership.updatedAt.nativeDate,
     }
   }
 

@@ -156,7 +156,7 @@ test('retrieval queries scoped entities in sequence and combines overlapping ran
   )
   assert.ok(candidates.every((chunk) => chunk instanceof Chunk))
   assert.deepEqual(
-    candidates.map((chunk) => chunk.createdAt),
+    candidates.map((chunk) => chunk.createdAt.nativeDate),
     [new Date(0), new Date(0), new Date(0)],
   )
 })

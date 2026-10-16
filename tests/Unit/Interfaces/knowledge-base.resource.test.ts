@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
+import { ReadDocumentIndexAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/read-document-index.assembler.ts'
 import { DocumentIndexingStatusDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-status.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
 import { DocumentIndexingTargetStateEnum } from '../../../src/Application/DocumentIndexes/Enums/document-indexing-target-state.enum.ts'
 import { RetrievalKnowledgeBaseContentAssembler } from '../../../src/Application/KnowledgeBases/Assemblers/retrieval-knowledge-base-content.assembler.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
+import { DocumentIndex } from '../../../src/Domain/DocumentIndex/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { DocumentRelation } from '../../../src/Domain/DocumentRelation/document-relation.ts'
 import { DocumentRelationResolutionEnum } from '../../../src/Domain/DocumentRelation/Enums/document-relation-resolution.enum.ts'
@@ -284,6 +286,22 @@ test('retrieval resource whitelists entity and evidence boundaries, preserving d
   assert.deepEqual(JSON.parse(JSON.stringify(resource)), expected)
   assert.notEqual(resource.matches[0]!.chunk.headingPath, chunk.headingPath)
   assert.notEqual(resource.matches[0]!.chunk.embeddingVector, chunk.embedding)
+})
+
+test('retrieval resource keeps UTC ISO output when the index date uses localized display settings', () => {
+  const facts = createRetrievalKnowledgeBaseContentInputFixture()
+  const index = facts.snapshot.indexes[0]!
+  facts.snapshot.indexes[0] = new DocumentIndex({
+    ...ReadDocumentIndexAssembler.toDocumentIndexRecordDTO(index),
+    readyAt: index.readyAt!.withDisplayOptions({ timeZone: 'Asia/Taipei', locale: 'zh-TW' }),
+  })
+  const knowledgeBase = facts.snapshot.knowledgeBase!
+  knowledgeBase.recordRetrieval(RetrievalKnowledgeBaseContentAssembler.toRetrievalEvidence(facts, [0.25], 'install'))
+
+  const resource = HybridKnowledgeRetrievalResource.toHybridKnowledgeRetrievalResource(knowledgeBase)
+
+  assert.equal(resource.matches[0]!.chunk.indexedAt, '2026-10-01T00:00:00.000Z')
+  assert.equal(JSON.parse(JSON.stringify(resource)).matches[0].chunk.indexedAt, '2026-10-01T00:00:00.000Z')
 })
 
 test('retrieval resource preserves empty result collections for absent knowledge bases and evidence', () => {

@@ -61,7 +61,7 @@ test('index loading returns complete entity union while preserving read scopes a
   assert.ok(retrievedChunks.every((chunk) => chunk instanceof Chunk))
   assert.deepEqual(retrievedChunks[2]!.embedding, [0.5, 0.25])
   assert.equal(retrievedChunks[2]!.searchVector, null)
-  assert.deepEqual(retrievedChunks[2]!.createdAt, new Date('2026-10-15T00:00:00.000Z'))
+  assert.deepEqual(retrievedChunks[2]!.createdAt.nativeDate, new Date('2026-10-15T00:00:00.000Z'))
   assert.deepEqual(fullContentIndexIds, ['second-full-index', 'first-full-index', 'second-full-index'])
   assert.deepEqual(countedIndexIds, ['count-only-index', 'second-full-index', 'count-only-index'])
 })

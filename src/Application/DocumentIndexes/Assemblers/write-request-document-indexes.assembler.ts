@@ -145,9 +145,9 @@ export class WriteRequestDocumentIndexesAssembler {
       lexicalProfile: documentIndex.lexicalProfile,
       relationProfile: documentIndex.relationProfile,
       status: documentIndex.status,
-      createdAt: documentIndex.createdAt,
-      readyAt: documentIndex.readyAt,
-      unreferencedSince: documentIndex.unreferencedSince,
+      createdAt: documentIndex.createdAt.nativeDate,
+      readyAt: documentIndex.readyAt?.nativeDate ?? null,
+      unreferencedSince: documentIndex.unreferencedSince?.nativeDate ?? null,
     }
   }
 

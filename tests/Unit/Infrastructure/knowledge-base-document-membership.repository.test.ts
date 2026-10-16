@@ -74,8 +74,8 @@ test('membership full reads restore domain generation and retain actual persiste
   assert.equal(restoredMembershipDTO.activeDocumentIndexId, 'index-1')
   assert.equal(restoredMembershipDTO.isEntry, true)
   assert.equal(restoredMembershipDTO.alwaysIncludeFullContent, false)
-  assert.deepEqual(restoredMembershipDTO.updatedAt, updatedAt)
-  assert.notEqual(restoredMembershipDTO.updatedAt, updatedAt)
+  assert.deepEqual(restoredMembershipDTO.updatedAt.nativeDate, updatedAt)
+  assert.notEqual(restoredMembershipDTO.updatedAt.nativeDate, updatedAt)
   assert.equal(findOneBy.mock.callCount(), 1)
   assert.deepEqual(findOneBy.mock.calls[0]?.arguments, [{ knowledgeBaseId: 'kb-1', documentId: 'document-1' }])
 })
@@ -137,7 +137,7 @@ test('membership activation retains generation and null/index CAS fences with af
   assert.ok(activatedMembership instanceof Membership)
   assert.equal(activatedMembership.activeDocumentIndexId, 'index-2')
   assert.equal(activatedMembership.requestedGeneration, '2')
-  assert.deepEqual(activatedMembership.updatedAt, membershipActivationQO.updatedAt)
+  assert.deepEqual(activatedMembership.updatedAt.nativeDate, membershipActivationQO.updatedAt)
   affected = 0
   assert.equal(
     await membershipRepository.updateActiveDocumentIndexByKnowledgeBaseIdAndDocumentIdAndRequestedGenerationAndActiveDocumentIndexId(

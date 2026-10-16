@@ -57,7 +57,7 @@ test('upsertBySourceTypeAndSourceKeyAndSourcePath omits an unspecified title and
   assert.ok(document instanceof Document)
   assert.notEqual(document, fixture.document)
   assert.equal(document.currentTitle, fixture.document.currentTitle)
-  assert.deepEqual(document.createdAt, fixture.document.createdAt)
+  assert.deepEqual(document.createdAt.nativeDate, fixture.document.createdAt)
   assert.deepEqual(fixture.upsert.mock.calls[0]?.arguments, [
     { ...candidateSource, unreferencedSince: null },
     conflictOptions,
@@ -77,7 +77,7 @@ test('upsertTitleBySourceTypeAndSourceKeyAndSourcePath includes a supplied title
   assert.ok(document instanceof Document)
   assert.notEqual(document, fixture.document)
   assert.equal(document.currentTitle, fixture.document.currentTitle)
-  assert.deepEqual(document.createdAt, fixture.document.createdAt)
+  assert.deepEqual(document.createdAt.nativeDate, fixture.document.createdAt)
   assert.deepEqual(fixture.upsert.mock.calls[0]?.arguments, [
     { ...candidateSource, unreferencedSince: null, currentTitle: 'renamed title' },
     conflictOptions,
@@ -121,7 +121,7 @@ test('upsertBySourceTypeAndSourceKeyAndSourcePath performs both the conflict wri
   assert.ok(document instanceof Document)
   assert.notEqual(document, fixture.document)
   assert.equal(document.currentTitle, fixture.document.currentTitle)
-  assert.deepEqual(document.createdAt, fixture.document.createdAt)
+  assert.deepEqual(document.createdAt.nativeDate, fixture.document.createdAt)
   assert.equal(fixture.upsert.mock.callCount(), 0)
   assert.equal(fixture.findOneByOrFail.mock.callCount(), 0)
   assert.deepEqual(upsert.mock.calls[0]?.arguments, [{ ...candidateSource, unreferencedSince: null }, conflictOptions])

@@ -17,7 +17,7 @@ export class IndexingMembershipAssembler {
       requestedGeneration: membership.requestedGeneration,
       expectedActiveDocumentIndexId,
       documentIndexId,
-      updatedAt: membership.updatedAt,
+      updatedAt: membership.updatedAt.nativeDate,
     }
   }
 
@@ -29,7 +29,7 @@ export class IndexingMembershipAssembler {
       activeDocumentIndexId: membership.activeDocumentIndexId,
       isEntry: membership.isEntry,
       alwaysIncludeFullContent: membership.alwaysIncludeFullContent,
-      updatedAt: membership.updatedAt,
+      updatedAt: membership.updatedAt.nativeDate,
     }
   }
 
@@ -41,7 +41,7 @@ export class IndexingMembershipAssembler {
       activeDocumentIndexId: membership.activeDocumentIndexId,
       isEntry: membership.isEntry,
       alwaysIncludeFullContent: membership.alwaysIncludeFullContent,
-      updatedAt: membership.updatedAt,
+      updatedAt: membership.updatedAt.nativeDate,
     }
   }
 }

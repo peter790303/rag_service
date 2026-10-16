@@ -21,9 +21,9 @@ test('starting retention preserves the first timestamp across repeated requests'
 
   assert.equal(document.id, 'document-1')
   assert.equal(document.unreferencedSince, null)
-  assert.deepEqual(document.startRetention(first), first)
-  assert.deepEqual(document.startRetention(later), first)
-  assert.deepEqual(document.unreferencedSince, first)
+  assert.deepEqual(document.startRetention(first).nativeDate, first)
+  assert.deepEqual(document.startRetention(later).nativeDate, first)
+  assert.equal(document.unreferencedSince, document.startRetention(first))
 })
 
 test('restoring and starting retention protect lifecycle timestamps from external mutation', () => {
@@ -35,11 +35,11 @@ test('restoring and starting retention protect lifecycle timestamps from externa
 
   existingTimestamp.setTime(0)
   startedAt.setTime(0)
-  retainedTimestamp.setTime(0)
-  restored.unreferencedSince?.setTime(0)
+  retainedTimestamp.nativeDate.setTime(0)
+  restored.unreferencedSince?.nativeDate.setTime(0)
 
-  assert.deepEqual(restored.unreferencedSince, new Date('2026-10-01T00:00:00.000Z'))
-  assert.deepEqual(newlyUnreferenced.unreferencedSince, new Date('2026-10-02T00:00:00.000Z'))
+  assert.deepEqual(restored.unreferencedSince?.nativeDate, new Date('2026-10-01T00:00:00.000Z'))
+  assert.deepEqual(newlyUnreferenced.unreferencedSince?.nativeDate, new Date('2026-10-02T00:00:00.000Z'))
 })
 
 test('retention expires at the supplied cutoff only after it has started', () => {

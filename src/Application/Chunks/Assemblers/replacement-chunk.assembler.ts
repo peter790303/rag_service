@@ -34,7 +34,7 @@ export class ReplacementChunkAssembler {
       blockStart: replacementChunk.blockStart,
       blockEnd: replacementChunk.blockEnd,
       tokenCount: replacementChunk.tokenCount,
-      createdAt: replacementChunk.createdAt,
+      createdAt: replacementChunk.createdAt.nativeDate,
       embedding: replacementChunk.embedding,
     }
   }

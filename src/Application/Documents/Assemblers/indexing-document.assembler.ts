@@ -11,8 +11,8 @@ export class IndexingDocumentAssembler {
       sourceType: document.sourceType,
       sourceKey: document.sourceKey,
       sourcePath: document.sourcePath,
-      createdAt: document.createdAt,
-      unreferencedSince: document.unreferencedSince,
+      createdAt: document.createdAt.nativeDate,
+      unreferencedSince: document.unreferencedSince?.nativeDate ?? null,
     }
   }
 

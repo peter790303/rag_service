@@ -46,7 +46,7 @@ describe('ChunkFactory', () => {
     assert.equal(chunk.tokenCount, null)
     assert.deepEqual(chunk.embedding, persistedChunkModel.embedding)
     assert.equal(chunk.searchVector, persistedChunkModel.searchVector)
-    assert.deepEqual(chunk.createdAt, persistedChunkModel.createdAt)
+    assert.deepEqual(chunk.createdAt.nativeDate, persistedChunkModel.createdAt)
     assert.equal(chunk.vectorCosineDistanceFor([1, 0]), null)
     assert.doesNotThrow(() => chunk.assertBelongsToDocumentIndex(persistedChunkModel.documentIndexId))
   })
@@ -61,7 +61,7 @@ describe('ChunkFactory', () => {
 
     assert.deepEqual(chunk.headingPath, ['Title', '小節'])
     assert.deepEqual(chunk.embedding, [0.2, 0.3])
-    assert.deepEqual(chunk.createdAt, new Date('2026-10-15T00:00:00.000Z'))
+    assert.deepEqual(chunk.createdAt.nativeDate, new Date('2026-10-15T00:00:00.000Z'))
   })
 
   it('applies the same domain invariants to persisted state instead of bypassing construction', async (t) => {

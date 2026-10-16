@@ -3,6 +3,8 @@ import { DocumentIndexIdentityRequiredException } from './Exceptions/document-in
 import { InvalidDocumentIndexStateException } from './Exceptions/invalid-document-index-state.exception.ts'
 import { InvalidDocumentIndexTimestampException } from './Exceptions/invalid-document-index-timestamp.exception.ts'
 import { UnsupportedDocumentIndexStatusException } from './Exceptions/unsupported-document-index-status.exception.ts'
+import { InvalidDateTimeException } from '../Document/Exceptions/invalid-date-time.exception.ts'
+import { DateTime } from '../Document/ValueObjects/date-time.ts'
 
 export type DocumentIndexState = {
   id: string
@@ -17,9 +19,9 @@ export type DocumentIndexState = {
   lexicalProfile: string
   relationProfile: string
   status: DocumentIndexStatus
-  createdAt: Date
-  readyAt: Date | null
-  unreferencedSince: Date | null
+  createdAt: Date | DateTime
+  readyAt: Date | DateTime | null
+  unreferencedSince: Date | DateTime | null
 }
 
 export class DocumentIndex {
@@ -47,11 +49,11 @@ export class DocumentIndex {
 
   readonly status: DocumentIndexStatus
 
-  private readonly createdTime: Date
+  private readonly createdTime: DateTime
 
-  private readonly readyTime: Date | null
+  private readonly readyTime: DateTime | null
 
-  private readonly unreferencedTime: Date | null
+  private readonly unreferencedTime: DateTime | null
 
   constructor(state: DocumentIndexState) {
     if (typeof state.id !== 'string' || state.id.trim().length === 0) throw new DocumentIndexIdentityRequiredException()
@@ -78,9 +80,10 @@ export class DocumentIndex {
     if (!Object.values(DocumentIndexStatusEnum).includes(state.status))
       throw new UnsupportedDocumentIndexStatusException({ status: state.status })
 
-    assertValidDate(state.createdAt, 'createdAt')
-    assertValidDateOrNull(state.readyAt, 'readyAt')
-    assertValidDateOrNull(state.unreferencedSince, 'unreferencedSince')
+    this.createdTime = toDateTime(state.createdAt, 'createdAt')
+    this.readyTime = state.readyAt === null ? null : toDateTime(state.readyAt, 'readyAt')
+    this.unreferencedTime =
+      state.unreferencedSince === null ? null : toDateTime(state.unreferencedSince, 'unreferencedSince')
     this.id = state.id
     this.documentId = state.documentId
     this.revisionId = state.revisionId
@@ -93,47 +96,40 @@ export class DocumentIndex {
     this.lexicalProfile = state.lexicalProfile
     this.relationProfile = state.relationProfile
     this.status = state.status
-    this.createdTime = new Date(state.createdAt)
-    this.readyTime = cloneDate(state.readyAt)
-    this.unreferencedTime = cloneDate(state.unreferencedSince)
   }
 
-  get createdAt(): Date {
-    return new Date(this.createdTime)
+  get createdAt(): DateTime {
+    return this.createdTime
   }
 
-  get readyAt(): Date | null {
-    return cloneDate(this.readyTime)
+  get readyAt(): DateTime | null {
+    return this.readyTime
   }
 
-  get unreferencedSince(): Date | null {
-    return cloneDate(this.unreferencedTime)
+  get unreferencedSince(): DateTime | null {
+    return this.unreferencedTime
   }
 
   canReplacePlan(): boolean {
     return this.status !== DocumentIndexStatusEnum.READY
   }
 
-  markReady(at: Date): DocumentIndex {
-    assertValidDate(at, 'readyAt')
-
-    return this.withLifecycle(DocumentIndexStatusEnum.READY, at, null)
+  markReady(at: Date | DateTime): DocumentIndex {
+    return this.withLifecycle(DocumentIndexStatusEnum.READY, toDateTime(at, 'readyAt'), null)
   }
 
   markReferenced(): DocumentIndex {
     return this.withLifecycle(this.status, this.readyAt, null)
   }
 
-  markUnreferenced(at: Date): DocumentIndex {
-    assertValidDate(at, 'unreferencedSince')
-
-    return this.withLifecycle(this.status, this.readyAt, at)
+  markUnreferenced(at: Date | DateTime): DocumentIndex {
+    return this.withLifecycle(this.status, this.readyAt, toDateTime(at, 'unreferencedSince'))
   }
 
   private withLifecycle(
     status: DocumentIndexStatus,
-    readyAt: Date | null,
-    unreferencedSince: Date | null,
+    readyAt: DateTime | null,
+    unreferencedSince: DateTime | null,
   ): DocumentIndex {
     return new DocumentIndex({
       id: this.id,
@@ -155,11 +151,12 @@ export class DocumentIndex {
   }
 }
 
-const cloneDate = (value: Date | null): Date | null => (value === null ? null : new Date(value))
-const assertValidDate = (value: Date, field: 'createdAt' | 'readyAt' | 'unreferencedSince'): void => {
-  if (!(value instanceof Date) || !Number.isFinite(value.getTime()))
+const toDateTime = (value: Date | DateTime, field: 'createdAt' | 'readyAt' | 'unreferencedSince'): DateTime => {
+  try {
+    return new DateTime(value)
+  } catch (error) {
+    if (!(error instanceof InvalidDateTimeException)) throw error
+
     throw new InvalidDocumentIndexTimestampException({ field })
-}
-const assertValidDateOrNull = (value: Date | null, field: 'readyAt' | 'unreferencedSince'): void => {
-  if (value !== null) assertValidDate(value, field)
+  }
 }

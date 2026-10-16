@@ -112,7 +112,7 @@ test(
       assert.equal(detached.requestedGeneration, '7')
       assert.equal(detached.isEntry, true)
       assert.equal(detached.alwaysIncludeFullContent, true)
-      assert.equal(detached.updatedAt.toISOString(), detachedAt.toISOString())
+      assert.equal(detached.updatedAt.isoString, detachedAt.toISOString())
     } finally {
       await cleanup()
     }
@@ -141,26 +141,26 @@ test(
         repository.upsertTitleBySourceTypeAndSourceKeyAndSourcePath({ ...source, currentTitle: 'Original title' }),
       )
       assert.equal(created.id, source.id)
-      assert.deepEqual(created.createdAt, source.createdAt)
+      assert.deepEqual(created.createdAt.nativeDate, source.createdAt)
       const preserved = await transaction.run(() =>
         repository.upsertBySourceTypeAndSourceKeyAndSourcePath(repeatedSource),
       )
       assert.equal(preserved.id, created.id)
-      assert.deepEqual(preserved.createdAt, created.createdAt)
+      assert.equal(preserved.createdAt.equals(created.createdAt), true)
       assert.equal(preserved.currentTitle, 'Original title')
 
       const cleared = await transaction.run(() =>
         repository.upsertTitleBySourceTypeAndSourceKeyAndSourcePath({ ...repeatedSource, currentTitle: null }),
       )
       assert.equal(cleared.id, created.id)
-      assert.deepEqual(cleared.createdAt, created.createdAt)
+      assert.equal(cleared.createdAt.equals(created.createdAt), true)
       assert.equal(cleared.currentTitle, null)
 
       const empty = await transaction.run(() =>
         repository.upsertTitleBySourceTypeAndSourceKeyAndSourcePath({ ...repeatedSource, currentTitle: '' }),
       )
       assert.equal(empty.id, created.id)
-      assert.deepEqual(empty.createdAt, created.createdAt)
+      assert.equal(empty.createdAt.equals(created.createdAt), true)
       assert.equal(empty.currentTitle, '')
       assert.equal((await repository.upsertBySourceTypeAndSourceKeyAndSourcePath(source)).currentTitle, '')
     } finally {

@@ -10,14 +10,14 @@ export class WriteLifecycleDocumentIndexAssembler {
     return {
       documentIndexId: documentIndex.id,
       status: documentIndex.status,
-      readyAt: documentIndex.readyAt,
-      unreferencedSince: documentIndex.unreferencedSince,
+      readyAt: documentIndex.readyAt?.nativeDate ?? null,
+      unreferencedSince: documentIndex.unreferencedSince?.nativeDate ?? null,
     }
   }
 
   static toSetDocumentIndexUnreferencedSinceQO(
     documentIndex: DocumentIndex,
   ): SetDocumentIndexUnreferencedSinceQueryObject {
-    return { documentIndexId: documentIndex.id, unreferencedSince: documentIndex.unreferencedSince }
+    return { documentIndexId: documentIndex.id, unreferencedSince: documentIndex.unreferencedSince?.nativeDate ?? null }
   }
 }

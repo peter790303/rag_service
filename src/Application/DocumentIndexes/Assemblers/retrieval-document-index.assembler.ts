@@ -14,7 +14,7 @@ export class RetrievalDocumentIndexAssembler {
       embeddingProfile: restoredDocumentIndexDTO.embeddingProfile,
       lexicalProfile: restoredDocumentIndexDTO.lexicalProfile,
       relationProfile: restoredDocumentIndexDTO.relationProfile,
-      readyAt: restoredDocumentIndexDTO.readyAt,
+      readyAt: restoredDocumentIndexDTO.readyAt?.nativeDate ?? null,
     }
   }
 }

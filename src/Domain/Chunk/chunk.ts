@@ -17,6 +17,12 @@ import { InvalidChunkTokenCountException } from './Exceptions/invalid-chunk-toke
 import { ChunkLexicalSearchMatch } from './ValueObjects/chunk-lexical-search-match.ts'
 import { ChunkRetrievalMatch } from './ValueObjects/chunk-retrieval-match.ts'
 import { ChunkVectorSearchMatch } from './ValueObjects/chunk-vector-search-match.ts'
+import { InvalidDateTimeException } from '../Document/Exceptions/invalid-date-time.exception.ts'
+import { DateTime } from '../Document/ValueObjects/date-time.ts'
+import { InvalidSourceLineRangeEndException } from '../DocumentRevision/Exceptions/invalid-source-line-range-end.exception.ts'
+import { InvalidSourceLineRangeStartException } from '../DocumentRevision/Exceptions/invalid-source-line-range-start.exception.ts'
+import { SourceLineRangeReversedException } from '../DocumentRevision/Exceptions/source-line-range-reversed.exception.ts'
+import { SourceLineRange } from '../DocumentRevision/ValueObjects/source-line-range.ts'
 
 export type ChunkState = {
   readonly id: string
@@ -29,7 +35,7 @@ export type ChunkState = {
   readonly tokenCount: number | null
   readonly embedding: readonly number[]
   readonly searchVector: string | null
-  readonly createdAt: Date
+  readonly createdAt: Date | DateTime
 }
 
 /** An identified, immutable source passage belonging to one document index. */
@@ -42,17 +48,15 @@ export class Chunk {
 
   readonly content: string
 
-  readonly blockStart: number
-
-  readonly blockEnd: number
-
   readonly tokenCount: number | null
+
+  private readonly sourceRange: SourceLineRange
 
   private readonly sourceHeadingPath: readonly string[]
 
   private readonly sourceEmbedding: readonly number[]
 
-  private readonly sourceCreatedAt: Date
+  private readonly sourceCreatedAt: DateTime
 
   readonly searchVector: string | null
 
@@ -80,11 +84,7 @@ export class Chunk {
 
     if (typeof state.content !== 'string') throw new InvalidChunkContentException()
 
-    if (!Number.isInteger(state.blockStart) || state.blockStart < 0) throw new InvalidChunkBlockStartException()
-
-    if (!Number.isInteger(state.blockEnd) || state.blockEnd < 0) throw new InvalidChunkBlockEndException()
-
-    if (state.blockEnd < state.blockStart) throw new ChunkSourceSpanReversedException()
+    this.sourceRange = this.toSourceLineRange(state.blockStart, state.blockEnd)
 
     if (state.tokenCount !== null && (!Number.isInteger(state.tokenCount) || state.tokenCount < 0)) {
       throw new InvalidChunkTokenCountException()
@@ -95,8 +95,6 @@ export class Chunk {
     this.ordinal = state.ordinal
     this.sourceHeadingPath = [...state.headingPath]
     this.content = state.content
-    this.blockStart = state.blockStart
-    this.blockEnd = state.blockEnd
 
     if (!Array.isArray(state.embedding) || !Array.from(state.embedding).every(Number.isFinite)) {
       throw new InvalidChunkEmbeddingException()
@@ -106,22 +104,26 @@ export class Chunk {
       throw new InvalidChunkSearchVectorException()
     }
 
-    if (!(state.createdAt instanceof Date) || !Number.isFinite(state.createdAt.getTime())) {
-      throw new InvalidChunkCreatedAtException()
-    }
-
     this.tokenCount = state.tokenCount
     this.sourceEmbedding = [...state.embedding]
     this.searchVector = state.searchVector
-    this.sourceCreatedAt = new Date(state.createdAt)
+    this.sourceCreatedAt = this.toDateTime(state.createdAt)
   }
 
   get embedding(): number[] {
     return [...this.sourceEmbedding]
   }
 
-  get createdAt(): Date {
-    return new Date(this.sourceCreatedAt)
+  get createdAt(): DateTime {
+    return this.sourceCreatedAt
+  }
+
+  get blockStart(): number {
+    return this.sourceRange.startLine
+  }
+
+  get blockEnd(): number {
+    return this.sourceRange.endLine
   }
 
   recordVectorSearchMatch(queryVector: readonly number[], cosineDistance: number): void {
@@ -186,5 +188,29 @@ export class Chunk {
 
   assertHasSearchVector(): asserts this is this & { readonly searchVector: string } {
     if (this.searchVector === null) throw new InvalidChunkSearchVectorException()
+  }
+
+  private toDateTime(value: Date | DateTime): DateTime {
+    try {
+      return new DateTime(value)
+    } catch (error) {
+      if (!(error instanceof InvalidDateTimeException)) throw error
+
+      throw new InvalidChunkCreatedAtException()
+    }
+  }
+
+  private toSourceLineRange(startLine: number, endLine: number): SourceLineRange {
+    try {
+      return new SourceLineRange(startLine, endLine)
+    } catch (error) {
+      if (error instanceof InvalidSourceLineRangeStartException) throw new InvalidChunkBlockStartException()
+
+      if (error instanceof InvalidSourceLineRangeEndException) throw new InvalidChunkBlockEndException()
+
+      if (error instanceof SourceLineRangeReversedException) throw new ChunkSourceSpanReversedException()
+
+      throw error
+    }
   }
 }

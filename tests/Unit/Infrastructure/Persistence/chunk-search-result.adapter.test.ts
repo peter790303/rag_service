@@ -37,7 +37,7 @@ test('candidate adapters restore complete Chunk entities from pgvector wire text
   assert.equal(matchedChunk.tokenCount, null)
   assert.deepEqual(matchedChunk.embedding, [1.25, -2.5, 0])
   assert.equal(matchedChunk.searchVector, "'orbit':1")
-  assert.deepEqual(matchedChunk.createdAt, new Date(semanticQueryRowDTO.createdAt))
+  assert.deepEqual(matchedChunk.createdAt.nativeDate, new Date(semanticQueryRowDTO.createdAt))
   assert.equal(matchedChunk.vectorCosineDistanceFor(queryVector), 0.25)
   assert.equal(matchedChunk.vectorCosineDistanceFor([0, 1, 0]), null)
   assert.equal(semanticQueryRowDTO.embedding, '[1.25,-2.5,0]')

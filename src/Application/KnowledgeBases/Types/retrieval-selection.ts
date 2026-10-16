@@ -1,4 +1,5 @@
 import type { RankedCandidate } from './ranked-candidate.ts'
+import type { DateTime } from '../../../Domain/Document/ValueObjects/date-time.ts'
 import type { DocumentRelationResolutionEnum } from '../../../Domain/DocumentRelation/Enums/document-relation-resolution.enum.ts'
 import type { DocumentReference } from '../../../Domain/DocumentRelation/ValueObjects/document-reference.ts'
 import type { RetrievalProfileSettingsDto } from '../DataTransferObjects/retrieval-profile-settings.dto.ts'
@@ -21,7 +22,7 @@ export type RetrievalScopeInput<
     chunkingProfile: string
     embeddingProfile: string
     relationProfile: string
-    readyAt: Date | null
+    readyAt: DateTime | null
   },
   TRevision extends { id: string; content: string },
 > = {

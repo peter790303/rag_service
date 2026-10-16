@@ -62,7 +62,7 @@ export class HybridKnowledgeRetrievalResource {
       headingPath: chunk.headingPath,
       content: chunk.content,
       tokenCount: chunk.tokenCount,
-      indexedAt: index.readyAt!.toISOString(),
+      indexedAt: index.readyAt!.isoString,
       chunkingStrategyId: index.chunkingProfile,
       startBlock: chunk.blockStart,
       embeddingModelId: index.embeddingModel,

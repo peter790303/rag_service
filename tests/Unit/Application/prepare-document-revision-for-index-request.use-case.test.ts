@@ -96,8 +96,8 @@ test('revision creation supplies validated identity and timestamps while preserv
         assert.match(revision.id, /^[0-9a-f-]{36}$/)
         assert.equal(revision.title, title === undefined ? null : title)
         assert.equal(revision.content, '')
-        assert.ok(Number.isFinite(revision.capturedAt.getTime()))
-        assert.deepEqual(revision.createdAt, revision.capturedAt)
+        assert.ok(Number.isFinite(revision.capturedAt.epochMilliseconds))
+        assert.equal(revision.createdAt.equals(revision.capturedAt), true)
         assert.equal(writes[0]?.id, revision.id)
       }),
     ),

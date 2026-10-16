@@ -1,5 +1,9 @@
 import { DocumentRelationTypeEnum } from './Enums/document-relation-type.enum.ts'
 import { InvalidDocumentRelationStateException } from './Exceptions/invalid-document-relation-state.exception.ts'
+import { InvalidSourceLineRangeEndException } from '../DocumentRevision/Exceptions/invalid-source-line-range-end.exception.ts'
+import { InvalidSourceLineRangeStartException } from '../DocumentRevision/Exceptions/invalid-source-line-range-start.exception.ts'
+import { SourceLineRangeReversedException } from '../DocumentRevision/Exceptions/source-line-range-reversed.exception.ts'
+import { SourceLineRange } from '../DocumentRevision/ValueObjects/source-line-range.ts'
 
 export interface DocumentRelationState {
   readonly id: string
@@ -27,9 +31,7 @@ export class DocumentRelation {
 
   readonly relationType: DocumentRelationTypeEnum
 
-  readonly evidenceBlockStart: number
-
-  readonly evidenceBlockEnd: number
+  private readonly evidenceRange: SourceLineRange
 
   readonly evidenceText: string
 
@@ -55,11 +57,19 @@ export class DocumentRelation {
 
     if (relationType === undefined) throw new InvalidDocumentRelationStateException('relationType')
 
-    if (!Number.isInteger(state.evidenceBlockStart) || state.evidenceBlockStart < 0)
-      throw new InvalidDocumentRelationStateException('evidenceBlockStart')
+    let evidenceRange: SourceLineRange
 
-    if (!Number.isInteger(state.evidenceBlockEnd) || state.evidenceBlockEnd < state.evidenceBlockStart)
-      throw new InvalidDocumentRelationStateException('evidenceBlockEnd')
+    try {
+      evidenceRange = new SourceLineRange(state.evidenceBlockStart, state.evidenceBlockEnd)
+    } catch (error) {
+      if (error instanceof InvalidSourceLineRangeStartException)
+        throw new InvalidDocumentRelationStateException('evidenceBlockStart')
+
+      if (error instanceof InvalidSourceLineRangeEndException || error instanceof SourceLineRangeReversedException)
+        throw new InvalidDocumentRelationStateException('evidenceBlockEnd')
+
+      throw error
+    }
 
     if (typeof state.evidenceText !== 'string') throw new InvalidDocumentRelationStateException('evidenceText')
 
@@ -69,8 +79,15 @@ export class DocumentRelation {
     this.targetReference = state.targetReference
     this.targetAnchor = state.targetAnchor
     this.relationType = relationType
-    this.evidenceBlockStart = state.evidenceBlockStart
-    this.evidenceBlockEnd = state.evidenceBlockEnd
+    this.evidenceRange = evidenceRange
     this.evidenceText = state.evidenceText
+  }
+
+  get evidenceBlockStart(): number {
+    return this.evidenceRange.startLine
+  }
+
+  get evidenceBlockEnd(): number {
+    return this.evidenceRange.endLine
   }
 }
