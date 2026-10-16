@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import type { RagConfig } from '../../../config/rag.config.js'
-import { KnowledgeEmbeddingUnavailableException } from '../../../src/Domain/Knowledge/Exceptions/knowledge-embedding-unavailable.exception.js'
-import { HttpEmbeddingClient } from '../../../src/Infrastructure/External/Embedding/http-embedding.client.js'
+import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
+import { HttpEmbeddingClient } from '../../../src/Infrastructure/External/Embedding/http-embedding.client.ts'
 
 const config = {
   embeddingApiUrl: 'https://embedding.example.test/v1/embeddings',
   embeddingModel: 'test-model',
   embeddingDimensions: 2,
-} satisfies Pick<RagConfig, 'embeddingApiUrl' | 'embeddingModel' | 'embeddingDimensions'>
+} satisfies Pick<KnowledgeServiceConfig, 'embeddingApiUrl' | 'embeddingModel' | 'embeddingDimensions'>
 
 const assertEmbeddingUnavailable = (error: unknown): boolean => {
   assert.ok(error instanceof KnowledgeEmbeddingUnavailableException)
@@ -59,9 +59,16 @@ test('embedding client sends configured bearer authorization', async (context) =
 })
 
 test('embedding client maps network failures to knowledge availability', async (context) => {
-  context.mock.method(globalThis, 'fetch', async () => Promise.reject(new TypeError('private endpoint')))
+  const cause = new TypeError('private endpoint')
+  context.mock.method(globalThis, 'fetch', async () => Promise.reject(cause))
 
-  await assert.rejects(new HttpEmbeddingClient(config).embed(['question']), assertEmbeddingUnavailable)
+  await assert.rejects(new HttpEmbeddingClient(config).embed(['question']), (error: unknown) => {
+    assertEmbeddingUnavailable(error)
+    assert.ok(error instanceof KnowledgeEmbeddingUnavailableException)
+    assert.equal(error.cause, cause)
+
+    return true
+  })
 })
 
 test('embedding client bounds requests and maps timeout aborts to knowledge availability', async (context) => {
@@ -107,4 +114,21 @@ test('embedding client skips the provider for an empty input batch', async (cont
 
   assert.deepEqual(await new HttpEmbeddingClient(config).embed([]), [])
   assert.equal(fetchMock.mock.callCount(), 0)
+})
+
+test('embedding client preserves the response JSON failure as its cause', async (context) => {
+  const cause = new SyntaxError('invalid provider JSON')
+  const response = new Response('invalid')
+  context.mock.method(response, 'json', async () => {
+    throw cause
+  })
+  context.mock.method(globalThis, 'fetch', async () => response)
+
+  await assert.rejects(new HttpEmbeddingClient(config).embed(['question']), (error: unknown) => {
+    assertEmbeddingUnavailable(error)
+    assert.ok(error instanceof KnowledgeEmbeddingUnavailableException)
+    assert.equal(error.cause, cause)
+
+    return true
+  })
 })

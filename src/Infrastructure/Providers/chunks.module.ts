@@ -25,7 +25,8 @@ import { ChunkRepository } from '../Persistence/Repositories/chunk.repository.ts
     },
     {
       provide: FindLexicalChunkCandidatesUseCase,
-      useFactory: () => new FindLexicalChunkCandidatesUseCase(),
+      useFactory: (chunkRepository: ChunkRepositoryContract) => new FindLexicalChunkCandidatesUseCase(chunkRepository),
+      inject: [ChunkRepositoryContract],
     },
     {
       provide: FindRetrievalChunkCandidatesUseCase,

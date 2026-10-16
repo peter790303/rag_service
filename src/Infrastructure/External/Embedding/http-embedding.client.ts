@@ -1,19 +1,19 @@
 import { Inject, Injectable } from '@nestjs/common'
 
-import { createEmbeddingRequestBody } from './Adapter/embedding-request.adapter.js'
-import { mapEmbeddingResponse } from './Adapter/embedding-response.adapter.js'
-import { RAG_CONFIG, type RagConfig } from '../../../../config/rag.config.js'
-import { EmbeddingProvider } from '../../../Application/KnowledgeBases/Contracts/embedding-provider.js'
-import { KnowledgeEmbeddingUnavailableException } from '../../../Domain/Knowledge/Exceptions/knowledge-embedding-unavailable.exception.js'
+import { createEmbeddingRequestBody } from './Adapters/embedding-request.adapter.ts'
+import { mapEmbeddingResponse } from './Adapters/embedding-response.adapter.ts'
+import { KNOWLEDGE_SERVICE_CONFIG, type KnowledgeServiceConfig } from '../../../../config/knowledge-service.config.ts'
+import { EmbeddingProvider } from '../../../Application/KnowledgeBases/Contracts/embedding-provider.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
 
 const EXTERNAL_REQUEST_TIMEOUT_MS = 30_000
 
 @Injectable()
 export class HttpEmbeddingClient extends EmbeddingProvider {
   constructor(
-    @Inject(RAG_CONFIG)
-    private readonly config: Pick<
-      RagConfig,
+    @Inject(KNOWLEDGE_SERVICE_CONFIG)
+    private readonly embeddingConfig: Pick<
+      KnowledgeServiceConfig,
       'embeddingModel' | 'embeddingDimensions' | 'embeddingApiUrl' | 'embeddingApiKey'
     >,
   ) {
@@ -21,7 +21,7 @@ export class HttpEmbeddingClient extends EmbeddingProvider {
   }
 
   get modelId(): string {
-    return this.config.embeddingModel
+    return this.embeddingConfig.embeddingModel
   }
 
   async embed(texts: string[]): Promise<number[][]> {
@@ -31,23 +31,25 @@ export class HttpEmbeddingClient extends EmbeddingProvider {
     const response = await this.postEmbeddingRequest(requestBody)
     const responseBody = await this.readResponseBody(response)
 
-    return mapEmbeddingResponse(responseBody, texts.length, this.config.embeddingDimensions)
+    return mapEmbeddingResponse(responseBody, texts.length, this.embeddingConfig.embeddingDimensions)
   }
 
   private async postEmbeddingRequest(body: string): Promise<Response> {
     let response: Response
     try {
-      response = await fetch(this.config.embeddingApiUrl, {
+      response = await fetch(this.embeddingConfig.embeddingApiUrl, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          ...(this.config.embeddingApiKey ? { authorization: `Bearer ${this.config.embeddingApiKey}` } : {}),
+          ...(this.embeddingConfig.embeddingApiKey
+            ? { authorization: `Bearer ${this.embeddingConfig.embeddingApiKey}` }
+            : {}),
         },
         body,
         signal: AbortSignal.timeout(EXTERNAL_REQUEST_TIMEOUT_MS),
       })
-    } catch {
-      throw new KnowledgeEmbeddingUnavailableException()
+    } catch (cause) {
+      throw new KnowledgeEmbeddingUnavailableException({ cause })
     }
 
     if (!response.ok) throw new KnowledgeEmbeddingUnavailableException()
@@ -58,8 +60,8 @@ export class HttpEmbeddingClient extends EmbeddingProvider {
   private async readResponseBody(response: Response): Promise<unknown> {
     try {
       return await response.json()
-    } catch {
-      throw new KnowledgeEmbeddingUnavailableException()
+    } catch (cause) {
+      throw new KnowledgeEmbeddingUnavailableException({ cause })
     }
   }
 }

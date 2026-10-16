@@ -1,8 +1,8 @@
-import { ChunkPlanningUnavailableException } from '../../DocumentIndexes/Exceptions/chunk-planning-unavailable.exception.ts'
 import type { PlannedDocumentRelation } from '../../DocumentRelations/DataTransferObjects/planned-document-relation.dto.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
 import type { MarkdownChunkPlan } from '../DataTransferObjects/markdown-chunk-plan.dto.ts'
 import type { PlannedMarkdownChunk } from '../DataTransferObjects/planned-markdown-chunk.dto.ts'
+import { ChunkPlanningUnavailableException } from '../Exceptions/chunk-planning-unavailable.exception.ts'
 import { InvalidChunkReplacementTimestampException } from '../Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
 
 const plannedRelationTypes = new Set(['markdown_link', 'wiki_link', 'requires', 'applies_to', 'overrides'])
@@ -15,8 +15,8 @@ export class ReplacementChunkGuard {
     }
 
     if (
-      !markdownChunkPlan.chunks.every((chunk) => ReplacementChunkGuard.isValidChunk(chunk)) ||
-      !markdownChunkPlan.relations.every((relation) => ReplacementChunkGuard.isValidRelation(relation))
+      !Array.from(markdownChunkPlan.chunks).every((chunk) => ReplacementChunkGuard.isValidChunk(chunk)) ||
+      !Array.from(markdownChunkPlan.relations).every((relation) => ReplacementChunkGuard.isValidRelation(relation))
     ) {
       throw new ChunkPlanningUnavailableException()
     }
@@ -27,7 +27,7 @@ export class ReplacementChunkGuard {
       chunk &&
       typeof chunk.content === 'string' &&
       Array.isArray(chunk.headingPath) &&
-      chunk.headingPath.every((heading) => typeof heading === 'string') &&
+      Array.from(chunk.headingPath).every((heading) => typeof heading === 'string') &&
       typeof chunk.blockStart === 'number' &&
       typeof chunk.blockEnd === 'number' &&
       typeof chunk.tokenCount === 'number',
@@ -50,18 +50,11 @@ export class ReplacementChunkGuard {
     )
   }
 
-  static assertAlignedOutputs(
-    markdownChunkPlan: MarkdownChunkPlan,
-    chunkEmbeddings: readonly number[][],
-    lexicalSearchTexts: readonly string[],
-  ): void {
+  static assertAlignedOutputs(markdownChunkPlan: MarkdownChunkPlan, chunkEmbeddings: readonly number[][]): void {
     if (
       !Array.isArray(chunkEmbeddings) ||
       chunkEmbeddings.length !== markdownChunkPlan.chunks.length ||
-      !chunkEmbeddings.every((chunkEmbedding) => ReplacementChunkGuard.isValidVector(chunkEmbedding)) ||
-      !Array.isArray(lexicalSearchTexts) ||
-      lexicalSearchTexts.length !== markdownChunkPlan.chunks.length ||
-      !lexicalSearchTexts.every((lexicalSearchText) => typeof lexicalSearchText === 'string')
+      !Array.from(chunkEmbeddings).every((chunkEmbedding) => ReplacementChunkGuard.isValidVector(chunkEmbedding))
     ) {
       throw new KnowledgeEmbeddingUnavailableException()
     }
@@ -71,7 +64,7 @@ export class ReplacementChunkGuard {
     return (
       Array.isArray(chunkEmbedding) &&
       chunkEmbedding.length > 0 &&
-      chunkEmbedding.every((embeddingComponent) => Number.isFinite(embeddingComponent))
+      Array.from(chunkEmbedding).every((embeddingComponent) => Number.isFinite(embeddingComponent))
     )
   }
 

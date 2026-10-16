@@ -5,8 +5,10 @@ import { In } from 'typeorm'
 import type { Repository } from 'typeorm'
 
 import { ChunkRepository as ChunkRepositoryContract } from '../../../Application/Chunks/Contracts/chunk.repository.ts'
+import { LexicalRankingUnavailableException } from '../../../Application/Chunks/Exceptions/lexical-ranking-unavailable.exception.ts'
 import type {
   ChunkVectorSimilarityQueryObject,
+  ChunkLexicalSearchQueryObject,
   ChunkIndexIdsQueryObject,
   ChunkIndexQueryObject,
   ChunkRetrievalCandidatesQueryObject,
@@ -17,6 +19,7 @@ import type { Chunk } from '../../../Domain/Chunk/chunk.ts'
 import { RETRIEVAL_READONLY_DATA_SOURCE } from '../../Providers/retrieval-readonly-data-source.options.ts'
 import { ChunkSearchResultAdapter } from '../Adapters/chunk-search-result.adapter.ts'
 import type { ChunkSemanticQueryRowDto } from '../Adapters/chunk-search-result.adapter.ts'
+import { LexicalSearchQueryAdapter } from '../Adapters/lexical-search-query.adapter.ts'
 import { ReadTransactionDataSourceMismatchException } from '../Exceptions/read-transaction-data-source-mismatch.exception.ts'
 import { ReadTransactionNotActiveException } from '../Exceptions/read-transaction-not-active.exception.ts'
 import { ChunkFactory } from '../Factories/chunk.factory.ts'
@@ -26,6 +29,8 @@ import { PersistenceTransaction } from '../persistence-transaction.ts'
 /** Chunk-primary persistence operations. */
 @Injectable()
 export class ChunkRepository extends ChunkRepositoryContract {
+  private readonly lexicalSearchQueryAdapter = new LexicalSearchQueryAdapter()
+
   constructor(
     private readonly persistenceTransaction: PersistenceTransaction,
     @InjectDataSource(RETRIEVAL_READONLY_DATA_SOURCE) private readonly retrievalDataSource: DataSource,
@@ -40,7 +45,12 @@ export class ChunkRepository extends ChunkRepositoryContract {
   async saveChunks(saveChunksQO: SaveChunksQueryObject): Promise<void> {
     if (!saveChunksQO.chunks.length) return
 
-    await this.chunkModelRepository.save([...saveChunksQO.chunks])
+    await this.chunkModelRepository.save(
+      saveChunksQO.chunks.map((chunk) => ({
+        ...chunk,
+        searchVector: this.lexicalSearchQueryAdapter.format(chunk.content).searchText,
+      })),
+    )
   }
 
   async findByDocumentIndexId(chunkIndexQO: ChunkIndexQueryObject): Promise<Chunk[]> {
@@ -98,6 +108,18 @@ export class ChunkRepository extends ChunkRepositoryContract {
     })
 
     return persistedChunks.map(ChunkFactory.toChunk)
+  }
+
+  async findByDocumentIndexIdsOrderByLexicalScoreDescAndIdAsc(
+    chunkLexicalSearchQO: ChunkLexicalSearchQueryObject,
+  ): Promise<Chunk[]> {
+    if (!chunkLexicalSearchQO.documentIndexIds.length || chunkLexicalSearchQO.limit <= 0) return []
+
+    const lexicalQuery = this.lexicalSearchQueryAdapter.format(chunkLexicalSearchQO.queryText)
+
+    if (!lexicalQuery.terms.length) return []
+
+    throw new LexicalRankingUnavailableException()
   }
 
   async findByDocumentIndexIdsOrderByVectorCosineDistanceAscAndIdAsc(

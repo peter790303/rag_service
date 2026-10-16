@@ -26,9 +26,9 @@ const createCandidateChunk = (id: string): Chunk =>
     blockEnd: 1,
   })
 
-const createLexicalCandidateChunk = (id: string, terms: readonly string[], score: number): Chunk => {
+const createLexicalCandidateChunk = (id: string, queryText: string, score: number): Chunk => {
   const chunk = createCandidateChunk(id)
-  chunk.recordLexicalSearchMatch(terms, score)
+  chunk.recordLexicalSearchMatch(queryText, score)
 
   return chunk
 }
@@ -54,13 +54,13 @@ const createSemanticCandidateChunk = (id: string, queryVector: readonly number[]
 
 test('candidate assembly preserves selected identities and source ranks without selecting or mutating entities', () => {
   const queryVector = [1, 0]
-  const terms = ['deployments']
+  const queryText = 'Deployments'
   const firstSharedSemanticChunk = createSemanticCandidateChunk('shared', queryVector, 0.1)
   const repeatedSharedSemanticChunk = createSemanticCandidateChunk('shared', queryVector, 0.8)
   const semanticOnlyChunk = createSemanticCandidateChunk('semantic-only', queryVector, 0.2)
-  const firstSharedLexicalChunk = createLexicalCandidateChunk('shared', terms, 0.6)
-  const repeatedSharedLexicalChunk = createLexicalCandidateChunk('shared', terms, 0.99)
-  const lexicalOnlyChunk = createLexicalCandidateChunk('lexical-only', terms, 0)
+  const firstSharedLexicalChunk = createLexicalCandidateChunk('shared', queryText, 0.6)
+  const repeatedSharedLexicalChunk = createLexicalCandidateChunk('shared', queryText, 0.99)
+  const lexicalOnlyChunk = createLexicalCandidateChunk('lexical-only', queryText, 0)
   const semanticCandidateChunks = Object.freeze([
     firstSharedSemanticChunk,
     repeatedSharedSemanticChunk,
@@ -97,7 +97,7 @@ test('candidate assembly preserves selected identities and source ranks without 
   assert.equal(retrievalCandidateChunkMatches[2]?.candidateChunk, semanticOnlyChunk)
   assert.equal(firstSharedSemanticChunk.retrievalMatch, null)
   assert.equal(lexicalOnlyChunk.retrievalMatch, null)
-  assert.equal(firstSharedLexicalChunk.requireLexicalSearchScoreFor(terms), 0.6)
+  assert.equal(firstSharedLexicalChunk.requireLexicalSearchScoreFor(queryText), 0.6)
 })
 
 test('retrieval queries scoped entities in sequence and combines overlapping ranked channels in the UseCase', async () => {
@@ -124,8 +124,8 @@ test('retrieval queries scoped entities in sequence and combines overlapping ran
       candidateQueryCalls.push({ channel: 'lexical', candidateQuery: findLexicalChunkCandidatesDTO })
 
       return [
-        createLexicalCandidateChunk('lexical-only', findLexicalChunkCandidatesDTO.terms, 0.7),
-        createLexicalCandidateChunk('shared', findLexicalChunkCandidatesDTO.terms, 0.6),
+        createLexicalCandidateChunk('lexical-only', findLexicalChunkCandidatesDTO.queryText, 0.7),
+        createLexicalCandidateChunk('shared', findLexicalChunkCandidatesDTO.queryText, 0.6),
       ]
     },
   }
@@ -135,12 +135,15 @@ test('retrieval queries scoped entities in sequence and combines overlapping ran
   ).execute({
     documentIndexIds: ['selected-index'],
     queryVector: [1, 0],
-    terms: ['deployments'],
+    queryText: 'Deployments',
     limit: 7,
   })
 
   assert.deepEqual(candidateQueryCalls, [
-    { channel: 'lexical', candidateQuery: { documentIndexIds: ['selected-index'], terms: ['deployments'], limit: 7 } },
+    {
+      channel: 'lexical',
+      candidateQuery: { documentIndexIds: ['selected-index'], queryText: 'Deployments', limit: 7 },
+    },
     { channel: 'semantic', candidateQuery: { documentIndexIds: ['selected-index'], queryVector: [1, 0], limit: 7 } },
   ])
   assert.deepEqual(
@@ -159,11 +162,11 @@ test('retrieval queries scoped entities in sequence and combines overlapping ran
 })
 
 test('retrieval keeps first entity identity, measurement, original channel rank and channel order when IDs repeat', async () => {
-  const terms = ['deployments']
+  const queryText = 'Deployments'
   const queryVector = [1, 0]
   const semanticShared = createSemanticCandidateChunk('shared', queryVector, 0.1)
   const semanticOnly = createSemanticCandidateChunk('semantic-only', queryVector, 0.2)
-  const lexicalOnly = createLexicalCandidateChunk('lexical-only', terms, 0)
+  const lexicalOnly = createLexicalCandidateChunk('lexical-only', queryText, 0)
   const chunkRepository = {
     findByDocumentIndexIdsOrderByVectorCosineDistanceAscAndIdAsc: async (
       chunkVectorSimilarityQO: ChunkVectorSimilarityQueryObject,
@@ -175,16 +178,16 @@ test('retrieval keeps first entity identity, measurement, original channel rank 
   }
   const lexicalCandidates: FindLexicalChunkCandidatesUseCaseContract = {
     execute: async () => [
-      createLexicalCandidateChunk('shared', terms, 0.6),
-      createLexicalCandidateChunk('shared', terms, 0.99),
+      createLexicalCandidateChunk('shared', queryText, 0.6),
+      createLexicalCandidateChunk('shared', queryText, 0.99),
       lexicalOnly,
-      createLexicalCandidateChunk('lexical-only', terms, 0.8),
+      createLexicalCandidateChunk('lexical-only', queryText, 0.8),
     ],
   }
   const candidates = await new FindRetrievalChunkCandidatesUseCase(
     chunkRepository as ChunkRepository,
     lexicalCandidates,
-  ).execute({ documentIndexIds: ['selected-index'], queryVector, terms, limit: 7 })
+  ).execute({ documentIndexIds: ['selected-index'], queryVector, queryText, limit: 7 })
 
   assert.equal(candidates.length, 3)
   assert.equal(candidates[0], semanticShared)
@@ -208,35 +211,38 @@ test('retrieval rejects lexical evidence measured for a different query instead 
     ) => [createSemanticCandidateChunk('shared', chunkVectorSimilarityQO.queryVector, 0.1)],
   }
   const lexicalCandidates: FindLexicalChunkCandidatesUseCaseContract = {
-    execute: async () => [createLexicalCandidateChunk('shared', ['different-query'], 0.6)],
+    execute: async () => [createLexicalCandidateChunk('shared', 'different-query', 0.6)],
   }
 
   await assert.rejects(
     new FindRetrievalChunkCandidatesUseCase(chunkRepository as ChunkRepository, lexicalCandidates).execute({
       documentIndexIds: ['selected-index'],
       queryVector,
-      terms: ['deployments'],
+      queryText: 'Deployments',
       limit: 7,
     }),
     ChunkLexicalSearchMatchMissingException,
   )
 })
 
-test('the lexical Application boundary returns no entities for empty scope, terms and nonpositive limits', async () => {
-  const lexicalCandidates = new FindLexicalChunkCandidatesUseCase()
-  const findLexicalChunkCandidatesDTO = Object.freeze({
-    documentIndexIds: Object.freeze(['selected-index']),
-    terms: Object.freeze(['deployments']),
-    limit: 1,
-  })
+test('the lexical Application boundary delegates the unmodified query and returns the repository entities', async () => {
+  const queryText = '  Deployments!  '
+  const candidate = createLexicalCandidateChunk('selected', queryText, 0.7)
+  const input = Object.freeze({ documentIndexIds: Object.freeze(['selected-index']), queryText, limit: 7 })
+  const calls: unknown[] = []
+  const repository = {
+    findByDocumentIndexIdsOrderByLexicalScoreDescAndIdAsc: async (query: unknown) => {
+      calls.push(query)
 
-  assert.deepEqual(await lexicalCandidates.execute({ ...findLexicalChunkCandidatesDTO, documentIndexIds: [] }), [])
-  assert.deepEqual(await lexicalCandidates.execute({ ...findLexicalChunkCandidatesDTO, terms: [] }), [])
-  assert.deepEqual(await lexicalCandidates.execute({ ...findLexicalChunkCandidatesDTO, limit: 0 }), [])
-  assert.deepEqual(await lexicalCandidates.execute({ ...findLexicalChunkCandidatesDTO, limit: -1 }), [])
-  assert.deepEqual(findLexicalChunkCandidatesDTO, {
-    documentIndexIds: ['selected-index'],
-    terms: ['deployments'],
-    limit: 1,
-  })
+      return [candidate]
+    },
+  }
+  const lexicalCandidates = new FindLexicalChunkCandidatesUseCase(repository as ChunkRepository)
+
+  const result = await lexicalCandidates.execute(input)
+
+  assert.deepEqual(calls, [input])
+  assert.equal(result[0], candidate)
+  assert.equal(result[0]?.requireLexicalSearchScoreFor(queryText), 0.7)
+  assert.equal(input.queryText, '  Deployments!  ')
 })

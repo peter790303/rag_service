@@ -21,3 +21,9 @@ export type ChunkVectorSimilarityQueryObject = {
   readonly queryVector: readonly number[]
   readonly limit: number
 }
+
+export type ChunkLexicalSearchQueryObject = {
+  readonly documentIndexIds: readonly string[]
+  readonly queryText: string
+  readonly limit: number
+}

@@ -15,9 +15,9 @@
     "typeorm": "node --env-file-if-exists=.env node_modules/typeorm/cli.js",
     "migration:revert": "npm run typeorm -- migration:revert -d dist/database/data-source.js",
     "lint": "eslint .",
-    "format": "prettier --write \"**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,yml,yaml}\" .prettierrc",
-    "format:check": "prettier --check \"**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,yml,yaml}\" .prettierrc",
-    "check": "npm run lint && npm run format:check && npm run typecheck && npm run build"
+    "format": "eslint . --fix --fix-type layout && prettier --write \"**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,yml,yaml}\" .prettierrc",
+    "format:check": "npm run lint && prettier --check \"**/*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,json,yml,yaml}\" .prettierrc",
+    "check": "npm run format:check && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@nestjs/common": "^12.1.3",

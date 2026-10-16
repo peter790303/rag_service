@@ -141,26 +141,26 @@ export class Chunk {
     return cosineDistance
   }
 
-  recordLexicalSearchMatch(terms: readonly string[], score: number): void {
-    this.lexicalSearchMatch = new ChunkLexicalSearchMatch(terms, score)
+  recordLexicalSearchMatch(queryText: string, score: number): void {
+    this.lexicalSearchMatch = new ChunkLexicalSearchMatch(queryText, score)
     this.currentRetrievalMatch = null
   }
 
-  requireLexicalSearchScoreFor(terms: readonly string[]): number {
-    if (!this.lexicalSearchMatch?.matches(terms)) throw new ChunkLexicalSearchMatchMissingException()
+  requireLexicalSearchScoreFor(queryText: string): number {
+    if (!this.lexicalSearchMatch?.matches(queryText)) throw new ChunkLexicalSearchMatchMissingException()
 
     return this.lexicalSearchMatch.score
   }
 
   recordRetrievalMatch(
     queryVector: readonly number[],
-    terms: readonly string[],
+    queryText: string,
     semanticRank: number | null,
     lexicalRank: number | null,
   ): void {
     this.currentRetrievalMatch = new ChunkRetrievalMatch(
       semanticRank === null ? 0 : 1 - this.requireVectorCosineDistanceFor(queryVector),
-      lexicalRank === null ? 0 : this.requireLexicalSearchScoreFor(terms),
+      lexicalRank === null ? 0 : this.requireLexicalSearchScoreFor(queryText),
       semanticRank,
       lexicalRank,
     )
@@ -182,5 +182,9 @@ export class Chunk {
 
   assertBelongsToDocumentIndex(documentIndexId: string): void {
     if (this.documentIndexId !== documentIndexId) throw new ChunkDocumentIndexMismatchException()
+  }
+
+  assertHasSearchVector(): asserts this is this & { readonly searchVector: string } {
+    if (this.searchVector === null) throw new InvalidChunkSearchVectorException()
   }
 }

@@ -1,8 +1,20 @@
 import { Module } from '@nestjs/common'
 
-import { RagInfrastructureModule } from './Infrastructure/Providers/rag-infrastructure.module.js'
-import { RagController } from './Interfaces/Http/Controllers/rag.controller.js'
-import { RagServiceAuthGuard } from './Interfaces/Http/Middleware/rag-service-auth.guard.js'
+import { KnowledgeServiceInfrastructureModule } from './Infrastructure/Providers/knowledge-service-infrastructure.module.ts'
+import { DocumentIndexesController } from './Interfaces/Http/Controllers/document-indexes.controller.ts'
+import { HealthController } from './Interfaces/Http/Controllers/health.controller.ts'
+import { KnowledgeBaseMembershipsController } from './Interfaces/Http/Controllers/knowledge-base-memberships.controller.ts'
+import { KnowledgeBaseRetrievalController } from './Interfaces/Http/Controllers/knowledge-base-retrieval.controller.ts'
+import { ProjectServiceAuthGuard } from './Interfaces/Http/Middleware/project-service-auth.guard.ts'
 
-@Module({ imports: [RagInfrastructureModule], controllers: [RagController], providers: [RagServiceAuthGuard] })
+@Module({
+  imports: [KnowledgeServiceInfrastructureModule],
+  controllers: [
+    HealthController,
+    DocumentIndexesController,
+    KnowledgeBaseRetrievalController,
+    KnowledgeBaseMembershipsController,
+  ],
+  providers: [ProjectServiceAuthGuard],
+})
 export class AppModule {}

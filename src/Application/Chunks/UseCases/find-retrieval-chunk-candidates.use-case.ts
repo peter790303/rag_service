@@ -40,13 +40,16 @@ export class FindRetrievalChunkCandidatesUseCase extends FindRetrievalChunkCandi
       lexicalCandidateChunks,
     )
 
-    const { queryVector, terms } = findRetrievalChunkCandidatesDTO
+    const { queryVector, queryText } = findRetrievalChunkCandidatesDTO
     retrievalCandidateChunkMatches.forEach(({ candidateChunk, semanticRank, lexicalMatch }) => {
       if (lexicalMatch) {
-        candidateChunk.recordLexicalSearchMatch(terms, lexicalMatch.candidateChunk.requireLexicalSearchScoreFor(terms))
+        candidateChunk.recordLexicalSearchMatch(
+          queryText,
+          lexicalMatch.candidateChunk.requireLexicalSearchScoreFor(queryText),
+        )
       }
 
-      candidateChunk.recordRetrievalMatch(queryVector, terms, semanticRank, lexicalMatch?.rank ?? null)
+      candidateChunk.recordRetrievalMatch(queryVector, queryText, semanticRank, lexicalMatch?.rank ?? null)
     })
 
     return selectedCandidateChunks

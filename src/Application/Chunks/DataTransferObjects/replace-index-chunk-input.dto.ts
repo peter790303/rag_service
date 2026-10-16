@@ -1,10 +1,9 @@
 import type { MarkdownChunkPlan } from './markdown-chunk-plan.dto.ts'
-import type { IndexJobDeliveryDto } from '../../DocumentIndexes/DataTransferObjects/index-job-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDto } from '../../DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
 
 export interface ReplaceIndexChunkInputDto {
-  indexJob: IndexJobDeliveryDto
+  job: DocumentIndexingDeliveryDto
   markdownChunkPlan: MarkdownChunkPlan
   chunkEmbeddings: readonly number[][]
-  lexicalSearchTexts: readonly string[]
   now: Date
 }

@@ -139,22 +139,34 @@ describe('Chunk', () => {
     assert.throws(() => chunk.recordVectorSearchMatch([1], NaN), InvalidChunkVectorSearchMatchException)
   })
 
-  it('ties lexical evidence to the original terms and clears stale retrieval ranks when evidence changes', () => {
-    const chunk = new Chunk(createChunkState())
-    const terms = ['release', 'deployments']
-    assert.throws(() => chunk.requireLexicalSearchScoreFor(terms), ChunkLexicalSearchMatchMissingException)
-    assert.throws(() => chunk.requireRetrievalMatch(), ChunkRetrievalMatchMissingException)
-    chunk.recordLexicalSearchMatch(terms, 0)
-    terms[0] = 'changed'
+  it('requires a search vector for indexing while preserving nullable read state and empty vectors', () => {
+    const withoutSearchVector: Chunk = new Chunk(createChunkState({ searchVector: null }))
+    const emptySearchVector: Chunk = new Chunk(createChunkState({ searchVector: '' }))
 
-    assert.throws(() => chunk.requireLexicalSearchScoreFor(terms), ChunkLexicalSearchMatchMissingException)
+    assert.equal(withoutSearchVector.searchVector, null)
+    assert.throws(() => withoutSearchVector.assertHasSearchVector(), InvalidChunkSearchVectorException)
+    emptySearchVector.assertHasSearchVector()
+    assert.equal(emptySearchVector.searchVector, '')
+  })
+
+  it('ties lexical evidence to the original query text and clears stale retrieval ranks when evidence changes', () => {
+    const chunk = new Chunk(createChunkState())
+    const queryText = 'Release deployments'
+    assert.throws(() => chunk.requireLexicalSearchScoreFor(queryText), ChunkLexicalSearchMatchMissingException)
+    assert.throws(() => chunk.requireRetrievalMatch(), ChunkRetrievalMatchMissingException)
+    chunk.recordLexicalSearchMatch(queryText, 0)
+
     assert.throws(
-      () => chunk.requireLexicalSearchScoreFor(['deployments', 'release']),
+      () => chunk.requireLexicalSearchScoreFor('release deployments'),
       ChunkLexicalSearchMatchMissingException,
     )
-    assert.equal(chunk.requireLexicalSearchScoreFor(['release', 'deployments']), 0)
+    assert.throws(
+      () => chunk.requireLexicalSearchScoreFor('deployments Release'),
+      ChunkLexicalSearchMatchMissingException,
+    )
+    assert.equal(chunk.requireLexicalSearchScoreFor(queryText), 0)
     chunk.recordVectorSearchMatch([1, 0], -Number.EPSILON)
-    chunk.recordRetrievalMatch([1, 0], ['release', 'deployments'], 2, 3)
+    chunk.recordRetrievalMatch([1, 0], queryText, 2, 3)
     assert.deepEqual(
       { ...chunk.requireRetrievalMatch() },
       {
@@ -165,10 +177,10 @@ describe('Chunk', () => {
       },
     )
 
-    chunk.recordLexicalSearchMatch(['release'], 0.7)
+    chunk.recordLexicalSearchMatch('release', 0.7)
     assert.equal(chunk.retrievalMatch, null)
     assert.throws(() => chunk.requireRetrievalMatch(), ChunkRetrievalMatchMissingException)
-    chunk.recordRetrievalMatch([], ['release'], null, 1)
+    chunk.recordRetrievalMatch([], 'release', null, 1)
     assert.equal(chunk.requireRetrievalMatch().semanticRank, null)
     assert.equal(chunk.requireRetrievalMatch().lexicalScore, 0.7)
     chunk.recordVectorSearchMatch([0, 1], 0.2)
@@ -177,15 +189,15 @@ describe('Chunk', () => {
 
   it('rejects missing query evidence and invalid channel ranks instead of inventing scores', () => {
     const chunk = new Chunk(createChunkState())
-    assert.throws(() => chunk.recordRetrievalMatch([1], ['release'], 1, null), ChunkVectorSearchMatchMissingException)
-    assert.throws(() => chunk.recordRetrievalMatch([], ['release'], null, 1), ChunkLexicalSearchMatchMissingException)
-    assert.throws(() => chunk.recordLexicalSearchMatch([], 1), InvalidChunkLexicalSearchMatchException)
-    assert.throws(() => chunk.recordLexicalSearchMatch([' '], 1), InvalidChunkLexicalSearchMatchException)
-    assert.throws(() => chunk.recordLexicalSearchMatch(['release'], Infinity), InvalidChunkLexicalSearchMatchException)
-    chunk.recordLexicalSearchMatch(['release'], 0.3)
-    assert.throws(() => chunk.recordRetrievalMatch([], ['release'], null, 0), InvalidChunkRetrievalMatchException)
-    assert.throws(() => chunk.recordRetrievalMatch([], ['release'], null, 1.5), InvalidChunkRetrievalMatchException)
-    assert.throws(() => chunk.recordRetrievalMatch([], ['release'], null, null), InvalidChunkRetrievalMatchException)
+    assert.throws(() => chunk.recordRetrievalMatch([1], 'release', 1, null), ChunkVectorSearchMatchMissingException)
+    assert.throws(() => chunk.recordRetrievalMatch([], 'release', null, 1), ChunkLexicalSearchMatchMissingException)
+    assert.throws(() => chunk.recordLexicalSearchMatch('', 1), InvalidChunkLexicalSearchMatchException)
+    assert.throws(() => chunk.recordLexicalSearchMatch(' ', 1), InvalidChunkLexicalSearchMatchException)
+    assert.throws(() => chunk.recordLexicalSearchMatch('release', Infinity), InvalidChunkLexicalSearchMatchException)
+    chunk.recordLexicalSearchMatch('release', 0.3)
+    assert.throws(() => chunk.recordRetrievalMatch([], 'release', null, 0), InvalidChunkRetrievalMatchException)
+    assert.throws(() => chunk.recordRetrievalMatch([], 'release', null, 1.5), InvalidChunkRetrievalMatchException)
+    assert.throws(() => chunk.recordRetrievalMatch([], 'release', null, null), InvalidChunkRetrievalMatchException)
     assert.equal(chunk.retrievalMatch, null)
   })
 

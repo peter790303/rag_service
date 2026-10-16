@@ -1,0 +1,16 @@
+export const DOCUMENT_INDEX_FAILURE_RETRY_STATUS = {
+  NOT_FOUND: 'not-found',
+  ALREADY_RETRIED: 'already-retried',
+  ACTIVE_JOB_EXISTS: 'active-job-exists',
+  NOT_CURRENT: 'not-current',
+  STALE: 'stale',
+  QUEUED: 'queued',
+  RETRIED: 'retried',
+} as const
+
+export type DocumentIndexingNotRetryableStatus =
+  | typeof DOCUMENT_INDEX_FAILURE_RETRY_STATUS.NOT_FOUND
+  | typeof DOCUMENT_INDEX_FAILURE_RETRY_STATUS.ALREADY_RETRIED
+  | typeof DOCUMENT_INDEX_FAILURE_RETRY_STATUS.ACTIVE_JOB_EXISTS
+  | typeof DOCUMENT_INDEX_FAILURE_RETRY_STATUS.NOT_CURRENT
+  | typeof DOCUMENT_INDEX_FAILURE_RETRY_STATUS.STALE

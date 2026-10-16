@@ -1,97 +1,122 @@
-import 'reflect-metadata'
-
 import assert from 'node:assert/strict'
 import { createHash, createHmac } from 'node:crypto'
 import { test } from 'node:test'
 
 import { Module } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
+import 'reflect-metadata'
 
-import type { RagConfig } from '../../../config/rag.config.js'
-import { RagServiceAuthenticatorPort } from '../../../src/Application/KnowledgeBases/Contracts/rag-service-authenticator.js'
-import type {
-  RagIndexRequestResult,
-  RagJobStatusDto,
-  RetryFailedJobDto,
-} from '../../../src/Application/KnowledgeBases/DataTransferObjects/rag.dto.js'
-import { GetRagJobStatusUseCase } from '../../../src/Application/KnowledgeBases/UseCases/get-rag-job-status.use-case.js'
-import { PruneRagMembershipsUseCase } from '../../../src/Application/KnowledgeBases/UseCases/prune-rag-memberships.use-case.js'
-import { RequestRagIndexUseCase } from '../../../src/Application/KnowledgeBases/UseCases/request-rag-index.use-case.js'
-import { RetrieveRagUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-rag.use-case.js'
-import { RetryFailedRagJobUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retry-failed-rag-job.use-case.js'
-import { RAG_DOCUMENT_INDEX_STATUS } from '../../../src/Domain/Knowledge/Enums/rag-document-index-status.enum.js'
-import { RagExecutionStageEnum } from '../../../src/Domain/Knowledge/Enums/rag-execution-stage.enum.js'
-import { RagJobTargetStateEnum } from '../../../src/Domain/Knowledge/Enums/rag-job-target-state.enum.js'
-import { RagSourceTypeEnum } from '../../../src/Domain/Knowledge/Enums/rag-source-type.enum.js'
-import { KnowledgeBaseProjectMismatchException } from '../../../src/Domain/Knowledge/Exceptions/knowledge-base-project-mismatch.exception.js'
-import { KnowledgeEmbeddingUnavailableException } from '../../../src/Domain/Knowledge/Exceptions/knowledge-embedding-unavailable.exception.js'
-import { KnowledgeIndexPendingException } from '../../../src/Domain/Knowledge/Exceptions/knowledge-index-pending.exception.js'
-import { KnowledgeJobNotFoundException } from '../../../src/Domain/Knowledge/Exceptions/knowledge-job-not-found.exception.js'
-import { KnowledgeMembershipPruneConflictException } from '../../../src/Domain/Knowledge/Exceptions/knowledge-membership-prune-conflict.exception.js'
-import { RagServiceAuthenticator } from '../../../src/Infrastructure/Auth/rag-service-authenticator.js'
-import { RagController } from '../../../src/Interfaces/Http/Controllers/rag.controller.js'
-import { ApplicationErrorFilter } from '../../../src/Interfaces/Http/ExceptionHandlers/application-error.filter.js'
-import { createGlobalValidationPipe } from '../../../src/Interfaces/Http/Pipes/create-global-validation-pipe.js'
+import type { DocumentIndexRequestResult } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-request.dto.ts'
+import type { DocumentIndexingStatusDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-status.dto.ts'
+import type { RetryDocumentIndexingResultDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/retry-document-indexing-result.dto.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
+import { DocumentIndexingTargetStateEnum } from '../../../src/Application/DocumentIndexes/Enums/document-indexing-target-state.enum.ts'
+import { DocumentIndexingRequestedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-requested.event.ts'
+import { ActiveDocumentIndexExecutionPreventsRetryException } from '../../../src/Application/DocumentIndexes/Exceptions/active-document-index-execution-prevents-retry.exception.ts'
+import { DocumentDisappearedBeforeIndexCompletionException } from '../../../src/Application/DocumentIndexes/Exceptions/document-disappeared-before-index-completion.exception.ts'
+import { DocumentIndexingFailureAlreadyRetriedException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-failure-already-retried.exception.ts'
+import { DocumentIndexingFailureNotCurrentException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-failure-not-current.exception.ts'
+import { DocumentIndexingNotFoundException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-not-found.exception.ts'
+import { IndexDisappearedBeforeCompletionException } from '../../../src/Application/DocumentIndexes/Exceptions/index-disappeared-before-completion.exception.ts'
+import { IndexRetryRevisionUnavailableException } from '../../../src/Application/DocumentIndexes/Exceptions/index-retry-revision-unavailable.exception.ts'
+import { IndexRetrySourceChangedException } from '../../../src/Application/DocumentIndexes/Exceptions/index-retry-source-changed.exception.ts'
+import { IndexRetrySourceUnavailableException } from '../../../src/Application/DocumentIndexes/Exceptions/index-retry-source-unavailable.exception.ts'
+import { InvalidIndexRetrySourceContextException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-index-retry-source-context.exception.ts'
+import { PreparedIndexCollectedException } from '../../../src/Application/DocumentIndexes/Exceptions/prepared-index-collected.exception.ts'
+import { StaleDocumentIndexingFailureException } from '../../../src/Application/DocumentIndexes/Exceptions/stale-document-indexing-failure.exception.ts'
+import { DocumentIndexingRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-requested.listener.ts'
+import { ReadDocumentIndexingStatusListener } from '../../../src/Application/DocumentIndexes/Listeners/read-document-indexing-status.listener.ts'
+import { RetryDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
+import { IndexRequestDocumentUnavailableException } from '../../../src/Application/Documents/Exceptions/index-request-document-unavailable.exception.ts'
+import { ServiceAuthenticator } from '../../../src/Application/KnowledgeBases/Contracts/service-authenticator.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
+import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
+import { IndexRequestMembershipUnavailableException } from '../../../src/Application/Memberships/Exceptions/index-request-membership-unavailable.exception.ts'
+import { PruneKnowledgeBaseMembershipsUseCase } from '../../../src/Application/Memberships/UseCases/prune-knowledge-base-memberships.use-case.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
+import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
+import { KnowledgeIndexPendingException } from '../../../src/Domain/DocumentIndex/Exceptions/knowledge-index-pending.exception.ts'
+import { KnowledgeBaseProjectMismatchException } from '../../../src/Domain/KnowledgeBase/Exceptions/knowledge-base-project-mismatch.exception.ts'
+import { KnowledgeMembershipPruneConflictException } from '../../../src/Domain/Membership/Exceptions/knowledge-membership-prune-conflict.exception.ts'
+import { HmacProjectServiceAuthenticator } from '../../../src/Infrastructure/Auth/hmac-project-service.authenticator.ts'
+import { DocumentIndexesController } from '../../../src/Interfaces/Http/Controllers/document-indexes.controller.ts'
+import { HealthController } from '../../../src/Interfaces/Http/Controllers/health.controller.ts'
+import { KnowledgeBaseMembershipsController } from '../../../src/Interfaces/Http/Controllers/knowledge-base-memberships.controller.ts'
+import { KnowledgeBaseRetrievalController } from '../../../src/Interfaces/Http/Controllers/knowledge-base-retrieval.controller.ts'
+import { ApplicationErrorFilter } from '../../../src/Interfaces/Http/ExceptionHandlers/application-error.filter.ts'
+import { createGlobalValidationPipe } from '../../../src/Interfaces/Http/Pipes/create-global-validation-pipe.ts'
+import { createKnowledgeServiceConfigFixture } from '../../Support/knowledge-service-config.fixture.ts'
+import { createRestoredMembershipFixture } from '../../Unit/Application/document-index-lifecycle.fixture.ts'
 
 let authenticated = true
 let serviceError: Error | null = null
+let onIndexingRequested: ((event: DocumentIndexingRequestedEvent) => Promise<void>) | null = null
 const retrievalResponse = { matches: [], fullContentDocuments: [] }
-const indexResponse: RagIndexRequestResult = {
+const indexResponse: DocumentIndexRequestResult = {
   documentId: 'document-1',
   revisionId: 'revision-1',
   documentIndexId: 'index-1',
   jobId: null,
-  generation: 1,
+  generation: 'generation-1',
   reusedReadyIndex: true,
   blockedByFailedJob: false,
 }
-const retryResponse: RetryFailedJobDto = {
+const retryResponse: RetryDocumentIndexingResultDto = {
   jobId: 'job-2',
   failedJobId: 'failed-1',
-  status: RagJobTargetStateEnum.QUEUED,
+  status: DocumentIndexingTargetStateEnum.QUEUED,
   retryOfFailedJobId: 'failed-1',
 }
-const pruneResponse = { pruned: 2, internalData: 'hidden' }
+const pruneResponse = [createRestoredMembershipFixture(), createRestoredMembershipFixture({ documentId: 'document-2' })]
 const validIndexBody = {
   knowledgeBaseId: '11111111-1111-4111-8111-111111111111',
   projectId: 'project-1',
   projectName: 'Project',
-  sourceType: RagSourceTypeEnum.REPOSITORY,
+  sourceType: DocumentSourceTypeEnum.REPOSITORY,
   sourceKey: 'repository-1',
   sourcePath: 'README.md',
   content: 'content',
 }
 const authSecret = 'http-contract-secret-that-is-at-least-32-characters'
-const resultOrThrow = <T>(result: T): T => {
+const resultOrThrow = <T>(serviceResponseDTO: T): T => {
   if (serviceError !== null) throw serviceError
 
-  return result
+  return serviceResponseDTO
 }
 const useCaseProviders = [
-  { provide: RequestRagIndexUseCase, useValue: { execute: async () => resultOrThrow(indexResponse) } },
-  { provide: RetrieveRagUseCase, useValue: { execute: async () => resultOrThrow(retrievalResponse) } },
-  { provide: GetRagJobStatusUseCase, useValue: { execute: async () => resultOrThrow(jobStatusResponse) } },
-  { provide: RetryFailedRagJobUseCase, useValue: { execute: async () => resultOrThrow(retryResponse) } },
-  { provide: PruneRagMembershipsUseCase, useValue: { execute: async () => resultOrThrow(pruneResponse) } },
+  {
+    provide: DocumentIndexingRequestedListener,
+    useValue: {
+      handle: async (event: DocumentIndexingRequestedEvent) => {
+        await onIndexingRequested?.(event)
+
+        return resultOrThrow(indexResponse)
+      },
+    },
+  },
+  { provide: RetrieveKnowledgeBaseContentUseCase, useValue: { execute: async () => resultOrThrow(null) } },
+  { provide: ReadDocumentIndexingStatusListener, useValue: { handle: async () => resultOrThrow(jobStatusResponse) } },
+  { provide: RetryDocumentIndexingListener, useValue: { handle: async () => resultOrThrow(retryResponse) } },
+  { provide: PruneKnowledgeBaseMembershipsUseCase, useValue: { execute: async () => resultOrThrow(pruneResponse) } },
 ]
 const readyAt = new Date('2026-10-14T00:00:00.000Z')
-let jobStatusResponse: RagJobStatusDto = {
+let jobStatusResponse: DocumentIndexingStatusDto = {
   activeIndex: {
     id: 'index-1',
-    status: RAG_DOCUMENT_INDEX_STATUS.READY,
+    status: DocumentIndexStatusEnum.READY,
     readyAt,
   },
   requestedTarget: {
     indexId: 'index-1',
     generation: 'generation-1',
-    state: RagJobTargetStateEnum.RUNNING,
+    state: DocumentIndexingTargetStateEnum.RUNNING,
     jobId: 'job-1',
     failedJobId: null,
     attempts: 1,
     errorCode: null,
     errorMessage: null,
     executionVerification: {
-      stage: RagExecutionStageEnum.EMBEDDING,
+      stage: DocumentIndexExecutionStageEnum.EMBEDDING,
       completedUnits: 2,
       totalUnits: 4,
       verifiedAt: null,
@@ -117,20 +142,29 @@ if (jobStatusResponse.requestedTarget !== null) {
 Object.assign(jobStatusResponse, { internalStatusData: 'hidden' })
 
 @Module({
-  controllers: [RagController],
-  providers: [
-    { provide: RagServiceAuthenticatorPort, useValue: { authenticate: () => authenticated } },
-    ...useCaseProviders,
+  controllers: [
+    HealthController,
+    DocumentIndexesController,
+    KnowledgeBaseRetrievalController,
+    KnowledgeBaseMembershipsController,
   ],
+  providers: [{ provide: ServiceAuthenticator, useValue: { authenticate: () => authenticated } }, ...useCaseProviders],
 })
 class HttpContractTestModule {}
 
 @Module({
-  controllers: [RagController],
+  controllers: [
+    HealthController,
+    DocumentIndexesController,
+    KnowledgeBaseRetrievalController,
+    KnowledgeBaseMembershipsController,
+  ],
   providers: [
     {
-      provide: RagServiceAuthenticatorPort,
-      useValue: new RagServiceAuthenticator({ serviceAuthSecret: authSecret } as RagConfig),
+      provide: ServiceAuthenticator,
+      useValue: new HmacProjectServiceAuthenticator(
+        createKnowledgeServiceConfigFixture({ serviceAuthSecret: authSecret }),
+      ),
     },
     ...useCaseProviders,
   ],
@@ -173,13 +207,41 @@ test('HTTP contract returns 422 for invalid DTOs, 401 for failed auth, and 404 f
     })
     assert.equal(invalidSource.status, 422)
 
-    const reusedIndex = await fetch(`${baseUrl}/v1/index-requests`, {
+    let completeIndexingRequest!: () => void
+    let receiveIndexingRequest!: (event: DocumentIndexingRequestedEvent) => void
+    const indexingCompleted = new Promise<void>((resolve) => {
+      completeIndexingRequest = resolve
+    })
+    const indexingReceived = new Promise<DocumentIndexingRequestedEvent>((resolve) => {
+      receiveIndexingRequest = resolve
+    })
+    onIndexingRequested = async (event) => {
+      receiveIndexingRequest(event)
+      await indexingCompleted
+    }
+    let responded = false
+    const response = fetch(`${baseUrl}/v1/index-requests`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(validIndexBody),
+    }).then((result) => {
+      responded = true
+
+      return result
     })
-    assert.equal(reusedIndex.status, 201)
-    assert.deepEqual(await reusedIndex.json(), indexResponse)
+    try {
+      const event = await indexingReceived
+      assert.ok(event instanceof DocumentIndexingRequestedEvent)
+      assert.deepEqual(event.sourceDocument, { ...validIndexBody, payload: {} })
+      assert.equal(responded, false)
+      completeIndexingRequest()
+      const reusedIndex = await response
+      assert.equal(reusedIndex.status, 201)
+      assert.deepEqual(await reusedIndex.json(), indexResponse)
+    } finally {
+      completeIndexingRequest()
+      onIndexingRequested = null
+    }
 
     const emptyQueryVector = await fetch(`${baseUrl}/v1/retrieve/hybrid`, {
       method: 'POST',
@@ -203,20 +265,20 @@ test('HTTP contract returns 422 for invalid DTOs, 401 for failed auth, and 404 f
     assert.deepEqual(await jobStatus.json(), {
       activeIndex: {
         id: 'index-1',
-        status: RAG_DOCUMENT_INDEX_STATUS.READY,
+        status: DocumentIndexStatusEnum.READY,
         readyAt: readyAt.toISOString(),
       },
       requestedTarget: {
         indexId: 'index-1',
         generation: 'generation-1',
-        state: RagJobTargetStateEnum.RUNNING,
+        state: DocumentIndexingTargetStateEnum.RUNNING,
         jobId: 'job-1',
         failedJobId: null,
         attempts: 1,
         errorCode: null,
         errorMessage: null,
         executionVerification: {
-          stage: RagExecutionStageEnum.EMBEDDING,
+          stage: DocumentIndexExecutionStageEnum.EMBEDDING,
           completedUnits: 2,
           totalUnits: 4,
           verifiedAt: null,
@@ -285,7 +347,7 @@ test('HTTP contract returns 422 for invalid DTOs, 401 for failed auth, and 404 f
   }
 })
 
-test('HTTP exposes typed domain error envelopes and keeps unexpected error details private', async () => {
+test('HTTP exposes typed application and domain error envelopes and keeps unexpected error details private', async () => {
   const app = await NestFactory.create(HttpContractTestModule, { logger: false })
   app.useGlobalPipes(createGlobalValidationPipe())
   app.useGlobalFilters(new ApplicationErrorFilter())
@@ -293,15 +355,108 @@ test('HTTP exposes typed domain error envelopes and keeps unexpected error detai
   try {
     await app.listen(0, '127.0.0.1')
     const baseUrl = await app.getUrl()
+    const applicationErrors = [
+      {
+        error: new IndexRequestDocumentUnavailableException(),
+        name: 'IndexRequestDocumentUnavailableException',
+        code: 'INDEX_REQUEST_DOCUMENT_UNAVAILABLE',
+        message: 'Document is no longer available',
+      },
+      {
+        error: new IndexRequestMembershipUnavailableException(),
+        name: 'IndexRequestMembershipUnavailableException',
+        code: 'INDEX_REQUEST_MEMBERSHIP_UNAVAILABLE',
+        message: 'Membership is no longer available',
+      },
+      {
+        error: new PreparedIndexCollectedException(),
+        name: 'PreparedIndexCollectedException',
+        code: 'PREPARED_INDEX_COLLECTED',
+        message: 'The prepared index was collected before it could be queued',
+      },
+      {
+        error: new DocumentDisappearedBeforeIndexCompletionException(),
+        name: 'DocumentDisappearedBeforeIndexCompletionException',
+        code: 'DOCUMENT_DISAPPEARED_BEFORE_INDEX_COMPLETION',
+        message: 'Document disappeared before completion',
+      },
+      {
+        error: new IndexDisappearedBeforeCompletionException(),
+        name: 'IndexDisappearedBeforeCompletionException',
+        code: 'INDEX_DISAPPEARED_BEFORE_COMPLETION',
+        message: 'Index disappeared before completion',
+      },
+      {
+        error: new StaleDocumentIndexingFailureException(),
+        name: 'StaleDocumentIndexingFailureException',
+        code: 'STALE_DOCUMENT_INDEXING_FAILURE',
+        message: 'Failed job is stale and cannot be manually retried',
+      },
+      {
+        error: new DocumentIndexingFailureAlreadyRetriedException(),
+        name: 'DocumentIndexingFailureAlreadyRetriedException',
+        code: 'DOCUMENT_INDEXING_FAILURE_ALREADY_RETRIED',
+        message: 'Failed job has already been retried',
+      },
+      {
+        error: new ActiveDocumentIndexExecutionPreventsRetryException(),
+        name: 'ActiveDocumentIndexExecutionPreventsRetryException',
+        code: 'ACTIVE_DOCUMENT_INDEX_EXECUTION_PREVENTS_RETRY',
+        message: 'Failed job is no longer retryable: active-job-exists',
+      },
+      {
+        error: new DocumentIndexingFailureNotCurrentException(),
+        name: 'DocumentIndexingFailureNotCurrentException',
+        code: 'DOCUMENT_INDEXING_FAILURE_NOT_CURRENT',
+        message: 'Failed job is no longer retryable: not-current',
+      },
+      {
+        error: new IndexRetrySourceUnavailableException(),
+        name: 'IndexRetrySourceUnavailableException',
+        code: 'INDEX_RETRY_SOURCE_UNAVAILABLE',
+        message: 'Current source is unavailable',
+      },
+      {
+        error: new IndexRetryRevisionUnavailableException(),
+        name: 'IndexRetryRevisionUnavailableException',
+        code: 'INDEX_RETRY_REVISION_UNAVAILABLE',
+        message: 'Current indexed source revision is unavailable',
+      },
+      {
+        error: new InvalidIndexRetrySourceContextException(),
+        name: 'InvalidIndexRetrySourceContextException',
+        code: 'INVALID_INDEX_RETRY_SOURCE_CONTEXT',
+        message: 'Failed job retry payload contains an invalid source context',
+      },
+      {
+        error: new IndexRetrySourceChangedException(),
+        name: 'IndexRetrySourceChangedException',
+        code: 'INDEX_RETRY_SOURCE_CHANGED',
+        message: 'Current source changed during retry',
+      },
+    ]
+
+    applicationErrors.forEach(({ error, name, code, message }) => {
+      assert.equal(error instanceof KnowledgeIndexPendingException, false)
+      assert.equal(error.name, name)
+      assert.equal(error.code, code)
+      assert.equal(error.message, message)
+    })
+
     const errors = [
       { error: new KnowledgeIndexPendingException(), status: 409 },
       { error: new KnowledgeBaseProjectMismatchException(), status: 409 },
       { error: new KnowledgeMembershipPruneConflictException('kb-1', 'document-1'), status: 409 },
-      { error: new KnowledgeJobNotFoundException('job-1'), status: 404 },
+      { error: new DocumentIndexingNotFoundException('job-1'), status: 404 },
       { error: new KnowledgeEmbeddingUnavailableException(), status: 502 },
     ]
 
-    for (const { error, status } of errors) {
+    const expectedErrors = [
+      ...errors.map(({ error, status }) => ({ error, status, code: error.code, message: error.message })),
+      ...applicationErrors.map((error) => ({ ...error, status: 409 })),
+    ]
+
+    for (const { error, status, code, message } of expectedErrors) {
       serviceError = error
       const response = await fetch(`${baseUrl}/v1/retrieve/hybrid`, {
         method: 'POST',
@@ -309,7 +464,7 @@ test('HTTP exposes typed domain error envelopes and keeps unexpected error detai
         body: JSON.stringify({ projectId: 'project-1', queryText: 'query' }),
       })
       assert.equal(response.status, status)
-      assert.deepEqual(await response.json(), { code: error.code, message: error.message })
+      assert.deepEqual(await response.json(), { code, message })
     }
 
     serviceError = new Error('internal database credential must not be returned')

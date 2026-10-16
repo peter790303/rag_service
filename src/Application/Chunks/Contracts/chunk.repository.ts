@@ -3,6 +3,7 @@ import type { ChunkIndexIdsQueryObject } from '../QueryObjects/chunk.query-objec
 import type { ChunkIndexQueryObject } from '../QueryObjects/chunk.query-object.ts'
 import type { ChunkRetrievalCandidatesQueryObject } from '../QueryObjects/chunk.query-object.ts'
 import type { ChunkIndexOrdinalsQueryObject } from '../QueryObjects/chunk.query-object.ts'
+import type { ChunkLexicalSearchQueryObject } from '../QueryObjects/chunk.query-object.ts'
 import type { ChunkVectorSimilarityQueryObject } from '../QueryObjects/chunk.query-object.ts'
 import type { SaveChunksQueryObject } from '../QueryObjects/save-chunks.query-object.ts'
 
@@ -24,6 +25,10 @@ export abstract class ChunkRepository {
   ): Promise<Chunk[]>
 
   abstract findByDocumentIndexIds(chunkIndexIdsQO: ChunkIndexIdsQueryObject): Promise<Chunk[]>
+
+  abstract findByDocumentIndexIdsOrderByLexicalScoreDescAndIdAsc(
+    chunkLexicalSearchQO: ChunkLexicalSearchQueryObject,
+  ): Promise<Chunk[]>
 
   /**
    * 在指定 documentIndexIds 範圍內，以 queryVector 計算 cosine distance 候選。

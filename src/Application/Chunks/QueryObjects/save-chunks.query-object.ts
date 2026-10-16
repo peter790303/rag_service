@@ -1,6 +1,6 @@
 export type SaveChunksQueryObject = {
   readonly chunks: readonly {
-    readonly id?: string
+    readonly id: string
     readonly documentIndexId: string
     readonly ordinal: number
     readonly headingPath: string[]
@@ -9,7 +9,6 @@ export type SaveChunksQueryObject = {
     readonly blockEnd: number
     readonly tokenCount: number | null
     readonly embedding: number[]
-    readonly createdAt?: Date
-    readonly searchVector: string
+    readonly createdAt: Date
   }[]
 }

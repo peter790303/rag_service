@@ -1,55 +1,60 @@
 import { Inject, Injectable } from '@nestjs/common'
 
-import { createChunkPlanningRequestBody } from './Adapter/chunk-planning-request.adapter.js'
-import { mapChunkPlanningResponse } from './Adapter/chunk-planning-response.adapter.js'
-import { RAG_CONFIG, type RagConfig } from '../../../../config/rag.config.js'
-import { ChunkPlanningProvider } from '../../../Application/KnowledgeBases/Contracts/chunk-planning-provider.js'
-import { ChunkPlanningUnavailableException } from '../../../Domain/Knowledge/Exceptions/chunk-planning-unavailable.exception.js'
-import { MarkdownChunkFactory, type MarkdownPlan } from '../../../Domain/Knowledge/markdown-chunk.factory.js'
+import { createChunkPlanningRequestBody } from './Adapters/chunk-planning-request.adapter.ts'
+import { mapChunkPlanningResponse } from './Adapters/chunk-planning-response.adapter.ts'
+import { MarkdownSourceAdapter } from './Adapters/markdown-source.adapter.ts'
+import { KNOWLEDGE_SERVICE_CONFIG, type KnowledgeServiceConfig } from '../../../../config/knowledge-service.config.ts'
+import { ChunkPlanningProvider } from '../../../Application/Chunks/Contracts/chunk-planning-provider.ts'
+import type { MarkdownChunkPlan } from '../../../Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import { ChunkPlanningUnavailableException } from '../../../Application/Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
 
 const EXTERNAL_REQUEST_TIMEOUT_MS = 30_000
 
 @Injectable()
 export class HttpChunkPlanningClient extends ChunkPlanningProvider {
   constructor(
-    @Inject(RAG_CONFIG)
-    private readonly config: Pick<RagConfig, 'chunkingModel' | 'chunkingApiUrl' | 'chunkingApiKey'>,
+    @Inject(KNOWLEDGE_SERVICE_CONFIG)
+    private readonly chunkPlanningConfig: Pick<
+      KnowledgeServiceConfig,
+      'chunkingModel' | 'chunkingApiUrl' | 'chunkingApiKey'
+    >,
   ) {
     super()
   }
 
   get modelId(): string {
-    return this.config.chunkingModel
+    return this.chunkPlanningConfig.chunkingModel
   }
 
-  async plan(source: string): Promise<MarkdownPlan> {
-    const sourceBlocks = MarkdownChunkFactory.scan(source)
+  async plan(source: string): Promise<MarkdownChunkPlan> {
+    const sourceScan = MarkdownSourceAdapter.scan(source)
 
-    if (!sourceBlocks.length) return MarkdownChunkFactory.plan(source)
+    if (!sourceScan.blocks.length) return { chunks: [], relations: [] }
 
-    const requestBody = createChunkPlanningRequestBody(this.modelId, sourceBlocks)
+    const requestBody = createChunkPlanningRequestBody(this.modelId, sourceScan.blocks)
     const response = await this.postPlanRequest(requestBody)
     const responseBody = await this.readResponseBody(response)
-    const chunkStarts = mapChunkPlanningResponse(responseBody, sourceBlocks)
 
-    return MarkdownChunkFactory.plan(source, chunkStarts)
+    return mapChunkPlanningResponse(responseBody, source, sourceScan)
   }
 
   private async postPlanRequest(body: string): Promise<Response> {
     let response: Response
 
     try {
-      response = await fetch(this.config.chunkingApiUrl, {
+      response = await fetch(this.chunkPlanningConfig.chunkingApiUrl, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          ...(this.config.chunkingApiKey ? { authorization: `Bearer ${this.config.chunkingApiKey}` } : {}),
+          ...(this.chunkPlanningConfig.chunkingApiKey
+            ? { authorization: `Bearer ${this.chunkPlanningConfig.chunkingApiKey}` }
+            : {}),
         },
         body,
         signal: AbortSignal.timeout(EXTERNAL_REQUEST_TIMEOUT_MS),
       })
-    } catch {
-      throw new ChunkPlanningUnavailableException()
+    } catch (cause) {
+      throw new ChunkPlanningUnavailableException({ cause })
     }
 
     if (!response.ok) throw new ChunkPlanningUnavailableException()
@@ -60,8 +65,8 @@ export class HttpChunkPlanningClient extends ChunkPlanningProvider {
   private async readResponseBody(response: Response): Promise<unknown> {
     try {
       return await response.json()
-    } catch {
-      throw new ChunkPlanningUnavailableException()
+    } catch (cause) {
+      throw new ChunkPlanningUnavailableException({ cause })
     }
   }
 }

@@ -10,6 +10,7 @@ import { FindLexicalChunkCandidatesUseCase } from '../../../src/Application/Chun
 import { Chunk } from '../../../src/Domain/Chunk/chunk.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
+import { LexicalSearchQueryAdapter } from '../../../src/Infrastructure/Persistence/Adapters/lexical-search-query.adapter.ts'
 import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
 import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
 import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
@@ -137,6 +138,64 @@ const createCandidateFixture = async () => {
     throw error
   }
 }
+
+test(
+  'repository writes preserve the persisted lexical representation of the previous formatter path',
+  { skip: !process.env.RAG_DATABASE_URL },
+  async () => {
+    const { dataSource, cleanup, chunkRepository, scopeA, scopeB } = await createCandidateFixture()
+    const formatter = new LexicalSearchQueryAdapter()
+    const contents = ['Architecture BOUNDARIES architecture', '繁體中文 Hybrid 檢索', '，。！？ --']
+    const chunks = contents.map((content, index) => ({
+      id: createChunkIdFixture(100 + index),
+      documentIndexId: scopeA,
+      ordinal: 10 + index,
+      headingPath: ['Lexical write'],
+      content,
+      blockStart: index,
+      blockEnd: index + 1,
+      tokenCount: null,
+      embedding: createEmbeddingVectorFixture(1, 0),
+      createdAt: chunkCreatedAtFixture,
+    }))
+
+    try {
+      const baselineChunks = await Promise.all(
+        contents.map((content, index) =>
+          seedChunkFixture(
+            dataSource,
+            200 + index,
+            scopeB,
+            10 + index,
+            createEmbeddingVectorFixture(1, 0),
+            content,
+            formatter.format(content).searchText,
+          ),
+        ),
+      )
+      await chunkRepository.saveChunks({ chunks })
+      const baseline = await Promise.all(
+        baselineChunks.map((chunk) => dataSource.getRepository(ChunkModel).findOneByOrFail({ id: chunk.id })),
+      )
+      const stored = await Promise.all(
+        chunks.map((chunk) => dataSource.getRepository(ChunkModel).findOneByOrFail({ id: chunk.id })),
+      )
+
+      assert.deepEqual(
+        stored.map((chunk) => chunk.content),
+        contents,
+      )
+      assert.deepEqual(
+        stored.map((chunk) => chunk.searchVector),
+        baseline.map((chunk) => chunk.searchVector),
+      )
+      assert.ok(stored.every((chunk) => chunk.searchVector !== null))
+      assert.ok(chunks.every((chunk) => !Object.hasOwn(chunk, 'searchVector')))
+    } finally {
+      await cleanup()
+    }
+  },
+)
 
 test(
   'native semantic candidate rankings share the TypeORM read-only snapshot and retain connection ownership',
@@ -361,9 +420,17 @@ test(
   'public lexical candidate rankings retain database top-K, scores, complete projections and snapshot requirements',
   { skip: !process.env.RAG_DATABASE_URL },
   async (context) => {
-    const { dataSource, retrievalDataSource, cleanup, persistenceTransaction, scopeA, scopeB, outsideScope } =
-      await createCandidateFixture()
-    const lexicalCandidates = new FindLexicalChunkCandidatesUseCase()
+    const {
+      dataSource,
+      retrievalDataSource,
+      cleanup,
+      persistenceTransaction,
+      chunkRepository,
+      scopeA,
+      scopeB,
+      outsideScope,
+    } = await createCandidateFixture()
+    const lexicalCandidates = new FindLexicalChunkCandidatesUseCase(chunkRepository)
     const lexicalIn = (manager: EntityManager, findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDto) =>
       persistenceTransaction.bind(manager, () => lexicalCandidates.execute(findLexicalChunkCandidatesDTO))
 
@@ -376,14 +443,14 @@ test(
         const before = await inspectRetrievalSession(runner.manager)
         const lexicalInput = {
           documentIndexIds: Object.freeze([scopeA, scopeB]),
-          terms: Object.freeze(['ORBIT']),
+          queryText: 'ORBIT',
           limit: 3,
         }
 
-        await context.test('empty scope, terms and nonpositive limits do not query PostgreSQL', async () => {
+        await context.test('empty scope, query text and nonpositive limits do not query PostgreSQL', async () => {
           const callsBefore = queryCalls.mock.callCount()
           assert.deepEqual(await lexicalIn(runner.manager, { ...lexicalInput, documentIndexIds: [] }), [])
-          assert.deepEqual(await lexicalIn(runner.manager, { ...lexicalInput, terms: [] }), [])
+          assert.deepEqual(await lexicalIn(runner.manager, { ...lexicalInput, queryText: '' }), [])
           assert.deepEqual(await lexicalIn(runner.manager, { ...lexicalInput, limit: 0 }), [])
           assert.equal(queryCalls.mock.callCount(), callsBefore)
         })
@@ -393,7 +460,7 @@ test(
         assert.equal(queryCalls.mock.callCount(), callsBeforeLexical + 1, 'lexical candidates use one native query')
         const lexical = lexicalResult.map((chunk) => ({
           chunkId: chunk.id,
-          score: chunk.requireLexicalSearchScoreFor(lexicalInput.terms),
+          score: chunk.requireLexicalSearchScoreFor(lexicalInput.queryText),
         }))
 
         await context.test(
@@ -416,14 +483,14 @@ test(
             })
             assert.equal(outside[0]?.id, createChunkIdFixture(5))
             assert.ok(
-              (outside[0]?.requireLexicalSearchScoreFor(lexicalInput.terms) ?? NaN) > (lexical[0]?.score ?? NaN),
+              (outside[0]?.requireLexicalSearchScoreFor(lexicalInput.queryText) ?? NaN) > (lexical[0]?.score ?? NaN),
             )
-            const inflected = await lexicalIn(runner.manager, { ...lexicalInput, terms: ['orbits'] })
+            const inflected = await lexicalIn(runner.manager, { ...lexicalInput, queryText: 'orbits' })
             assert.deepEqual(
               inflected.map((chunk) => chunk.id),
               [createChunkIdFixture(3)],
             )
-            const conjunction = await lexicalIn(runner.manager, { ...lexicalInput, terms: ['orbit', 'missing'] })
+            const conjunction = await lexicalIn(runner.manager, { ...lexicalInput, queryText: 'orbit missing' })
             assert.deepEqual(conjunction, [])
           },
         )
@@ -499,7 +566,7 @@ test(
             )
             const lexicalAfter = await lexicalIn(runner.manager, lexicalInput)
             assert.deepEqual(
-              lexicalAfter.map((chunk) => [chunk.id, chunk.requireLexicalSearchScoreFor(lexicalInput.terms)]),
+              lexicalAfter.map((chunk) => [chunk.id, chunk.requireLexicalSearchScoreFor(lexicalInput.queryText)]),
               lexical.map((lexicalScore) => [lexicalScore.chunkId, lexicalScore.score]),
             )
             assert.deepEqual(lexicalAfter, lexicalResult)
@@ -510,7 +577,8 @@ test(
               const freshLexical = await lexicalIn(fresh.manager, lexicalInput)
               assert.equal(freshLexical[0]?.id, createChunkIdFixture(0))
               assert.ok(
-                (freshLexical[0]?.requireLexicalSearchScoreFor(lexicalInput.terms) ?? NaN) > (lexical[0]?.score ?? NaN),
+                (freshLexical[0]?.requireLexicalSearchScoreFor(lexicalInput.queryText) ?? NaN) >
+                  (lexical[0]?.score ?? NaN),
               )
             } finally {
               if (fresh.isTransactionActive) await fresh.rollbackTransaction()

@@ -1,17 +1,17 @@
 import type { Chunk } from '../../../Domain/Chunk/chunk.ts'
+import { RetrievalCandidateChunkAssembler } from '../Assemblers/retrieval-candidate-chunk.assembler.ts'
+import type { ChunkRepository } from '../Contracts/chunk.repository.ts'
 import { FindLexicalChunkCandidatesUseCaseContract } from '../Contracts/find-lexical-chunk-candidates.use-case.contract.ts'
 import type { FindLexicalChunkCandidatesDto } from '../DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
-import { LexicalRankingUnavailableException } from '../Exceptions/lexical-ranking-unavailable.exception.ts'
 
 export class FindLexicalChunkCandidatesUseCase extends FindLexicalChunkCandidatesUseCaseContract {
-  async execute(findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDto): Promise<Chunk[]> {
-    if (
-      !findLexicalChunkCandidatesDTO.documentIndexIds.length ||
-      !findLexicalChunkCandidatesDTO.terms.length ||
-      findLexicalChunkCandidatesDTO.limit <= 0
-    )
-      return []
+  constructor(private readonly chunkRepository: ChunkRepository) {
+    super()
+  }
 
-    throw new LexicalRankingUnavailableException()
+  async execute(findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDto): Promise<Chunk[]> {
+    return this.chunkRepository.findByDocumentIndexIdsOrderByLexicalScoreDescAndIdAsc(
+      RetrievalCandidateChunkAssembler.toChunkLexicalSearchQueryObject(findLexicalChunkCandidatesDTO),
+    )
   }
 }

@@ -1,45 +1,75 @@
-import type { PrepareChunkReplacementUseCaseContract } from '../../DocumentIndexes/Contracts/prepare-chunk-replacement.use-case.contract.ts'
+import { randomUUID } from 'node:crypto'
+
+import { Chunk } from '../../../Domain/Chunk/chunk.ts'
+import { ChunkDocumentIndexRequiredException } from '../../../Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
+import type { DocumentIndexChunkReplacementRequestedListenerContract } from '../../DocumentIndexes/Contracts/document-index-chunk-replacement-requested.listener.contract.ts'
+import { DocumentIndexChunkReplacementRequestedEvent } from '../../DocumentIndexes/Events/document-index-chunk-replacement-requested.event.ts'
 import type { ReplacePlannedDocumentRelationsUseCaseContract } from '../../DocumentRelations/Contracts/replace-planned-document-relations.use-case.contract.ts'
 import type { PersistenceTransaction } from '../../KnowledgeBases/Contracts/persistence-transaction.ts'
 import { ReplacementChunkAssembler } from '../Assemblers/replacement-chunk.assembler.ts'
 import type { ChunkRepository } from '../Contracts/chunk.repository.ts'
 import type { ReplaceIndexChunkUseCaseContract } from '../Contracts/replace-index-chunk.use-case.contract.ts'
 import type { ReplaceIndexChunkInputDto } from '../DataTransferObjects/replace-index-chunk-input.dto.ts'
+import { IncompleteChunkReplacementOutputException } from '../Exceptions/incomplete-chunk-replacement-output.exception.ts'
 import { ReplacementChunkGuard } from '../Guards/replacement-chunk.guard.ts'
 
 /** Replaces all persistence rows for one claimed index as a single transaction. */
 export class ReplaceIndexChunkUseCase implements ReplaceIndexChunkUseCaseContract {
   constructor(
     private readonly persistenceTransaction: PersistenceTransaction,
-    private readonly prepareChunkReplacementUseCase: PrepareChunkReplacementUseCaseContract,
+    private readonly prepareDocumentIndexChunkReplacement: DocumentIndexChunkReplacementRequestedListenerContract,
     private readonly chunkRepository: ChunkRepository,
     private readonly replacePlannedDocumentRelationsUseCase: ReplacePlannedDocumentRelationsUseCaseContract,
   ) {}
 
   async execute(replaceIndexChunkInputDTO: ReplaceIndexChunkInputDto): Promise<void> {
-    const { indexJob, markdownChunkPlan, chunkEmbeddings, lexicalSearchTexts, now } = replaceIndexChunkInputDTO
+    if (
+      typeof replaceIndexChunkInputDTO?.job?.documentIndexId !== 'string' ||
+      !replaceIndexChunkInputDTO.job.documentIndexId.trim()
+    )
+      throw new ChunkDocumentIndexRequiredException()
+
+    const { job, markdownChunkPlan, chunkEmbeddings, now } = replaceIndexChunkInputDTO
 
     ReplacementChunkGuard.assertValidPlan(markdownChunkPlan)
-    ReplacementChunkGuard.assertAlignedOutputs(markdownChunkPlan, chunkEmbeddings, lexicalSearchTexts)
+    ReplacementChunkGuard.assertAlignedOutputs(markdownChunkPlan, chunkEmbeddings)
     ReplacementChunkGuard.assertValidDate(now)
 
     // Snapshot validated provider output before locks can yield to another task.
-    const saveChunksQO = ReplacementChunkAssembler.toSaveChunksQueryObject(
-      indexJob.documentIndexId,
-      markdownChunkPlan,
-      chunkEmbeddings,
-      lexicalSearchTexts,
-      now,
-    )
+    const replacementChunks = markdownChunkPlan.chunks.map((plannedChunk, ordinal) => {
+      const embedding = chunkEmbeddings[ordinal]
 
-    const chunkIndexQO = ReplacementChunkAssembler.toChunkIndexQueryObject(indexJob.documentIndexId)
+      if (embedding === undefined) throw new IncompleteChunkReplacementOutputException({ ordinal })
+
+      const replacementChunk: Chunk = new Chunk({
+        id: randomUUID(),
+        documentIndexId: job.documentIndexId,
+        ordinal,
+        headingPath: plannedChunk.headingPath,
+        content: plannedChunk.content,
+        blockStart: plannedChunk.blockStart,
+        blockEnd: plannedChunk.blockEnd,
+        tokenCount: plannedChunk.tokenCount,
+        embedding,
+        searchVector: null,
+        createdAt: now,
+      })
+
+      return replacementChunk
+    })
+    const saveChunksQO = ReplacementChunkAssembler.toSaveChunksQueryObject(replacementChunks)
+
+    const chunkIndexQO = ReplacementChunkAssembler.toChunkIndexQueryObject(job.documentIndexId)
     const replacePlannedDocumentRelationsInputDTO = ReplacementChunkAssembler.toReplacePlannedDocumentRelationsInputDTO(
-      indexJob.documentIndexId,
+      job.documentIndexId,
       markdownChunkPlan,
     )
 
     await this.persistenceTransaction.run(async () => {
-      if (!(await this.prepareChunkReplacementUseCase.execute(indexJob))) return
+      if (
+        !(await this.prepareDocumentIndexChunkReplacement.handle(new DocumentIndexChunkReplacementRequestedEvent(job)))
+      )
+        return
 
       await this.chunkRepository.removeByDocumentIndexId(chunkIndexQO)
       await this.chunkRepository.saveChunks(saveChunksQO)

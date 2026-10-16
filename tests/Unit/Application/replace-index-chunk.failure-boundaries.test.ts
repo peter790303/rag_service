@@ -5,30 +5,33 @@ import {
   createDocumentFixture,
   createRestoredMembershipFixture,
   createRestoredDocumentIndexFixture,
-  createIndexJobRecordFixture,
+  createJobRecordFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
 import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { ReplaceIndexChunkInputDto } from '../../../src/Application/Chunks/DataTransferObjects/replace-index-chunk-input.dto.ts'
+import { ChunkPlanningUnavailableException } from '../../../src/Application/Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
 import { InvalidChunkReplacementTimestampException } from '../../../src/Application/Chunks/Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
 import type { SaveChunksQueryObject } from '../../../src/Application/Chunks/QueryObjects/save-chunks.query-object.ts'
 import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
-import type { IndexJobLeaseFact } from '../../../src/Application/DocumentIndexes/DataTransferObjects/index-job-claim.dto.ts'
-import type { ClaimedIndexJobDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/index-job.dto.ts'
-import { IndexJobExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/index-job-execution-stage.enum.ts'
-import { InvalidIndexJobLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-index-job-lease.exception.ts'
-import { INDEX_JOB_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/index-job-lifecycle.helper.ts'
-import { PrepareChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/prepare-chunk-replacement.use-case.ts'
-import type { PlannedDocumentRelation } from '../../../src/Application/DocumentRelations/DataTransferObjects/planned-document-relation.dto.ts'
+import type { DocumentIndexExecutionLeaseDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-lease.dto.ts'
+import type { DocumentIndexingClaimDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
+import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
+import { DocumentIndexChunkReplacementRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-index-chunk-replacement-requested.listener.ts'
+import type { PlannedDocumentRelationWrite } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
 import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
 import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
+import { ChunkDocumentIndexRequiredException } from '../../../src/Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
 import { InvalidChunkBlockStartException } from '../../../src/Domain/Chunk/Exceptions/invalid-chunk-block-start.exception.ts'
 import { InvalidChunkTokenCountException } from '../../../src/Domain/Chunk/Exceptions/invalid-chunk-token-count.exception.ts'
-import { DocumentIndex } from '../../../src/Domain/DocumentIndex/document-index.ts'
+import type { DocumentIndex } from '../../../src/Domain/DocumentIndex/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 
-const claimedIndexJobFixture: ClaimedIndexJobDto = {
+const claimedJobFixture: DocumentIndexingClaimDto = {
   id: 'job-1',
   knowledgeBaseId: 'kb-1',
   documentId: 'doc-1',
@@ -38,7 +41,7 @@ const claimedIndexJobFixture: ClaimedIndexJobDto = {
   leaseToken: 'lease-1',
   leaseExpiresAt: new Date('2026-10-14T00:00:00.000Z'),
   executionVerification: {
-    stage: IndexJobExecutionStageEnum.CLAIMED,
+    stage: DocumentIndexExecutionStageEnum.CLAIMED,
     completedUnits: 0,
     totalUnits: null,
     verifiedAt: null,
@@ -59,33 +62,33 @@ const createChunkReplacementPlanFixture = (): MarkdownChunkPlan => ({
   ],
 })
 
-const createReplacementIndexJobLeaseFixture = (): IndexJobLeaseFact => ({
-  id: claimedIndexJobFixture.id,
-  knowledgeBaseId: claimedIndexJobFixture.knowledgeBaseId,
-  documentId: claimedIndexJobFixture.documentId,
-  documentIndexId: claimedIndexJobFixture.documentIndexId,
-  generation: claimedIndexJobFixture.generation,
-  attempts: claimedIndexJobFixture.attempts,
-  status: INDEX_JOB_STATUS.RUNNING,
-  leaseToken: claimedIndexJobFixture.leaseToken,
+const createReplacementJobLeaseFixture = (): DocumentIndexExecutionLeaseDto => ({
+  id: claimedJobFixture.id,
+  knowledgeBaseId: claimedJobFixture.knowledgeBaseId,
+  documentId: claimedJobFixture.documentId,
+  documentIndexId: claimedJobFixture.documentIndexId,
+  generation: claimedJobFixture.generation,
+  attempts: claimedJobFixture.attempts,
+  status: DOCUMENT_INDEX_EXECUTION_STATUS.RUNNING,
+  leaseToken: claimedJobFixture.leaseToken,
   leaseExpiresAt: new Date(Date.now() + 60_000),
 })
 
 interface ChunkReplacementScenario {
   lockDocument(): Promise<boolean>
   lockByKnowledgeBaseIdAndDocumentId(): Promise<{ requestedGeneration: number } | null>
-  lockJob(): Promise<IndexJobLeaseFact | null>
+  lockJob(): Promise<DocumentIndexExecutionLeaseDto | null>
   lockDocumentIndex(): Promise<DocumentIndex | null>
   deleteChunksForIndex(): Promise<void>
   deleteRelationsForIndex(): Promise<void>
   saveChunks(replacementChunksQO: SaveChunksQueryObject['chunks']): Promise<void>
-  saveRelations(plannedRelationsDTO: readonly PlannedDocumentRelation[]): Promise<void>
+  saveRelations(plannedRelationsQO: readonly PlannedDocumentRelationWrite[]): Promise<void>
 }
 
 const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacementScenario> = {}) => {
   const events: string[] = []
   const savedChunks: SaveChunksQueryObject['chunks'][number][] = []
-  const savedRelations: PlannedDocumentRelation[] = []
+  const savedRelations: PlannedDocumentRelationWrite[] = []
   const chunkReplacementOperations: ChunkReplacementScenario = {
     lockDocument: async () => {
       events.push('lock-document')
@@ -100,13 +103,13 @@ const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacem
     lockJob: async () => {
       events.push('lock-job')
 
-      return createReplacementIndexJobLeaseFixture()
+      return createReplacementJobLeaseFixture()
     },
     lockDocumentIndex: async () => {
       events.push('lock-index')
 
-      return new DocumentIndex({
-        id: claimedIndexJobFixture.documentIndexId,
+      return createRestoredDocumentIndexFixture({
+        id: claimedJobFixture.documentIndexId,
         status: DocumentIndexStatusEnum.BUILDING,
         readyAt: null,
         unreferencedSince: null,
@@ -122,9 +125,9 @@ const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacem
       events.push('save-chunks')
       savedChunks.push(...replacementChunksQO)
     },
-    saveRelations: async (plannedRelationsDTO) => {
+    saveRelations: async (plannedRelationsQO) => {
       events.push('save-relations')
-      savedRelations.push(...plannedRelationsDTO)
+      savedRelations.push(...plannedRelationsQO)
     },
     ...scenarioOverrides,
   }
@@ -146,7 +149,7 @@ const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacem
 
   const useCase = new ReplaceIndexChunkUseCase(
     chunkReplacementTransaction,
-    new PrepareChunkReplacementUseCase(
+    new DocumentIndexChunkReplacementRequestedListener(
       new ReserveDocumentForIndexingUseCase(
         createRepositoryStub<ConstructorParameters<typeof ReserveDocumentForIndexingUseCase>[0]>({
           lockByDocumentId: async () =>
@@ -166,14 +169,14 @@ const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacem
           },
         }),
       ),
-      createRepositoryStub<ConstructorParameters<typeof PrepareChunkReplacementUseCase>[2]>({
-        lockById: async () => {
+      createRepositoryStub<ConstructorParameters<typeof DocumentIndexChunkReplacementRequestedListener>[2]>({
+        lockExecution: async () => {
           const lockedJobLease = await chunkReplacementOperations.lockJob()
 
-          return lockedJobLease === null ? null : createIndexJobRecordFixture(lockedJobLease)
+          return lockedJobLease === null ? null : createJobRecordFixture(lockedJobLease)
         },
       }),
-      createRepositoryStub<ConstructorParameters<typeof PrepareChunkReplacementUseCase>[3]>({
+      createRepositoryStub<ConstructorParameters<typeof DocumentIndexChunkReplacementRequestedListener>[3]>({
         lockByDocumentIndexId: async () => {
           const lockedDocumentIndex = await chunkReplacementOperations.lockDocumentIndex()
 
@@ -207,22 +210,25 @@ const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacem
 test('replacement rejects missing, fenced or expired job facts before inspecting or mutating the index', async (t) => {
   const facts: {
     name: string
-    fact: IndexJobLeaseFact | null
+    fact: DocumentIndexExecutionLeaseDto | null
   }[] = [
     { name: 'missing job', fact: null },
-    { name: 'different job', fact: { ...createReplacementIndexJobLeaseFixture(), id: 'job-2' } },
-    { name: 'different knowledge base', fact: { ...createReplacementIndexJobLeaseFixture(), knowledgeBaseId: 'kb-2' } },
-    { name: 'different document', fact: { ...createReplacementIndexJobLeaseFixture(), documentId: 'doc-2' } },
-    { name: 'different index', fact: { ...createReplacementIndexJobLeaseFixture(), documentIndexId: 'index-2' } },
-    { name: 'different generation', fact: { ...createReplacementIndexJobLeaseFixture(), generation: '2' } },
-    { name: 'different attempt', fact: { ...createReplacementIndexJobLeaseFixture(), attempts: 2 } },
-    { name: 'different token', fact: { ...createReplacementIndexJobLeaseFixture(), leaseToken: 'lease-2' } },
-    { name: 'missing token', fact: { ...createReplacementIndexJobLeaseFixture(), leaseToken: null } },
-    { name: 'queued job', fact: { ...createReplacementIndexJobLeaseFixture(), status: INDEX_JOB_STATUS.QUEUED } },
-    { name: 'missing expiration', fact: { ...createReplacementIndexJobLeaseFixture(), leaseExpiresAt: null } },
+    { name: 'different job', fact: { ...createReplacementJobLeaseFixture(), id: 'job-2' } },
+    { name: 'different knowledge base', fact: { ...createReplacementJobLeaseFixture(), knowledgeBaseId: 'kb-2' } },
+    { name: 'different document', fact: { ...createReplacementJobLeaseFixture(), documentId: 'doc-2' } },
+    { name: 'different index', fact: { ...createReplacementJobLeaseFixture(), documentIndexId: 'index-2' } },
+    { name: 'different generation', fact: { ...createReplacementJobLeaseFixture(), generation: '2' } },
+    { name: 'different attempt', fact: { ...createReplacementJobLeaseFixture(), attempts: 2 } },
+    { name: 'different token', fact: { ...createReplacementJobLeaseFixture(), leaseToken: 'lease-2' } },
+    { name: 'missing token', fact: { ...createReplacementJobLeaseFixture(), leaseToken: null } },
+    {
+      name: 'queued job',
+      fact: { ...createReplacementJobLeaseFixture(), status: DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED },
+    },
+    { name: 'missing expiration', fact: { ...createReplacementJobLeaseFixture(), leaseExpiresAt: null } },
     {
       name: 'expired lease',
-      fact: { ...createReplacementIndexJobLeaseFixture(), leaseExpiresAt: new Date(Date.now() - 1) },
+      fact: { ...createReplacementJobLeaseFixture(), leaseExpiresAt: new Date(Date.now() - 1) },
     },
   ]
   const assertRejectedFact = ({ name, fact }: (typeof facts)[number]) =>
@@ -231,13 +237,12 @@ test('replacement rejects missing, fenced or expired job facts before inspecting
 
       await assert.rejects(
         chunkReplacementScenario.useCase.execute({
-          indexJob: claimedIndexJobFixture,
+          job: claimedJobFixture,
           markdownChunkPlan: createChunkReplacementPlanFixture(),
           chunkEmbeddings: [[1, 2]],
-          lexicalSearchTexts: ['original'],
           now: new Date(),
         }),
-        InvalidIndexJobLeaseException,
+        InvalidDocumentIndexExecutionLeaseException,
       )
       assert.deepEqual(chunkReplacementScenario.events, [
         'transaction-open',
@@ -267,13 +272,12 @@ test('replacement rejects missing document or membership and stale generation be
         const chunkReplacementScenario = createChunkReplacementScenario(scenarioOverrides)
         await assert.rejects(
           chunkReplacementScenario.useCase.execute({
-            indexJob: claimedIndexJobFixture,
+            job: claimedJobFixture,
             markdownChunkPlan: createChunkReplacementPlanFixture(),
             chunkEmbeddings: [[1, 2]],
-            lexicalSearchTexts: ['original'],
             now: new Date(),
           }),
-          InvalidIndexJobLeaseException,
+          InvalidDocumentIndexExecutionLeaseException,
         )
         assert.ok(!chunkReplacementScenario.events.includes('lock-job'))
         assert.ok(!chunkReplacementScenario.events.includes('lock-index'))
@@ -288,8 +292,8 @@ test('replacement rejects missing document or membership and stale generation be
 test('READY replacement validates ownership but preserves all chunks and relations', async () => {
   const chunkReplacementScenario = createChunkReplacementScenario({
     lockDocumentIndex: async () =>
-      new DocumentIndex({
-        id: claimedIndexJobFixture.documentIndexId,
+      createRestoredDocumentIndexFixture({
+        id: claimedJobFixture.documentIndexId,
         status: DocumentIndexStatusEnum.READY,
         readyAt: new Date(),
         unreferencedSince: null,
@@ -297,10 +301,9 @@ test('READY replacement validates ownership but preserves all chunks and relatio
   })
 
   await chunkReplacementScenario.useCase.execute({
-    indexJob: claimedIndexJobFixture,
+    job: claimedJobFixture,
     markdownChunkPlan: createChunkReplacementPlanFixture(),
     chunkEmbeddings: [[1, 2]],
-    lexicalSearchTexts: ['original'],
     now: new Date(),
   })
   assert.deepEqual(chunkReplacementScenario.events, [
@@ -324,10 +327,9 @@ test('relation persistence failure propagates through the transaction after chun
 
   await assert.rejects(
     chunkReplacementScenario.useCase.execute({
-      indexJob: claimedIndexJobFixture,
+      job: claimedJobFixture,
       markdownChunkPlan: createChunkReplacementPlanFixture(),
       chunkEmbeddings: [[1, 2]],
-      lexicalSearchTexts: ['original'],
       now: new Date(),
     }),
     relationError,
@@ -345,10 +347,9 @@ test('relation persistence failure propagates through the transaction after chun
   ])
 })
 
-test('replacement snapshots chunk, vector, relation, lexical and creation time before awaiting locks', async () => {
+test('replacement snapshots chunk, vector, relation and creation time before awaiting locks', async () => {
   const markdownChunkPlan = createChunkReplacementPlanFixture()
   const chunkEmbeddings = [[1, 2]]
-  const lexicalSearchTexts = ['original']
   const replacementCreatedAt = new Date('2026-10-15T00:00:00.000Z')
   const chunkReplacementScenario = createChunkReplacementScenario({
     lockJob: async () => {
@@ -358,18 +359,16 @@ test('replacement snapshots chunk, vector, relation, lexical and creation time b
       markdownChunkPlan.relations[0]!.targetReference = 'Changed.md'
       markdownChunkPlan.relations[0]!.evidenceText = 'Changed evidence'
       chunkEmbeddings[0]![0] = 99
-      lexicalSearchTexts[0] = 'changed'
       replacementCreatedAt.setUTCFullYear(2030)
 
-      return createReplacementIndexJobLeaseFixture()
+      return createReplacementJobLeaseFixture()
     },
   })
 
   await chunkReplacementScenario.useCase.execute({
-    indexJob: claimedIndexJobFixture,
+    job: claimedJobFixture,
     markdownChunkPlan,
     chunkEmbeddings,
-    lexicalSearchTexts,
     now: replacementCreatedAt,
   })
   assert.match(
@@ -379,7 +378,7 @@ test('replacement snapshots chunk, vector, relation, lexical and creation time b
   assert.deepEqual(chunkReplacementScenario.savedChunks, [
     {
       id: chunkReplacementScenario.savedChunks[0]?.id,
-      documentIndexId: claimedIndexJobFixture.documentIndexId,
+      documentIndexId: claimedJobFixture.documentIndexId,
       ordinal: 0,
       content: 'Original body',
       headingPath: ['Original'],
@@ -387,14 +386,18 @@ test('replacement snapshots chunk, vector, relation, lexical and creation time b
       blockEnd: 2,
       tokenCount: 4,
       embedding: [1, 2],
-      searchVector: 'original',
       createdAt: new Date('2026-10-15T00:00:00.000Z'),
     },
   ])
+  assert.match(
+    chunkReplacementScenario.savedRelations[0]?.id ?? '',
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  )
   assert.deepEqual(
     chunkReplacementScenario.savedRelations,
-    createChunkReplacementPlanFixture().relations.map((relation) => ({
-      sourceIndexId: claimedIndexJobFixture.documentIndexId,
+    createChunkReplacementPlanFixture().relations.map((relation, index) => ({
+      id: chunkReplacementScenario.savedRelations[index]?.id,
+      sourceIndexId: claimedJobFixture.documentIndexId,
       targetDocumentId: null,
       ...relation,
     })),
@@ -417,10 +420,9 @@ test('invalid numeric replacement payloads fail before opening a transaction', a
         const chunkReplacementScenario = createChunkReplacementScenario()
         await assert.rejects(
           chunkReplacementScenario.useCase.execute({
-            indexJob: claimedIndexJobFixture,
+            job: claimedJobFixture,
             markdownChunkPlan: createChunkReplacementPlanFixture(),
             chunkEmbeddings: vectors,
-            lexicalSearchTexts: ['original'],
             now: new Date(),
           }),
           exception,
@@ -435,10 +437,9 @@ test('invalid numeric replacement payloads fail before opening a transaction', a
     plan.chunks[0]!.blockStart = 0.5
     await assert.rejects(
       chunkReplacementScenario.useCase.execute({
-        indexJob: claimedIndexJobFixture,
+        job: claimedJobFixture,
         markdownChunkPlan: plan,
         chunkEmbeddings: [[1]],
-        lexicalSearchTexts: ['original'],
         now: new Date(),
       }),
       InvalidChunkBlockStartException,
@@ -451,10 +452,9 @@ test('invalid numeric replacement payloads fail before opening a transaction', a
     plan.chunks[0]!.tokenCount = -1
     await assert.rejects(
       chunkReplacementScenario.useCase.execute({
-        indexJob: claimedIndexJobFixture,
+        job: claimedJobFixture,
         markdownChunkPlan: plan,
         chunkEmbeddings: [[1]],
-        lexicalSearchTexts: ['original'],
         now: new Date(),
       }),
       InvalidChunkTokenCountException,
@@ -465,14 +465,80 @@ test('invalid numeric replacement payloads fail before opening a transaction', a
     const chunkReplacementScenario = createChunkReplacementScenario()
     await assert.rejects(
       chunkReplacementScenario.useCase.execute({
-        indexJob: claimedIndexJobFixture,
+        job: claimedJobFixture,
         markdownChunkPlan: createChunkReplacementPlanFixture(),
         chunkEmbeddings: [[1]],
-        lexicalSearchTexts: ['original'],
         now: new Date(NaN),
       }),
       InvalidChunkReplacementTimestampException,
     )
     assert.deepEqual(chunkReplacementScenario.events, [])
   })
+})
+
+test('missing or sparse replacement inputs fail before locks or destructive writes', async (context) => {
+  const validInput = {
+    job: claimedJobFixture,
+    markdownChunkPlan: createChunkReplacementPlanFixture(),
+    chunkEmbeddings: [[1]],
+    now: new Date(),
+  }
+  const scenarios = [
+    { name: 'missing input', input: undefined, exception: ChunkDocumentIndexRequiredException },
+    {
+      name: 'missing index with empty plan',
+      input: {
+        ...validInput,
+        job: { ...claimedJobFixture, documentIndexId: undefined },
+        markdownChunkPlan: { chunks: [], relations: [] },
+        chunkEmbeddings: [],
+      },
+      exception: ChunkDocumentIndexRequiredException,
+    },
+    {
+      name: 'missing plan',
+      input: { ...validInput, markdownChunkPlan: undefined },
+      exception: ChunkPlanningUnavailableException,
+    },
+    {
+      name: 'sparse plan',
+      input: { ...validInput, markdownChunkPlan: { chunks: new Array(1), relations: [] } },
+      exception: ChunkPlanningUnavailableException,
+    },
+    {
+      name: 'sparse heading',
+      input: {
+        ...validInput,
+        markdownChunkPlan: {
+          chunks: [{ ...validInput.markdownChunkPlan.chunks[0], headingPath: new Array(1) }],
+          relations: [],
+        },
+      },
+      exception: ChunkPlanningUnavailableException,
+    },
+    {
+      name: 'missing vectors',
+      input: { ...validInput, chunkEmbeddings: undefined },
+      exception: KnowledgeEmbeddingUnavailableException,
+    },
+    {
+      name: 'sparse vectors',
+      input: { ...validInput, chunkEmbeddings: new Array(1) },
+      exception: KnowledgeEmbeddingUnavailableException,
+    },
+    {
+      name: 'sparse vector coordinates',
+      input: { ...validInput, chunkEmbeddings: [new Array(1)] },
+      exception: KnowledgeEmbeddingUnavailableException,
+    },
+  ]
+  await Promise.all(
+    scenarios.map(({ name, input, exception }) =>
+      context.test(name, async () => {
+        const scenario = createChunkReplacementScenario()
+        await assert.rejects(scenario.useCase.execute(input as ReplaceIndexChunkInputDto), exception)
+        assert.deepEqual(scenario.events, [])
+      }),
+    ),
+  )
 })

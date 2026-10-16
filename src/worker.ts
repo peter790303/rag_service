@@ -1,10 +1,10 @@
-import 'reflect-metadata'
 import { NestFactory } from '@nestjs/core'
+import 'reflect-metadata'
 
-import { WorkerModule } from './Infrastructure/Providers/worker.module.js'
+import { KnowledgeMaintenanceWorkerModule } from './Infrastructure/Providers/knowledge-maintenance-worker.module.ts'
 
 const bootstrap = async (): Promise<void> => {
-  const workerApplicationContext = await NestFactory.createApplicationContext(WorkerModule)
+  const workerApplicationContext = await NestFactory.createApplicationContext(KnowledgeMaintenanceWorkerModule)
   const shutdown = async (): Promise<void> => {
     await workerApplicationContext.close()
   }

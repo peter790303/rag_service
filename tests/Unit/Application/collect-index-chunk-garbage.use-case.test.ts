@@ -6,7 +6,9 @@ import type { ChunkRepository } from '../../../src/Application/Chunks/Contracts/
 import type { IndexChunkGarbageDto } from '../../../src/Application/Chunks/DataTransferObjects/index-chunk-garbage.dto.ts'
 import { ChunkGarbageCollectionLockRequiredException } from '../../../src/Application/Chunks/Exceptions/chunk-garbage-collection-lock-required.exception.ts'
 import { IndexChunkGarbageCollectionNotEligibleException } from '../../../src/Application/Chunks/Exceptions/index-chunk-garbage-collection-not-eligible.exception.ts'
+import { InvalidIndexChunkGarbageInputException } from '../../../src/Application/Chunks/Exceptions/invalid-index-chunk-garbage-input.exception.ts'
 import { CollectIndexChunkGarbageUseCase } from '../../../src/Application/Chunks/UseCases/collect-index-chunk-garbage.use-case.ts'
+import { ChunkDocumentIndexRequiredException } from '../../../src/Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
 
 const eligibleGarbage: IndexChunkGarbageDto = {
   documentIndexId: 'index',
@@ -95,4 +97,52 @@ test('chunk garbage collection awaits the scoped deletion and propagates persist
 
     return true
   })
+})
+
+test('chunk garbage collection rejects missing write scope and invalid retention facts before deletion', async (context) => {
+  const scenarios = [
+    {
+      name: 'missing index',
+      input: { ...eligibleGarbage, documentIndexId: undefined },
+      exception: ChunkDocumentIndexRequiredException,
+    },
+    {
+      name: 'missing document',
+      input: { ...eligibleGarbage, documentId: undefined },
+      exception: InvalidIndexChunkGarbageInputException,
+    },
+    {
+      name: 'missing lock facts',
+      input: { ...eligibleGarbage, lockedDocumentIds: undefined },
+      exception: InvalidIndexChunkGarbageInputException,
+    },
+    {
+      name: 'missing unreferenced time',
+      input: { ...eligibleGarbage, unreferencedSince: undefined },
+      exception: InvalidIndexChunkGarbageInputException,
+    },
+    {
+      name: 'invalid unreferenced time',
+      input: { ...eligibleGarbage, unreferencedSince: new Date(NaN) },
+      exception: InvalidIndexChunkGarbageInputException,
+    },
+    {
+      name: 'missing cutoff',
+      input: { ...eligibleGarbage, retentionCutoff: undefined },
+      exception: InvalidIndexChunkGarbageInputException,
+    },
+  ]
+
+  await Promise.all(
+    scenarios.map(({ name, input, exception }) =>
+      context.test(name, async () => {
+        const useCase = new CollectIndexChunkGarbageUseCase(
+          createRepositoryStub<ChunkRepository>({
+            removeByDocumentIndexId: async () => assert.fail('invalid scope or retention facts must not delete chunks'),
+          }),
+        )
+        await assert.rejects(useCase.execute(input as IndexChunkGarbageDto), exception)
+      }),
+    ),
+  )
 })

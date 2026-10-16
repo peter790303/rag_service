@@ -11,6 +11,7 @@ export default tseslint.config(
     files: ['**/*.ts', '**/*.js', '**/*.mjs'],
     plugins: { 'import-x': importX },
     rules: {
+      'import-x/newline-after-import': ['error', { count: 1, considerComments: true }],
       'import-x/order': [
         'error',
         {
@@ -25,6 +26,17 @@ export default tseslint.config(
         { blankLine: 'always', prev: '*', next: 'return' },
         { blankLine: 'always', prev: '*', next: 'if' },
         { blankLine: 'always', prev: 'if', next: '*' },
+      ],
+    },
+  },
+  {
+    files: ['src/Application/Chunks/**/*.ts', 'src/Domain/Chunk/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        { selector: 'ForStatement', message: 'Chunks 集合處理請使用 map、filter、reduce 或 flatMap。' },
+        { selector: 'ForOfStatement', message: 'Chunks 集合處理請使用 map、filter、reduce 或 flatMap。' },
+        { selector: 'ForInStatement', message: 'Chunks 集合處理請使用 map、filter、reduce 或 flatMap。' },
       ],
     },
   },

@@ -1,6 +1,6 @@
 export type FindRetrievalChunkCandidatesDto = {
   documentIndexIds: readonly string[]
   queryVector: readonly number[]
-  terms: readonly string[]
+  queryText: string
   limit: number
 }

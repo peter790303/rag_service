@@ -2,7 +2,10 @@ import type { Chunk } from '../../../Domain/Chunk/chunk.ts'
 import type { FindLexicalChunkCandidatesDto } from '../DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
 import type { FindRetrievalChunkCandidatesDto } from '../DataTransferObjects/find-retrieval-chunk-candidates.dto.ts'
 import type { RetrievalCandidateChunkMatchDto } from '../DataTransferObjects/retrieval-candidate-chunk-match.dto.ts'
-import type { ChunkVectorSimilarityQueryObject } from '../QueryObjects/chunk.query-object.ts'
+import type {
+  ChunkLexicalSearchQueryObject,
+  ChunkVectorSimilarityQueryObject,
+} from '../QueryObjects/chunk.query-object.ts'
 
 export class RetrievalCandidateChunkAssembler {
   static toRetrievalCandidateChunkMatchDTOs(
@@ -46,8 +49,18 @@ export class RetrievalCandidateChunkAssembler {
   ): FindLexicalChunkCandidatesDto {
     return {
       documentIndexIds: findRetrievalChunkCandidatesDTO.documentIndexIds,
-      terms: findRetrievalChunkCandidatesDTO.terms,
+      queryText: findRetrievalChunkCandidatesDTO.queryText,
       limit: findRetrievalChunkCandidatesDTO.limit,
+    }
+  }
+
+  static toChunkLexicalSearchQueryObject(
+    findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDto,
+  ): ChunkLexicalSearchQueryObject {
+    return {
+      documentIndexIds: findLexicalChunkCandidatesDTO.documentIndexIds,
+      queryText: findLexicalChunkCandidatesDTO.queryText,
+      limit: findLexicalChunkCandidatesDTO.limit,
     }
   }
 

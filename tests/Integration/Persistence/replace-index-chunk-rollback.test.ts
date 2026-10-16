@@ -6,11 +6,11 @@ import { QueryFailedError } from 'typeorm'
 
 import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
 import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
-import type { ClaimedIndexJobDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/index-job.dto.ts'
-import { IndexJobExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/index-job-execution-stage.enum.ts'
-import { InvalidIndexJobLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-index-job-lease.exception.ts'
-import { INDEX_JOB_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/index-job-lifecycle.helper.ts'
-import { PrepareChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/prepare-chunk-replacement.use-case.ts'
+import type { DocumentIndexingClaimDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
+import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
+import { DocumentIndexChunkReplacementRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-index-chunk-replacement-requested.listener.ts'
 import type { SavePlannedDocumentRelationsQueryObject } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
 import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
@@ -24,7 +24,7 @@ import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Mode
 import { DocumentRelationModel } from '../../../src/Infrastructure/Persistence/Models/document-relation.model.ts'
 import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
 import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { IndexJobModel } from '../../../src/Infrastructure/Persistence/Models/index-job.model.ts'
+import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
 import { KnowledgeBaseDocumentMembershipModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document-membership.model.ts'
 import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
@@ -32,7 +32,7 @@ import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Reposit
 import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
 import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
 import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
-import { IndexJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/index-job.repository.ts'
+import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
 import { KnowledgeBaseDocumentMembershipRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document-membership.repository.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
@@ -109,7 +109,7 @@ test(
       const documentRevisionModelRepository = dataSource.getRepository(DocumentRevisionModel)
       const documentIndexModelRepository = dataSource.getRepository(DocumentIndexModel)
       const membershipModelRepository = dataSource.getRepository(KnowledgeBaseDocumentMembershipModel)
-      const indexJobModelRepository = dataSource.getRepository(IndexJobModel)
+      const jobModelRepository = dataSource.getRepository(JobModel)
       const chunkModelRepository = dataSource.getRepository(ChunkModel)
       const documentRelationModelRepository = dataSource.getRepository(DocumentRelationModel)
       const testKey = randomUUID()
@@ -165,13 +165,13 @@ test(
       const leaseToken = randomUUID()
       const leaseExpiresAt = new Date(Date.now() + 300_000)
       const verification = { claim_token: leaseToken, lease_expires_at: leaseExpiresAt.toISOString() }
-      const jobRecord = await indexJobModelRepository.save(
-        indexJobModelRepository.create({
+      const jobRecord = await jobModelRepository.save(
+        jobModelRepository.create({
           knowledgeBaseId: base.id,
           documentId: document.id,
           documentIndexId: index.id,
           generation: '1',
-          status: INDEX_JOB_STATUS.RUNNING,
+          status: DOCUMENT_INDEX_EXECUTION_STATUS.RUNNING,
           attempts: 1,
           availableAt: new Date(),
           reservedAt: new Date(),
@@ -184,7 +184,7 @@ test(
           executionVerification: verification,
         }),
       )
-      const job: ClaimedIndexJobDto = {
+      const job: DocumentIndexingClaimDto = {
         id: jobRecord.id,
         knowledgeBaseId: base.id,
         documentId: document.id,
@@ -194,7 +194,7 @@ test(
         leaseToken,
         leaseExpiresAt,
         executionVerification: {
-          stage: IndexJobExecutionStageEnum.CLAIMED,
+          stage: DocumentIndexExecutionStageEnum.CLAIMED,
           completedUnits: 0,
           totalUnits: null,
           verifiedAt: null,
@@ -236,12 +236,12 @@ test(
       const createUseCase = (relationRepository = new DocumentRelationRepository(persistenceTransaction)) =>
         new ReplaceIndexChunkUseCase(
           persistenceTransaction,
-          new PrepareChunkReplacementUseCase(
+          new DocumentIndexChunkReplacementRequestedListener(
             new ReserveDocumentForIndexingUseCase(new DocumentRepository(persistenceTransaction)),
             new ReserveMembershipForIndexingUseCase(
               new KnowledgeBaseDocumentMembershipRepository(persistenceTransaction),
             ),
-            new IndexJobRepository(persistenceTransaction),
+            new JobRepository(persistenceTransaction),
             new DocumentIndexRepository(persistenceTransaction),
           ),
           new ChunkRepository(persistenceTransaction, retrievalDataSource),
@@ -249,36 +249,35 @@ test(
         )
       const replace = (useCase: ReplaceIndexChunkUseCase, claimedJob = job) =>
         useCase.execute({
-          indexJob: claimedJob,
+          job: claimedJob,
           markdownChunkPlan: replacementPlan,
           chunkEmbeddings: [Array.from({ length: 384 }, () => 0.5)],
-          lexicalSearchTexts: [lexicalFormatter.format('new replacement body').searchText],
           now: new Date(),
         })
 
       await t.test('wrong claim token leaves old rows intact', async () => {
         await assert.rejects(
           replace(createUseCase(), { ...job, leaseToken: randomUUID() }),
-          InvalidIndexJobLeaseException,
+          InvalidDocumentIndexExecutionLeaseException,
         )
         await assertOriginalRows()
       })
       await t.test('expired persisted lease leaves old rows intact', async () => {
         const expiredLeaseExpiresAt = new Date(Date.now() - 1_000)
-        await indexJobModelRepository.update(job.id, {
+        await jobModelRepository.update(job.id, {
           leaseExpiresAt: expiredLeaseExpiresAt,
           executionVerification: { ...verification, lease_expires_at: expiredLeaseExpiresAt.toISOString() },
         })
-        await assert.rejects(replace(createUseCase()), InvalidIndexJobLeaseException)
+        await assert.rejects(replace(createUseCase()), InvalidDocumentIndexExecutionLeaseException)
         await assertOriginalRows()
-        await indexJobModelRepository.update(job.id, { executionVerification: verification, leaseExpiresAt })
+        await jobModelRepository.update(job.id, { executionVerification: verification, leaseExpiresAt })
       })
       await t.test('superseded membership generation leaves old rows intact', async () => {
         await membershipModelRepository.update(
           { knowledgeBaseId: membership.knowledgeBaseId, documentId: membership.documentId },
           { requestedGeneration: '2' },
         )
-        await assert.rejects(replace(createUseCase()), InvalidIndexJobLeaseException)
+        await assert.rejects(replace(createUseCase()), InvalidDocumentIndexExecutionLeaseException)
         await assertOriginalRows()
         await membershipModelRepository.update(
           { knowledgeBaseId: membership.knowledgeBaseId, documentId: membership.documentId },
@@ -403,12 +402,9 @@ test(
         const now = new Date()
 
         await createUseCase().execute({
-          indexJob: job,
+          job: job,
           markdownChunkPlan,
           chunkEmbeddings: markdownChunkPlan.chunks.map(() => Array.from({ length: 384 }, () => 0.5)),
-          lexicalSearchTexts: markdownChunkPlan.chunks.map(
-            (chunk) => lexicalFormatter.format(chunk.content).searchText,
-          ),
           now,
         })
 
