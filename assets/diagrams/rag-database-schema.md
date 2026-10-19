@@ -280,6 +280,6 @@
 
 - [Migrations（十一個初始 migrations：0000–0009 與 0014 成功收據）](../../database/migrations)
 - [TypeORM Models](../../src/Infrastructure/Persistence/Models)
-- [當前狀態與待辦](../../README.md#remaining-acceptance)
+- [當前狀態與待辦](/Users/xiang/Documents/Worker/BackEnd/Rag-Service/CONTEXT.md#驗收邊界與後續工作)
 - [ORM 與向量查詢例外](/Users/xiang/Documents/Worker/BackEnd/Rag-Service/CODING_STANDARDS.md#orm-與向量查詢例外)
 - [RAG Hybrid 全文 SQL 例外](/Users/xiang/Documents/Worker/BackEnd/Rag-Service/CODING_STANDARDS.md#rag-hybrid-全文匹配與相關度排名)
