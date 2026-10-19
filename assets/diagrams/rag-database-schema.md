@@ -1,6 +1,6 @@
 # RAG Database Schema
 
-> 定義核對：2026-10-18；程式基準 `144befe99a81ff40783640489e2fcf6669286968` 加目前未提交的增量修改。以已註冊 migrations 與 TypeORM Model 為依據，包含 **10 張表、104 個欄位、14 組實體 FK**。此處未驗證任何執行環境的 migration 套用狀態。
+> 定義核對：2026-10-19；程式基準 `71f401aa35e878fab54ad4dd8bfe7aaea552a265`。以已註冊 migrations 與 TypeORM Model 為依據，包含 **10 張表、104 個欄位、14 組實體 FK**。此處未驗證任何執行環境的 migration 套用狀態。
 
 [互動結構圖](rag-database-schema.html) · [SVG 圖](rag-database-schema.svg)
 

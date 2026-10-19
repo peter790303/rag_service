@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="4000" height="2400" viewBox="0 0 4000 2400" role="img" aria-labelledby="svg-title svg-desc">
 <title id="svg-title">RAG Database Schema — 10 表、104 欄、14 組實體 FK</title>
-<desc id="svg-desc">2026-10-19 依十一個初始 migrations（0000–0009、0014）核對。箭頭由參照表指向被參照表，刪除行為皆為 RESTRICT。此圖不代表已套用 migration 或全文查詢已完成。</desc>
+<desc id="svg-desc">2026-10-19 依十一個初始 migrations（0000–0009、0014）核對。箭頭由參照表指向被參照表，刪除行為皆為 RESTRICT。本次核對範圍為結構定義，未查驗執行環境的 migration 套用狀態。</desc>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="context-stroke"/></marker></defs>
 <style>text{font-family:Arial,"Noto Sans TC",sans-serif}.mono{font-family:Menlo,Consolas,monospace}.edge{fill:none;stroke:#087f8c;stroke-width:2.4;opacity:.35}.table{cursor:pointer}.dim{opacity:.12}.table.selected>rect:first-of-type{stroke:#142944;stroke-width:4}.edge.selected{opacity:1;stroke:#c15d13;stroke-width:4}.edge.dim{opacity:.07}.col{font-size:15px;fill:#243247}.type{font-size:14px;fill:#586c83}.note{font-size:14px;fill:#375466}.key{font-size:12px;fill:#6b55b4}.table:focus-visible>rect:first-of-type{stroke:#142944;stroke-width:4}</style>
 <rect width="4000" height="2400" fill="#f5f7fb"/>
 <text x="70" y="72" font-size="38" font-weight="700" fill="#162d46">RAG Database Schema</text>
-<text x="70" y="118" font-size="21" fill="#375466">10 張表 · 104 欄位 · 14 組實體 FK · PostgreSQL / pgvector · 2026-10-18</text>
-<text x="70" y="157" font-size="19" fill="#375466">project_id → knowledge_bases → membership.active_document_index_id → chunks / document_relations</text>
-<text x="70" y="194" font-size="17" fill="#5e7085">定義基準：十一個初始 migrations：0000–0009、0014（未提交修改）；箭頭指向被參照表，全部 ON DELETE RESTRICT。Hybrid 全文 SQL 已限定授權；未驗證環境 migration 套用。</text>
+<text x="70" y="118" font-size="21" fill="#375466">10 張表 · 104 欄位 · 14 組實體 FK · PostgreSQL / pgvector · 2026-10-19</text>
+<text x="70" y="157" font-size="19" fill="#375466">project_id → knowledge_bases → knowledge_base_documents.active_document_index_id → chunks / document_relations</text>
+<text x="70" y="194" font-size="17" fill="#5e7085">定義基準：71f401a 的十一個初始 migrations（0000–0009、0014）；箭頭指向被參照表，全部 ON DELETE RESTRICT。Hybrid 全文 SQL 已限定授權；未驗證環境 migration 套用。</text>
 <path class="edge physical" data-source="knowledge_base_documents" data-target="knowledge_bases" d="M 70 731 H 35 V 341 H 70" marker-end="url(#arrow)"><title>knowledge_base_documents(knowledge_base_id) → knowledge_bases(id) · ON DELETE RESTRICT</title></path>
 <path class="edge physical" data-source="jobs" data-target="knowledge_bases" d="M 3830 761 H 3920 V 230 H 1240 V 341 H 1190" marker-end="url(#arrow)"><title>jobs(knowledge_base_id) → knowledge_bases(id) · ON DELETE RESTRICT</title></path>
 <path class="edge physical" data-source="failed_jobs" data-target="knowledge_bases" d="M 3830 1461 H 3930 V 230 H 1250 V 341 H 1190" marker-end="url(#arrow)"><title>failed_jobs(knowledge_base_id) → knowledge_bases(id) · ON DELETE RESTRICT</title></path>
