@@ -6,11 +6,11 @@ import 'reflect-metadata'
 
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import { HybridKnowledgeRetrievalRequest } from '../../../src/Interfaces/Http/Requests/hybrid-knowledge-retrieval.request.ts'
-import { PruneKnowledgeBaseMembershipsRequest } from '../../../src/Interfaces/Http/Requests/prune-knowledge-base-memberships.request.ts'
+import { PruneKnowledgeBaseDocumentsRequest } from '../../../src/Interfaces/Http/Requests/prune-knowledge-base-documents.request.ts'
 import { SourceDocumentIndexRequest } from '../../../src/Interfaces/Http/Requests/source-document-index.request.ts'
 
 test('prune request assembles its validated body with the route knowledge-base id', () => {
-  const request = Object.assign(new PruneKnowledgeBaseMembershipsRequest(), {
+  const request = Object.assign(new PruneKnowledgeBaseDocumentsRequest(), {
     projectId: 'project-1',
     documentIds: ['document-1', 'document-2'],
   })
@@ -139,12 +139,12 @@ test('index DTO preserves provided empty and false values while omitting undefin
     isEntry: undefined,
     alwaysIncludeFullContent: undefined,
   })
-  const dto = request.toDTO()
+  const requestDTO = request.toDTO()
 
-  assert.equal(Object.hasOwn(dto, 'title'), false)
-  assert.equal(Object.hasOwn(dto, 'payload'), false)
-  assert.equal(Object.hasOwn(dto, 'isEntry'), false)
-  assert.equal(Object.hasOwn(dto, 'alwaysIncludeFullContent'), false)
+  assert.equal(Object.hasOwn(requestDTO, 'title'), false)
+  assert.equal(Object.hasOwn(requestDTO, 'payload'), false)
+  assert.equal(Object.hasOwn(requestDTO, 'isEntry'), false)
+  assert.equal(Object.hasOwn(requestDTO, 'alwaysIncludeFullContent'), false)
 })
 
 test('retrieval DTO preserves declared optional values and omits undefined or undeclared fields', () => {

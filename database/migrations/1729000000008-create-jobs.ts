@@ -41,6 +41,7 @@ export class CreateJobs1729000000008 implements MigrationInterface {
         ),
         created_at timestamptz NOT NULL DEFAULT now(),
         updated_at timestamptz NOT NULL DEFAULT now(),
+        lease_expires_at timestamptz,
         FOREIGN KEY (knowledge_base_id, document_id) REFERENCES knowledge_base_documents(knowledge_base_id, document_id) ON DELETE RESTRICT,
         FOREIGN KEY (document_id, document_index_id) REFERENCES document_indexes(document_id, id) ON DELETE RESTRICT,
         UNIQUE (knowledge_base_id, document_id),
@@ -51,7 +52,8 @@ export class CreateJobs1729000000008 implements MigrationInterface {
 CREATE INDEX idx_jobs_claim ON jobs(available_at, created_at) WHERE status = 'queued';
 CREATE INDEX idx_jobs_recovery ON jobs(reserved_at) WHERE status = 'running';
 CREATE INDEX idx_jobs_document_index ON jobs(document_index_id);
-CREATE INDEX idx_jobs_retry_failed ON jobs(retry_of_failed_job_id) WHERE retry_of_failed_job_id IS NOT NULL;`)
+CREATE INDEX idx_jobs_retry_failed ON jobs(retry_of_failed_job_id) WHERE retry_of_failed_job_id IS NOT NULL;
+CREATE INDEX idx_jobs_status_lease_expiry ON jobs(status, lease_expires_at, created_at, id);`)
     } finally {
       await queryRunner.query('RESET search_path')
     }

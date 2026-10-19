@@ -4,11 +4,11 @@ import type { KnowledgeServiceConfig } from '../../../../config/knowledge-servic
 import type { GetDocumentRevisionForIndexRetryUseCaseContract } from '../../DocumentRevisions/Contracts/get-document-revision-for-index-retry.use-case.contract.ts'
 import type { GetDocumentForIndexRetryUseCaseContract } from '../../Documents/Contracts/get-document-for-index-retry.use-case.contract.ts'
 import type { ReserveDocumentForIndexingUseCaseContract } from '../../Documents/Contracts/reserve-document-for-indexing.use-case.contract.ts'
+import type { GetKnowledgeBaseDocumentIndexingStateUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/get-knowledge-base-document-indexing-state.use-case.contract.ts'
+import type { ReserveKnowledgeBaseDocumentForIndexingUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/reserve-knowledge-base-document-for-indexing.use-case.contract.ts'
 import { EmbeddingProvider } from '../../KnowledgeBases/Contracts/embedding-provider.ts'
 import type { GetIndexingKnowledgeBaseUseCaseContract } from '../../KnowledgeBases/Contracts/get-indexing-knowledge-base.use-case.contract.ts'
 import type { PersistenceTransaction } from '../../KnowledgeBases/Contracts/persistence-transaction.ts'
-import type { GetMembershipIndexingStateUseCaseContract } from '../../Memberships/Contracts/get-membership-indexing-state.use-case.contract.ts'
-import type { ReserveMembershipForIndexingUseCaseContract } from '../../Memberships/Contracts/reserve-membership-for-indexing.use-case.contract.ts'
 import { ReadRetryDocumentIndexesAssembler } from '../Assemblers/read-retry-document-indexes.assembler.ts'
 import { WriteRequestDocumentIndexesAssembler } from '../Assemblers/write-request-document-indexes.assembler.ts'
 import { WriteRetryDocumentIndexesAssembler } from '../Assemblers/write-retry-document-indexes.assembler.ts'
@@ -17,8 +17,8 @@ import type { DocumentIndexFailureArchive } from '../Contracts/document-index-fa
 import type { DocumentIndexRepository } from '../Contracts/document-index.repository.ts'
 import type { DocumentIndexingRetryContext } from '../DataTransferObjects/document-indexing-retry-context.dto.ts'
 import type { DocumentIndexingRetryTarget } from '../DataTransferObjects/document-indexing-retry-target.dto.ts'
-import type { RetryDocumentIndexingResultDto } from '../DataTransferObjects/retry-document-indexing-result.dto.ts'
-import type { RetryDocumentIndexingDto } from '../DataTransferObjects/retry-document-indexing.dto.ts'
+import type { RetryDocumentIndexingResultDTO } from '../DataTransferObjects/retry-document-indexing-result.dto.ts'
+import type { RetryDocumentIndexingDTO } from '../DataTransferObjects/retry-document-indexing.dto.ts'
 import {
   DOCUMENT_INDEX_FAILURE_RETRY_STATUS,
   type DocumentIndexingNotRetryableStatus,
@@ -56,7 +56,7 @@ const preparationStatus = (
 
   if (retryContext.failedJob.attempts !== 4) return DOCUMENT_INDEX_FAILURE_RETRY_STATUS.NOT_CURRENT
 
-  if (retryContext.membership === null) return DOCUMENT_INDEX_FAILURE_RETRY_STATUS.NOT_CURRENT
+  if (retryContext.knowledgeBaseDocument === null) return DOCUMENT_INDEX_FAILURE_RETRY_STATUS.NOT_CURRENT
 
   if (retryContext.activeJob !== null) return DOCUMENT_INDEX_FAILURE_RETRY_STATUS.ACTIVE_JOB_EXISTS
 
@@ -68,13 +68,17 @@ const preparationStatus = (
 }
 
 const isCurrentTarget = (retryContext: DocumentIndexingRetryContext, expectedPipelineHash: string): boolean => {
-  if (retryContext.document === null || retryContext.membership === null || retryContext.documentIndex === null)
+  if (
+    retryContext.document === null ||
+    retryContext.knowledgeBaseDocument === null ||
+    retryContext.documentIndex === null
+  )
     return false
 
   if (retryContext.document.targetRevision === null) return false
 
   return (
-    retryContext.failedJob.generation === retryContext.membership.requestedGeneration &&
+    retryContext.failedJob.generation === retryContext.knowledgeBaseDocument.requestedGeneration &&
     retryContext.documentIndex.documentRevisionId === retryContext.document.targetRevision.id &&
     retryContext.documentIndex.pipelineHash === expectedPipelineHash
   )
@@ -84,7 +88,11 @@ const matchesExpected = (
   retryContext: DocumentIndexingRetryContext,
   expectedRetryTarget: DocumentIndexingRetryTarget,
 ): boolean => {
-  if (retryContext.document === null || retryContext.membership === null || retryContext.documentIndex === null)
+  if (
+    retryContext.document === null ||
+    retryContext.knowledgeBaseDocument === null ||
+    retryContext.documentIndex === null
+  )
     return false
 
   const targetRevision = retryContext.document.targetRevision
@@ -104,8 +112,10 @@ const matchesExpected = (
     targetRevision.id === expectedRetryTarget.revisionId &&
     retryContext.documentIndex.documentRevisionId === expectedRetryTarget.revisionId &&
     retryContext.documentIndex.pipelineHash === expectedRetryTarget.pipelineHash &&
-    retryContext.membership.requestedGeneration === expectedRetryTarget.membership.requestedGeneration &&
-    retryContext.membership.activeDocumentIndexId === expectedRetryTarget.membership.activeDocumentIndexId &&
+    retryContext.knowledgeBaseDocument.requestedGeneration ===
+      expectedRetryTarget.knowledgeBaseDocument.requestedGeneration &&
+    retryContext.knowledgeBaseDocument.activeDocumentIndexId ===
+      expectedRetryTarget.knowledgeBaseDocument.activeDocumentIndexId &&
     activeJobId === expectedRetryTarget.activeJobId
   )
 }
@@ -134,7 +144,7 @@ export class RetryDocumentIndexingListener {
     private readonly transaction: PersistenceTransaction,
     private readonly knowledgeBases: GetIndexingKnowledgeBaseUseCaseContract,
     private readonly documents: GetDocumentForIndexRetryUseCaseContract,
-    private readonly memberships: GetMembershipIndexingStateUseCaseContract,
+    private readonly knowledgeBaseDocuments: GetKnowledgeBaseDocumentIndexingStateUseCaseContract,
     private readonly revisions: GetDocumentRevisionForIndexRetryUseCaseContract,
     private readonly documentIndexRepository: DocumentIndexRepository,
     private readonly documentIndexExecutionQueue: DocumentIndexExecutionQueue,
@@ -143,10 +153,10 @@ export class RetryDocumentIndexingListener {
     private readonly config: KnowledgeServiceConfig,
     private readonly writeRequestDocumentIndexesAssembler: WriteRequestDocumentIndexesAssembler,
     private readonly reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
-    private readonly reserveMembershipForIndexing: ReserveMembershipForIndexingUseCaseContract,
+    private readonly reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
   ) {}
 
-  async handle({ projectId, failedJobId }: RetryDocumentIndexingDto): Promise<RetryDocumentIndexingResultDto> {
+  async handle({ projectId, failedJobId }: RetryDocumentIndexingDTO): Promise<RetryDocumentIndexingResultDTO> {
     const retryContext = await this.transaction.run(() => this.readByFailedJobIdWithRetryContextProjection(failedJobId))
     const retryPreparationStatus = preparationStatus(retryContext, projectId)
 
@@ -187,15 +197,15 @@ export class RetryDocumentIndexingListener {
       throwForRetryStatus(DOCUMENT_INDEX_FAILURE_RETRY_STATUS.STALE, failedJobId)
     }
 
-    const retryMembership = retryContext.membership
+    const retryKnowledgeBaseDocument = retryContext.knowledgeBaseDocument
 
-    if (retryMembership === null) throw new DocumentIndexingFailureNotCurrentException()
+    if (retryKnowledgeBaseDocument === null) throw new DocumentIndexingFailureNotCurrentException()
 
     const expectedRetryTarget = WriteRetryDocumentIndexesAssembler.toDocumentIndexingRetryTarget(
       failedJob,
       sourceDocument.sourceType,
       targetRevision.id,
-      retryMembership,
+      retryKnowledgeBaseDocument,
       expectedPipelineHash,
     )
     const retriedAt = new Date()
@@ -207,18 +217,18 @@ export class RetryDocumentIndexingListener {
         throw new DocumentIndexingNotFoundException(failedJobId)
       }
 
-      // Keep document → membership → failed-job locking identical to indexing and pruning.
+      // Keep document → knowledgeBaseDocument → failed-job locking identical to indexing and pruning.
       const lockedDocument = await this.reserveDocumentForIndexing.execute({
         documentId: candidateRetryContext.failedJob.documentId,
       })
-      let lockedMembership = false
+      let lockedKnowledgeBaseDocument = false
 
       if (lockedDocument) {
-        const membershipReservation = await this.reserveMembershipForIndexing.execute({
+        const knowledgeBaseDocumentReservation = await this.reserveKnowledgeBaseDocumentForIndexing.execute({
           knowledgeBaseId: candidateRetryContext.failedJob.knowledgeBaseId,
           documentId: candidateRetryContext.failedJob.documentId,
         })
-        lockedMembership = membershipReservation !== null
+        lockedKnowledgeBaseDocument = knowledgeBaseDocumentReservation !== null
       }
 
       const lockedFailedJob = await this.documentIndexFailureArchive.lockFailure({ failedJobId })
@@ -228,7 +238,11 @@ export class RetryDocumentIndexingListener {
         throw new DocumentIndexingNotFoundException(failedJobId)
       }
 
-      if (!lockedDocument || !lockedMembership || !matchesExpected(lockedRetryContext, expectedRetryTarget)) {
+      if (
+        !lockedDocument ||
+        !lockedKnowledgeBaseDocument ||
+        !matchesExpected(lockedRetryContext, expectedRetryTarget)
+      ) {
         throw new IndexRetrySourceChangedException()
       }
 
@@ -238,10 +252,10 @@ export class RetryDocumentIndexingListener {
         idempotencyKey,
         this.reusableExecutionStateForRetry(lockedRetryContext.failedJob.retryPayload.executionState),
       )
-      const createdRetryJob = await this.documentIndexExecutionQueue.enqueueRetry(retryableJob)
+      await this.documentIndexExecutionQueue.enqueueRetry(retryableJob)
       await this.documentIndexFailureArchive.markRetried({ failedJobId, retriedAt: retriedAt })
 
-      return createdRetryJob.id
+      return retryableJob.id
     })
 
     return WriteRetryDocumentIndexesAssembler.toRetryDocumentIndexingResult(jobId, failedJobId)
@@ -273,16 +287,17 @@ export class RetryDocumentIndexingListener {
 
     if (knowledgeBaseRecord === null) return null
 
-    const membershipQO = {
+    const knowledgeBaseDocumentQO = {
       knowledgeBaseId: failedJobRecord.knowledgeBaseId,
       documentId: failedJobRecord.documentId,
     }
     const documentRecord = await this.documents.execute({ documentId: failedJobRecord.documentId })
-    const membershipRecord = await this.memberships.execute(membershipQO)
+    const knowledgeBaseDocumentRecord = await this.knowledgeBaseDocuments.execute(knowledgeBaseDocumentQO)
     const documentIndexRecord = await this.documentIndexRepository.findByDocumentIndexId({
       documentIndexId: failedJobRecord.documentIndexId,
     })
-    const activeJobRecord = await this.documentIndexExecutionQueue.findMembershipExecution(membershipQO)
+    const activeJobRecord =
+      await this.documentIndexExecutionQueue.findKnowledgeBaseDocumentExecution(knowledgeBaseDocumentQO)
     let targetDocumentRevisionRecord = null
 
     if (documentIndexRecord !== null) {
@@ -296,7 +311,7 @@ export class RetryDocumentIndexingListener {
       failedJob: failedJobRecord,
       knowledgeBase: knowledgeBaseRecord,
       document: documentRecord,
-      membership: membershipRecord,
+      knowledgeBaseDocument: knowledgeBaseDocumentRecord,
       index: documentIndexRecord,
       activeJob: activeJobRecord,
       targetRevision: targetDocumentRevisionRecord,

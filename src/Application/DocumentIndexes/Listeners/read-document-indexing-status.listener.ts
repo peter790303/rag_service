@@ -1,13 +1,13 @@
-import { DocumentIndexStatusEnum } from '../../../Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import type { GetMembershipIndexingStateUseCaseContract } from '../../Memberships/Contracts/get-membership-indexing-state.use-case.contract.ts'
+import type { GetKnowledgeBaseDocumentIndexingStateUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/get-knowledge-base-document-indexing-state.use-case.contract.ts'
 import { ReadStatusDocumentIndexesAssembler } from '../Assemblers/read-status-document-indexes.assembler.ts'
 import type { DocumentIndexExecutionQueue } from '../Contracts/document-index-execution.queue.ts'
 import type { DocumentIndexFailureArchive } from '../Contracts/document-index-failure.archive.ts'
+import type { DocumentIndexSuccessArchive } from '../Contracts/document-index-success.archive.ts'
 import type { DocumentIndexRepository } from '../Contracts/document-index.repository.ts'
 import type { DocumentIndexingStatusFacts } from '../DataTransferObjects/document-indexing-status-facts.dto.ts'
-import type { DocumentIndexingStatusSourceDto } from '../DataTransferObjects/document-indexing-status-source.dto.ts'
-import type { DocumentIndexingStatusDto } from '../DataTransferObjects/document-indexing-status.dto.ts'
-import type { ReadDocumentIndexingStatusDto } from '../DataTransferObjects/read-document-indexing-status.dto.ts'
+import type { DocumentIndexingStatusSourceDTO } from '../DataTransferObjects/document-indexing-status-source.dto.ts'
+import type { DocumentIndexingStatusDTO } from '../DataTransferObjects/document-indexing-status.dto.ts'
+import type { ReadDocumentIndexingStatusDTO } from '../DataTransferObjects/read-document-indexing-status.dto.ts'
 import { DocumentIndexingTargetStateEnum } from '../Enums/document-indexing-target-state.enum.ts'
 import { DocumentIndexingNotFoundException } from '../Exceptions/document-indexing-not-found.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../Helpers/document-index-execution-lifecycle.helper.ts'
@@ -28,7 +28,7 @@ const resolveRequestedTargetState = (
 
   if (requestedTargetStateFacts.hasFailedJob) return DocumentIndexingTargetStateEnum.FAILED
 
-  return requestedTargetStateFacts.targetIndexStatus === DocumentIndexStatusEnum.READY
+  return requestedTargetStateFacts.hasSuccessfulReceipt
     ? DocumentIndexingTargetStateEnum.READY
     : DocumentIndexingTargetStateEnum.FAILED
 }
@@ -36,28 +36,27 @@ const resolveRequestedTargetState = (
 export class ReadDocumentIndexingStatusListener {
   constructor(
     private readonly documentIndexExecutionQueue: DocumentIndexExecutionQueue,
-    private readonly getMembershipIndexingState: GetMembershipIndexingStateUseCaseContract,
+    private readonly getKnowledgeBaseDocumentIndexingState: GetKnowledgeBaseDocumentIndexingStateUseCaseContract,
     private readonly documentIndexRepository: DocumentIndexRepository,
     private readonly documentIndexFailureArchive: DocumentIndexFailureArchive,
+    private readonly documentIndexSuccessArchive: DocumentIndexSuccessArchive,
   ) {}
 
-  async handle({ projectId, jobId }: ReadDocumentIndexingStatusDto): Promise<DocumentIndexingStatusDto> {
+  async handle({ projectId, jobId }: ReadDocumentIndexingStatusDTO): Promise<DocumentIndexingStatusDTO> {
     const source = await this.findByProjectIdAndJobIdOrFailedRecordIdWithStatusSourceProjection(projectId, jobId)
-    const membership = await this.getMembershipIndexingState.execute({
+    const knowledgeBaseDocument = await this.getKnowledgeBaseDocumentIndexingState.execute({
       knowledgeBaseId: source.knowledgeBaseId,
       documentId: source.documentId,
     })
-    const activeIndexId = membership?.activeDocumentIndexId ?? null
+    const activeIndexId = knowledgeBaseDocument?.activeDocumentIndexId ?? null
     const activeIndex =
       activeIndexId === null
         ? null
         : await this.documentIndexRepository.findByDocumentIndexId({ documentIndexId: activeIndexId })
-    const targetIndex = await this.documentIndexRepository.findByDocumentIndexId({ documentIndexId: source.indexId })
     const jobStatusFacts = ReadStatusDocumentIndexesAssembler.toDocumentIndexingStatusFacts(
       source,
-      membership,
+      knowledgeBaseDocument,
       activeIndex,
-      targetIndex,
     )
 
     const requestedTargetState =
@@ -71,7 +70,7 @@ export class ReadDocumentIndexingStatusListener {
   private async findByProjectIdAndJobIdOrFailedRecordIdWithStatusSourceProjection(
     projectId: string,
     jobId: string,
-  ): Promise<DocumentIndexingStatusSourceDto> {
+  ): Promise<DocumentIndexingStatusSourceDTO> {
     const activeJob = await this.documentIndexExecutionQueue.findExecutionInProject({ projectId, id: jobId })
 
     if (activeJob !== null) {
@@ -86,15 +85,24 @@ export class ReadDocumentIndexingStatusListener {
       idOrJobId: jobId,
     })
 
+    if (failedJob !== null) {
+      if (!failedJob.knowledgeBaseId || !failedJob.documentId || !failedJob.documentIndexId || !failedJob.generation)
+        throw new DocumentIndexingNotFoundException(jobId)
+
+      return ReadStatusDocumentIndexesAssembler.toFailedIndexingStatusSource(failedJob)
+    }
+
+    const successReceipt = await this.documentIndexSuccessArchive.findSuccessByProjectIdAndJobId({ projectId, jobId })
+
     if (
-      failedJob === null ||
-      !failedJob.knowledgeBaseId ||
-      !failedJob.documentId ||
-      !failedJob.documentIndexId ||
-      !failedJob.generation
+      successReceipt === null ||
+      !successReceipt.knowledgeBaseId ||
+      !successReceipt.documentId ||
+      !successReceipt.documentIndexId ||
+      !successReceipt.generation
     )
       throw new DocumentIndexingNotFoundException(jobId)
 
-    return ReadStatusDocumentIndexesAssembler.toFailedIndexingStatusSource(failedJob)
+    return ReadStatusDocumentIndexesAssembler.toSuccessfulIndexingStatusSource(successReceipt)
   }
 }

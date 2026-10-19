@@ -1,4 +1,4 @@
-export type FindRetrievalChunkCandidatesDto = {
+export type FindRetrievalChunkCandidatesDTO = {
   documentIndexIds: readonly string[]
   queryVector: readonly number[]
   queryText: string

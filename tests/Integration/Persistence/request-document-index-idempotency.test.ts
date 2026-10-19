@@ -11,10 +11,11 @@ import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCas
 import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
 import { DocumentIndexingRequestedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-requested.event.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
+import { CancelKnowledgeBaseDocumentDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/cancel-knowledge-base-document-document-indexing.listener.ts'
 import { DispatchDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/dispatch-document-indexing.listener.ts'
-import { DocumentIndexChunkReplacementRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-index-chunk-replacement-requested.listener.ts'
 import { DocumentIndexedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexed.listener.ts'
 import { DocumentIndexingRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-requested.listener.ts'
+import { AuthorizeDocumentIndexChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/authorize-document-index-chunk-replacement.use-case.ts'
 import { CollectDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/collect-document-index-garbage.use-case.ts'
 import { InspectDocumentIndexRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/inspect-document-index-retention.use-case.ts'
 import { PlanDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/plan-document-index-garbage.use-case.ts'
@@ -34,16 +35,16 @@ import { LockDocumentRetentionParentsUseCase } from '../../../src/Application/Do
 import { PrepareDocumentForIndexRequestUseCase } from '../../../src/Application/Documents/UseCases/prepare-document-for-index-request.use-case.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
 import { StartDocumentPruningRetentionUseCase } from '../../../src/Application/Documents/UseCases/start-document-pruning-retention.use-case.ts'
+import { ActivateKnowledgeBaseDocumentIndexUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/activate-knowledge-base-document-index.use-case.ts'
+import { CompleteKnowledgeBaseDocumentIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/complete-knowledge-base-document-indexing.use-case.ts'
+import { InspectKnowledgeBaseDocumentRetentionUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/inspect-knowledge-base-document-retention.use-case.ts'
+import { PrepareKnowledgeBaseDocumentForIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prepare-knowledge-base-document-for-index-request.use-case.ts'
+import { PruneKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prune-knowledge-base-documents.use-case.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
+import { SaveKnowledgeBaseDocumentIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/save-knowledge-base-document-index-request.use-case.ts'
 import { EnsureIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/ensure-indexing-knowledge-base.use-case.ts'
+import { GetIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/get-indexing-knowledge-base.use-case.ts'
 import { ValidateKnowledgeBasePruningUseCase } from '../../../src/Application/KnowledgeBases/UseCases/validate-knowledge-base-pruning.use-case.ts'
-import { CancelMembershipIndexingListener } from '../../../src/Application/Memberships/Listeners/cancel-membership-indexing.listener.ts'
-import { ActivateMembershipIndexUseCase } from '../../../src/Application/Memberships/UseCases/activate-membership-index.use-case.ts'
-import { CompleteMembershipIndexingUseCase } from '../../../src/Application/Memberships/UseCases/complete-membership-indexing.use-case.ts'
-import { InspectMembershipRetentionUseCase } from '../../../src/Application/Memberships/UseCases/inspect-membership-retention.use-case.ts'
-import { PrepareMembershipForIndexRequestUseCase } from '../../../src/Application/Memberships/UseCases/prepare-membership-for-index-request.use-case.ts'
-import { PruneKnowledgeBaseMembershipsUseCase } from '../../../src/Application/Memberships/UseCases/prune-knowledge-base-memberships.use-case.ts'
-import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
-import { SaveMembershipIndexRequestUseCase } from '../../../src/Application/Memberships/UseCases/save-membership-index-request.use-case.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { KnowledgeBaseProjectMismatchException } from '../../../src/Domain/KnowledgeBase/Exceptions/knowledge-base-project-mismatch.exception.ts'
@@ -53,17 +54,18 @@ import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Mode
 import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
 import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
 import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
 import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
 import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
+import { DocumentIndexSuccessReceiptRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index-success-receipt.repository.ts'
 import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
 import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
 import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-revision.repository.ts'
 import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
 import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
 import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentMembershipRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document-membership.repository.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
 import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
@@ -75,13 +77,20 @@ const config: KnowledgeServiceConfig = {
   databaseSchema: 'public',
   embeddingModel: 'integration-test-model',
   embeddingDimensions: 384,
+  embeddingTransport: 'http',
+  embeddingRevision: '',
+  embeddingCacheDir: '/unused',
   embeddingApiUrl: 'https://unused.invalid',
+  chunkingTransport: 'http',
+  chunkingCliPath: 'codex',
+  chunkingCliMaxOutputBytes: 4194304,
   chunkingModel: 'integration-test-chunker',
   chunkingApiUrl: 'https://unused.invalid',
   workerPollMs: 1000,
   gcPollMs: 60000,
   gcRetentionMs: 86400000,
   workerLeaseSeconds: 30,
+  externalRequestTimeoutMs: 30000,
   serviceAuthSecret: 'integration-test-secret',
 }
 
@@ -96,7 +105,7 @@ test(
       const documentModelRepository = dataSource.getRepository(DocumentModel)
       const documentRevisionModelRepository = dataSource.getRepository(DocumentRevisionModel)
       const documentIndexModelRepository = dataSource.getRepository(DocumentIndexModel)
-      const membershipModelRepository = dataSource.getRepository(KnowledgeBaseDocumentMembershipModel)
+      const knowledgeBaseDocumentModelRepository = dataSource.getRepository(KnowledgeBaseDocumentModel)
       const jobModelRepository = dataSource.getRepository(JobModel)
       const chunkModelRepository = dataSource.getRepository(ChunkModel)
       const fixtureId = randomUUID()
@@ -112,12 +121,12 @@ test(
       const documentIndexRepository = new DocumentIndexRepository(persistenceTransaction)
       const failedJobRepository = new FailedJobRepository(persistenceTransaction)
       const jobRepository = new JobRepository(persistenceTransaction)
-      const membershipRepository = new KnowledgeBaseDocumentMembershipRepository(persistenceTransaction)
+      const knowledgeBaseDocumentRepository = new KnowledgeBaseDocumentRepository(persistenceTransaction)
       const documentRepository = new DocumentRepository(persistenceTransaction)
       const documentIndexPersistenceFixture = new DocumentIndexPersistenceFixture(
         persistenceTransaction,
         jobRepository,
-        membershipRepository,
+        knowledgeBaseDocumentRepository,
         documentIndexRepository,
         knowledgeBaseRepository,
         documentRepository,
@@ -130,20 +139,32 @@ test(
         new DispatchDocumentIndexingListener(
           documentIndexPersistenceFixture.persistenceTransaction,
           new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-          new ReserveMembershipForIndexingUseCase(documentIndexPersistenceFixture.membershipRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+          ),
           documentIndexPersistenceFixture.documentIndexRepository,
           documentIndexPersistenceFixture.jobRepository,
           documentIndexPersistenceFixture.failedJobRepository,
           config.workerLeaseSeconds,
-          new ActivateMembershipIndexUseCase(documentIndexPersistenceFixture.membershipRepository),
+          new ActivateKnowledgeBaseDocumentIndexUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+          ),
+          new GetIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
+          new DocumentIndexSuccessReceiptRepository(documentIndexPersistenceFixture.persistenceTransaction),
         )
       const completeJob = new DocumentIndexedListener(
         documentIndexPersistenceFixture.persistenceTransaction,
         new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-        new ReserveMembershipForIndexingUseCase(documentIndexPersistenceFixture.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+          documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+        ),
         documentIndexPersistenceFixture.jobRepository,
         documentIndexPersistenceFixture.documentIndexRepository,
-        new CompleteMembershipIndexingUseCase(documentIndexPersistenceFixture.membershipRepository),
+        new CompleteKnowledgeBaseDocumentIndexingUseCase(
+          documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+        ),
+        new GetIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
+        new DocumentIndexSuccessReceiptRepository(documentIndexPersistenceFixture.persistenceTransaction),
       )
       const pipelineSettings = {
         embeddingModel: config.embeddingModel,
@@ -159,79 +180,94 @@ test(
         documentIndexPersistenceFixture.persistenceTransaction,
         new EnsureIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
         new PrepareDocumentForIndexRequestUseCase(documentIndexPersistenceFixture.documentRepository),
-        new PrepareMembershipForIndexRequestUseCase(documentIndexPersistenceFixture.membershipRepository),
+        new PrepareKnowledgeBaseDocumentForIndexRequestUseCase(
+          documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+        ),
         new PrepareDocumentRevisionForIndexRequestUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
         documentIndexPersistenceFixture.documentIndexRepository,
         documentIndexPersistenceFixture.jobRepository,
         documentIndexPersistenceFixture.failedJobRepository,
         pipelineSettings,
         writeRequestDocumentIndexesAssembler,
-        new SaveMembershipIndexRequestUseCase(documentIndexPersistenceFixture.membershipRepository),
-      )
-      const prune = new PruneKnowledgeBaseMembershipsUseCase(
-        documentIndexPersistenceFixture.persistenceTransaction,
-        new ValidateKnowledgeBasePruningUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
-        new LockDocumentRetentionParentsUseCase(documentIndexPersistenceFixture.documentRepository),
-        documentIndexPersistenceFixture.membershipRepository,
-        new CancelMembershipIndexingListener(documentIndexPersistenceFixture.jobRepository),
+        new SaveKnowledgeBaseDocumentIndexRequestUseCase(
+          documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+        ),
         new StartDocumentIndexPruningRetentionUseCase(
           documentIndexPersistenceFixture.documentIndexRepository,
           documentIndexPersistenceFixture.jobRepository,
-          new InspectMembershipRetentionUseCase(documentIndexPersistenceFixture.membershipRepository),
+          new InspectKnowledgeBaseDocumentRetentionUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+          ),
+        ),
+      )
+      const prune = new PruneKnowledgeBaseDocumentsUseCase(
+        documentIndexPersistenceFixture.persistenceTransaction,
+        new ValidateKnowledgeBasePruningUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
+        new LockDocumentRetentionParentsUseCase(documentIndexPersistenceFixture.documentRepository),
+        documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+        {
+          deliver: (event) =>
+            new CancelKnowledgeBaseDocumentDocumentIndexingListener(
+              documentIndexPersistenceFixture.jobRepository,
+            ).handle(event),
+        },
+        new StartDocumentIndexPruningRetentionUseCase(
+          documentIndexPersistenceFixture.documentIndexRepository,
+          documentIndexPersistenceFixture.jobRepository,
+          new InspectKnowledgeBaseDocumentRetentionUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+          ),
         ),
         new StartDocumentPruningRetentionUseCase(
           documentIndexPersistenceFixture.documentRepository,
           new InspectDocumentRetentionUseCase(
-            new InspectMembershipRetentionUseCase(documentIndexPersistenceFixture.membershipRepository),
-            new InspectDocumentRevisionRetentionUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
-            new InspectDocumentIndexRetentionUseCase(
-              documentIndexPersistenceFixture.documentIndexRepository,
-              documentIndexPersistenceFixture.jobRepository,
-              documentIndexPersistenceFixture.failedJobRepository,
+            new InspectKnowledgeBaseDocumentRetentionUseCase(
+              documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
             ),
+            new InspectDocumentRevisionRetentionUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
+            new InspectDocumentIndexRetentionUseCase(documentIndexPersistenceFixture.documentIndexRepository),
             new InspectDocumentRelationRetentionUseCase(documentIndexPersistenceFixture.documentRelationRepository),
             documentIndexPersistenceFixture.documentRepository,
+            documentIndexPersistenceFixture.jobRepository,
+            documentIndexPersistenceFixture.failedJobRepository,
           ),
         ),
       )
       const collectGarbage = new DocumentGarbageCollectionRequestedListener(
         documentIndexPersistenceFixture.persistenceTransaction,
         documentIndexPersistenceFixture.documentRepository,
-        new PlanDocumentIndexGarbageUseCase(
-          documentIndexPersistenceFixture.documentIndexRepository,
-          documentIndexPersistenceFixture.failedJobRepository,
-        ),
+        new PlanDocumentIndexGarbageUseCase(documentIndexPersistenceFixture.documentIndexRepository),
         new CollectDocumentIndexGarbageUseCase(
           documentIndexPersistenceFixture.documentIndexRepository,
           documentIndexPersistenceFixture.jobRepository,
           documentIndexPersistenceFixture.failedJobRepository,
-          new InspectMembershipRetentionUseCase(documentIndexPersistenceFixture.membershipRepository),
+          new InspectKnowledgeBaseDocumentRetentionUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+          ),
           new CollectDocumentRelationGarbageUseCase(documentIndexPersistenceFixture.documentRelationRepository),
           new CollectIndexChunkGarbageUseCase(documentIndexPersistenceFixture.chunkRepository),
         ),
         new PlanDocumentRevisionGarbageUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
         new CollectDocumentRevisionGarbageUseCase(
           documentIndexPersistenceFixture.documentRevisionRepository,
-          new InspectDocumentIndexRetentionUseCase(
-            documentIndexPersistenceFixture.documentIndexRepository,
-            documentIndexPersistenceFixture.jobRepository,
-            documentIndexPersistenceFixture.failedJobRepository,
-          ),
+          new InspectDocumentIndexRetentionUseCase(documentIndexPersistenceFixture.documentIndexRepository),
         ),
         new PlanDocumentRelationGarbageUseCase(documentIndexPersistenceFixture.documentRelationRepository),
         new LockDocumentRetentionParentsUseCase(documentIndexPersistenceFixture.documentRepository),
         new InspectDocumentRetentionUseCase(
-          new InspectMembershipRetentionUseCase(documentIndexPersistenceFixture.membershipRepository),
-          new InspectDocumentRevisionRetentionUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
-          new InspectDocumentIndexRetentionUseCase(
-            documentIndexPersistenceFixture.documentIndexRepository,
-            documentIndexPersistenceFixture.jobRepository,
-            documentIndexPersistenceFixture.failedJobRepository,
+          new InspectKnowledgeBaseDocumentRetentionUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
           ),
+          new InspectDocumentRevisionRetentionUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
+          new InspectDocumentIndexRetentionUseCase(documentIndexPersistenceFixture.documentIndexRepository),
           new InspectDocumentRelationRetentionUseCase(documentIndexPersistenceFixture.documentRelationRepository),
           documentIndexPersistenceFixture.documentRepository,
+          documentIndexPersistenceFixture.jobRepository,
+          documentIndexPersistenceFixture.failedJobRepository,
         ),
         config,
+        documentIndexPersistenceFixture.jobRepository,
+        documentIndexPersistenceFixture.failedJobRepository,
       )
       const input = {
         knowledgeBaseId: base.id,
@@ -282,9 +318,11 @@ test(
       const planSavedAt = new Date()
       await new ReplaceIndexChunkUseCase(
         documentIndexPersistenceFixture.persistenceTransaction,
-        new DocumentIndexChunkReplacementRequestedListener(
+        new AuthorizeDocumentIndexChunkReplacementUseCase(
           new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-          new ReserveMembershipForIndexingUseCase(documentIndexPersistenceFixture.membershipRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+          ),
           documentIndexPersistenceFixture.jobRepository,
           documentIndexPersistenceFixture.documentIndexRepository,
         ),
@@ -299,18 +337,59 @@ test(
       await completeJob.handle({ jobDelivery: claim, completedAt: new Date() })
 
       const document = await documentModelRepository.findOneByOrFail({ sourceKey: fixtureId })
-      const membership = await membershipModelRepository.findOneByOrFail({
+      const knowledgeBaseDocument = await knowledgeBaseDocumentModelRepository.findOneByOrFail({
         knowledgeBaseId: base.id,
         documentId: document.id,
       })
       const indexCountBefore = await documentIndexModelRepository.countBy({ documentId: document.id })
       const repeated = await requestIndex.handle(new DocumentIndexingRequestedEvent(input))
 
-      assert.equal(repeated.documentIndexId, membership.activeDocumentIndexId)
+      assert.equal(repeated.documentIndexId, knowledgeBaseDocument.activeDocumentIndexId)
       assert.equal(repeated.jobId, null)
       assert.equal(repeated.reusedReadyIndex, true)
-      assert.equal(repeated.generation, membership.requestedGeneration)
+      assert.equal(repeated.generation, knowledgeBaseDocument.requestedGeneration)
       assert.equal(await documentIndexModelRepository.countBy({ documentId: document.id }), indexCountBefore)
+      assert.equal(await jobModelRepository.countBy({ knowledgeBaseId: base.id, documentId: document.id }), 0)
+
+      const cancelledRunning = await requestIndex.handle(
+        new DocumentIndexingRequestedEvent({ ...input, content: `${input.content}\n\nCancelled running revision.` }),
+      )
+      const cancelledClaim = await claimNext().handle()
+      assert.equal(cancelledClaim?.id, cancelledRunning.jobId)
+      const restoredReady = await requestIndex.handle(new DocumentIndexingRequestedEvent(input))
+      assert.equal(restoredReady.documentIndexId, repeated.documentIndexId)
+      assert.equal(await jobModelRepository.countBy({ id: cancelledRunning.jobId! }), 0)
+      assert.ok(
+        (await documentIndexModelRepository.findOneByOrFail({ id: cancelledRunning.documentIndexId }))
+          .unreferencedSince instanceof Date,
+        'switching from a running target to a ready index must start retention for the cancelled building index',
+      )
+
+      const cancelledQueued = await requestIndex.handle(
+        new DocumentIndexingRequestedEvent({ ...input, content: `${input.content}\n\nCancelled queued revision.` }),
+      )
+      const replacementQueued = await requestIndex.handle(
+        new DocumentIndexingRequestedEvent({ ...input, content: `${input.content}\n\nReplacement queued revision.` }),
+      )
+      assert.equal(await jobModelRepository.countBy({ id: cancelledQueued.jobId! }), 0)
+      assert.ok(
+        (await documentIndexModelRepository.findOneByOrFail({ id: cancelledQueued.documentIndexId }))
+          .unreferencedSince instanceof Date,
+        'enqueueing a different target must start retention for the superseded building index',
+      )
+      await requestIndex.handle(new DocumentIndexingRequestedEvent(input))
+      const cancelledIndexIds = [
+        cancelledRunning.documentIndexId,
+        cancelledQueued.documentIndexId,
+        replacementQueued.documentIndexId,
+      ]
+      await documentIndexModelRepository.update(
+        { id: In(cancelledIndexIds) },
+        { unreferencedSince: new Date(Date.now() - config.gcRetentionMs - 1000) },
+      )
+      await collectGarbage.handle(new DocumentGarbageCollectionRequestedEvent())
+      assert.equal(await documentIndexModelRepository.countBy({ id: In(cancelledIndexIds) }), 0)
+      assert.equal(await documentIndexModelRepository.countBy({ id: repeated.documentIndexId }), 1)
       assert.equal(await jobModelRepository.countBy({ knowledgeBaseId: base.id, documentId: document.id }), 0)
 
       const changedInput = {
@@ -332,9 +411,11 @@ test(
       const changedPlanSavedAt = new Date()
       await new ReplaceIndexChunkUseCase(
         documentIndexPersistenceFixture.persistenceTransaction,
-        new DocumentIndexChunkReplacementRequestedListener(
+        new AuthorizeDocumentIndexChunkReplacementUseCase(
           new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-          new ReserveMembershipForIndexingUseCase(documentIndexPersistenceFixture.membershipRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+          ),
           documentIndexPersistenceFixture.jobRepository,
           documentIndexPersistenceFixture.documentIndexRepository,
         ),
@@ -406,8 +487,12 @@ test(
       }
       assert.deepEqual(completionIndexLockOrder, [repeated.documentIndexId, changedRequest.documentIndexId].sort())
       assert.equal(
-        (await membershipModelRepository.findOneByOrFail({ knowledgeBaseId: base.id, documentId: document.id }))
-          .activeDocumentIndexId,
+        (
+          await knowledgeBaseDocumentModelRepository.findOneByOrFail({
+            knowledgeBaseId: base.id,
+            documentId: document.id,
+          })
+        ).activeDocumentIndexId,
         changedRequest.documentIndexId,
         'completion must activate its target after taking the document lock ahead of garbage collection',
       )
@@ -424,23 +509,27 @@ test(
       )
 
       const latestActiveRequest = await requestIndex.handle(new DocumentIndexingRequestedEvent(input))
-      const latestMembership = await membershipModelRepository.findOneByOrFail({
+      const latestKnowledgeBaseDocument = await knowledgeBaseDocumentModelRepository.findOneByOrFail({
         knowledgeBaseId: base.id,
         documentId: document.id,
       })
       assert.equal(latestActiveRequest.documentIndexId, repeated.documentIndexId)
       assert.equal(latestActiveRequest.jobId, null)
       assert.equal(latestActiveRequest.generation, (BigInt(changedRequest.generation) + 1n).toString())
-      assert.equal(latestMembership.activeDocumentIndexId, repeated.documentIndexId)
-      assert.equal(latestMembership.requestedGeneration, latestActiveRequest.generation)
+      assert.equal(latestKnowledgeBaseDocument.activeDocumentIndexId, repeated.documentIndexId)
+      assert.equal(latestKnowledgeBaseDocument.requestedGeneration, latestActiveRequest.generation)
       assert.equal(await jobModelRepository.countBy({ knowledgeBaseId: base.id, documentId: document.id }), 0)
       await assert.rejects(
         completeJob.handle({ jobDelivery: changedClaim, completedAt: new Date() }),
         InvalidDocumentIndexExecutionLeaseException,
       )
       assert.equal(
-        (await membershipModelRepository.findOneByOrFail({ knowledgeBaseId: base.id, documentId: document.id }))
-          .activeDocumentIndexId,
+        (
+          await knowledgeBaseDocumentModelRepository.findOneByOrFail({
+            knowledgeBaseId: base.id,
+            documentId: document.id,
+          })
+        ).activeDocumentIndexId,
         repeated.documentIndexId,
         'a worker for the superseded revision must not replace the latest ready index',
       )
@@ -471,8 +560,12 @@ test(
             requestIndex.handle(new DocumentIndexingRequestedEvent(sharedBaseInput)),
             requestIndex.handle(new DocumentIndexingRequestedEvent(sharedBaseInput)),
           ])
-          assert.equal(repeated.jobId, first.jobId, 'concurrent requests for one membership reuse its job')
-          assert.equal(repeated.generation, first.generation, 'concurrent requests retain the membership generation')
+          assert.equal(repeated.jobId, first.jobId, 'concurrent requests for one knowledgeBaseDocument reuse its job')
+          assert.equal(
+            repeated.generation,
+            first.generation,
+            'concurrent requests retain the knowledgeBaseDocument generation',
+          )
           assert.equal(repeated.documentIndexId, first.documentIndexId)
 
           return first
@@ -494,13 +587,13 @@ test(
       const queuedSharedJobs = await jobModelRepository.findBy({
         knowledgeBaseId: In(sharedBases.map((sharedBase) => sharedBase.id)),
       })
-      assert.equal(queuedSharedJobs.length, 2, 'both knowledge-base memberships must own a queued job')
+      assert.equal(queuedSharedJobs.length, 2, 'both knowledge-base knowledgeBaseDocuments must own a queued job')
       assert.equal(
-        await membershipModelRepository.countBy({
+        await knowledgeBaseDocumentModelRepository.countBy({
           knowledgeBaseId: In(sharedBases.map((sharedBase) => sharedBase.id)),
         }),
         2,
-        'concurrent requests create exactly one membership per knowledge base',
+        'concurrent requests create exactly one knowledgeBaseDocument per knowledge base',
       )
       const firstSharedClaim = await claimNext().handle()
       assert.ok(firstSharedClaim, 'one of the shared-index jobs must be claimed')
@@ -508,9 +601,11 @@ test(
       const sharedPlanSavedAt = new Date()
       await new ReplaceIndexChunkUseCase(
         documentIndexPersistenceFixture.persistenceTransaction,
-        new DocumentIndexChunkReplacementRequestedListener(
+        new AuthorizeDocumentIndexChunkReplacementUseCase(
           new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-          new ReserveMembershipForIndexingUseCase(documentIndexPersistenceFixture.membershipRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+          ),
           documentIndexPersistenceFixture.jobRepository,
           documentIndexPersistenceFixture.documentIndexRepository,
         ),
@@ -528,14 +623,14 @@ test(
         await chunkModelRepository.countBy({ documentIndexId: String(sharedRequests[0]?.documentIndexId) }),
         sharedPlan.chunks.length,
       )
-      const activatedSharedMemberships = await membershipModelRepository.findBy({
+      const activatedSharedKnowledgeBaseDocuments = await knowledgeBaseDocumentModelRepository.findBy({
         knowledgeBaseId: In(sharedBases.map((sharedBase) => sharedBase.id)),
         documentId: document.id,
       })
-      assert.equal(activatedSharedMemberships.length, 2)
+      assert.equal(activatedSharedKnowledgeBaseDocuments.length, 2)
       assert.ok(
-        activatedSharedMemberships.every(
-          (membership) => membership.activeDocumentIndexId === sharedRequests[0]?.documentIndexId,
+        activatedSharedKnowledgeBaseDocuments.every(
+          (knowledgeBaseDocument) => knowledgeBaseDocument.activeDocumentIndexId === sharedRequests[0]?.documentIndexId,
         ),
       )
 
@@ -556,11 +651,11 @@ test(
       assert.equal(readyReuseRequest.documentIndexId, sharedRequests[0]?.documentIndexId)
       assert.equal(readyReuseRequest.jobId, null)
       assert.equal(readyReuseRequest.reusedReadyIndex, true)
-      const readyReuseMembership = await membershipModelRepository.findOneByOrFail({
+      const readyReuseKnowledgeBaseDocument = await knowledgeBaseDocumentModelRepository.findOneByOrFail({
         knowledgeBaseId: readyReuseBase.id,
         documentId: document.id,
       })
-      assert.equal(readyReuseMembership.activeDocumentIndexId, readyReuseRequest.documentIndexId)
+      assert.equal(readyReuseKnowledgeBaseDocument.activeDocumentIndexId, readyReuseRequest.documentIndexId)
       assert.equal(await jobModelRepository.countBy({ knowledgeBaseId: readyReuseBase.id, documentId: document.id }), 0)
 
       const sharedIndexId = String(sharedRequests[0]?.documentIndexId)
@@ -598,7 +693,7 @@ test(
       assert.equal(await collectGarbage.handle(new DocumentGarbageCollectionRequestedEvent()), undefined)
       assert.ok(
         await documentIndexModelRepository.findOneBy({ id: sharedIndexId }),
-        'GC must preserve an index still shared by another membership',
+        'GC must preserve an index still shared by another knowledgeBaseDocument',
       )
       assert.equal(await chunkModelRepository.countBy({ documentIndexId: sharedIndexId }), sharedPlan.chunks.length)
 
@@ -610,13 +705,13 @@ test(
       assert.equal(await collectGarbage.handle(new DocumentGarbageCollectionRequestedEvent()), undefined)
       assert.ok(
         await documentIndexModelRepository.findOneBy({ id: sharedIndexId }),
-        'GC must preserve the index reused by remaining memberships',
+        'GC must preserve the index reused by remaining knowledgeBaseDocuments',
       )
       await prune.execute({ projectId: readyReuseBase.projectId, knowledgeBaseId: readyReuseBase.id, documentIds: [] })
       assert.equal(await collectGarbage.handle(new DocumentGarbageCollectionRequestedEvent()), undefined)
       assert.ok(
         await documentIndexModelRepository.findOneBy({ id: sharedIndexId }),
-        'GC must preserve the index reused by a later membership',
+        'GC must preserve the index reused by a later knowledgeBaseDocument',
       )
       await prune.execute({ projectId: lateReuseBase.projectId, knowledgeBaseId: lateReuseBase.id, documentIds: [] })
       await documentIndexModelRepository.update(sharedIndexId, {
@@ -678,7 +773,7 @@ test(
       )
       assert.equal(await knowledgeBaseModelRepository.countBy({ projectId: rollbackProjectId }), 0)
       assert.equal(await documentModelRepository.countBy({ sourceKey: staleTargetInput.sourceKey }), 0)
-      assert.equal(await membershipModelRepository.countBy({ knowledgeBaseId: rollbackKnowledgeBaseId }), 0)
+      assert.equal(await knowledgeBaseDocumentModelRepository.countBy({ knowledgeBaseId: rollbackKnowledgeBaseId }), 0)
       assert.equal(await jobModelRepository.countBy({ knowledgeBaseId: rollbackKnowledgeBaseId }), 0)
 
       const concurrentBases = await Promise.all(
@@ -708,9 +803,9 @@ test(
       assert.equal(await documentModelRepository.countBy({ sourceKey: concurrentSourceKey }), 1)
       assert.equal(concurrentRequests[0]?.documentId, concurrentRequests[1]?.documentId)
       assert.equal(
-        await membershipModelRepository.countBy({ documentId: concurrentRequests[0]!.documentId }),
+        await knowledgeBaseDocumentModelRepository.countBy({ documentId: concurrentRequests[0]!.documentId }),
         2,
-        'concurrent requests from separate knowledge bases must both keep their membership',
+        'concurrent requests from separate knowledge bases must both keep their knowledgeBaseDocument',
       )
 
       const gcOrphanDocument = await documentModelRepository.save(
@@ -806,15 +901,17 @@ test(
         const referencedDocumentCandidate = documentCandidates.find((candidate) => candidate.id === document.id)
         assert.ok(
           referencedDocumentCandidate,
-          'membership reference checks are deferred until after the candidate is locked',
+          'knowledgeBaseDocument reference checks are deferred until after the candidate is locked',
         )
         const lockedReferencedDocument = await documentIndexPersistenceFixture.documentRepository.lockByDocumentId({
           documentId: document.id,
         })
         assert.ok(lockedReferencedDocument)
         assert.ok(
-          await documentIndexPersistenceFixture.membershipRepository.findByDocumentId({ documentId: document.id }),
-          'GC must retain documents still attached to a knowledge-base membership',
+          await documentIndexPersistenceFixture.knowledgeBaseDocumentRepository.findByDocumentId({
+            documentId: document.id,
+          }),
+          'GC must retain documents still attached to a knowledge-base knowledgeBaseDocument',
         )
 
         const lockedOrphanDocument = await documentIndexPersistenceFixture.documentRepository.lockByDocumentId({
@@ -825,9 +922,10 @@ test(
         assert.ok(lockedOrphanDocument.unreferencedSince.epochMilliseconds <= futureCutoff.getTime())
         assert.deepEqual(
           {
-            membership: await documentIndexPersistenceFixture.membershipRepository.findByDocumentId({
-              documentId: gcOrphanDocumentId,
-            }),
+            knowledgeBaseDocument:
+              await documentIndexPersistenceFixture.knowledgeBaseDocumentRepository.findByDocumentId({
+                documentId: gcOrphanDocumentId,
+              }),
             revision:
               await documentIndexPersistenceFixture.documentRevisionRepository.findByDocumentIdOrderByCreatedAtDesc({
                 documentId: gcOrphanDocumentId,
@@ -846,7 +944,7 @@ test(
             }),
           },
           {
-            membership: null,
+            knowledgeBaseDocument: null,
             revision: null,
             indexes: [],
             jobCount: 0,
@@ -885,9 +983,10 @@ test(
         assert.ok(locked)
         assert.deepEqual(
           {
-            membership: await documentIndexPersistenceFixture.membershipRepository.findByDocumentId({
-              documentId: raceSource.id,
-            }),
+            knowledgeBaseDocument:
+              await documentIndexPersistenceFixture.knowledgeBaseDocumentRepository.findByDocumentId({
+                documentId: raceSource.id,
+              }),
             revision:
               await documentIndexPersistenceFixture.documentRevisionRepository.findByDocumentIdOrderByCreatedAtDesc({
                 documentId: raceSource.id,
@@ -906,7 +1005,7 @@ test(
             }),
           },
           {
-            membership: null,
+            knowledgeBaseDocument: null,
             revision: null,
             indexes: [],
             jobCount: 0,
@@ -959,7 +1058,12 @@ test(
         null,
         'a successful request must clear the expired retention marker',
       )
-      assert.ok(await membershipModelRepository.findOneBy({ knowledgeBaseId: base.id, documentId: recoveredSource.id }))
+      assert.ok(
+        await knowledgeBaseDocumentModelRepository.findOneBy({
+          knowledgeBaseId: base.id,
+          documentId: recoveredSource.id,
+        }),
+      )
     } finally {
       await cleanup()
     }

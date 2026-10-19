@@ -7,8 +7,8 @@ import { DocumentIndexingModule } from './document-indexing.module.ts'
 import { DocumentRevisionsModule } from './document-revisions.module.ts'
 import { DocumentsModule } from './documents.module.ts'
 import { EmbeddingModule } from './embedding.module.ts'
+import { KnowledgeBaseDocumentsModule } from './knowledge-base-documents.module.ts'
 import { KnowledgeServiceConfigModule } from './knowledge-service-config.module.ts'
-import { MembershipsModule } from './memberships.module.ts'
 import { PersistenceModule } from './persistence.module.ts'
 import { type KnowledgeServiceConfig, KNOWLEDGE_SERVICE_CONFIG } from '../../../config/knowledge-service.config.ts'
 import { ChunkPlanningProvider } from '../../Application/Chunks/Contracts/chunk-planning-provider.ts'
@@ -20,15 +20,15 @@ import { DocumentIndexingFailedListener } from '../../Application/DocumentIndexe
 import { ProcessDocumentIndexListener } from '../../Application/DocumentIndexes/Listeners/process-document-index.listener.ts'
 import { LoadDocumentRevisionUseCaseContract } from '../../Application/DocumentRevisions/Contracts/load-document-revision.use-case.contract.ts'
 import { ReserveDocumentForIndexingUseCaseContract } from '../../Application/Documents/Contracts/reserve-document-for-indexing.use-case.contract.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCaseContract } from '../../Application/KnowledgeBaseDocuments/Contracts/reserve-knowledge-base-document-for-indexing.use-case.contract.ts'
 import { EmbeddingProvider } from '../../Application/KnowledgeBases/Contracts/embedding-provider.ts'
 import { PersistenceTransaction as PersistenceTransactionContract } from '../../Application/KnowledgeBases/Contracts/persistence-transaction.ts'
-import { ReserveMembershipForIndexingUseCaseContract } from '../../Application/Memberships/Contracts/reserve-membership-for-indexing.use-case.contract.ts'
 
 @Module({
   imports: [
     PersistenceModule,
     DocumentsModule,
-    MembershipsModule,
+    KnowledgeBaseDocumentsModule,
     DocumentIndexesModule,
     DocumentRevisionsModule,
     ChunkReplacementModule,
@@ -43,7 +43,7 @@ import { ReserveMembershipForIndexingUseCaseContract } from '../../Application/M
       useFactory: (
         transaction: PersistenceTransactionContract,
         reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
-        reserveMembershipForIndexing: ReserveMembershipForIndexingUseCaseContract,
+        reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
         jobs: DocumentIndexExecutionQueue,
         documentIndexRepository: DocumentIndexRepositoryContract,
         replaceIndexChunk: ReplaceIndexChunkUseCaseContract,
@@ -57,7 +57,7 @@ import { ReserveMembershipForIndexingUseCaseContract } from '../../Application/M
         new ProcessDocumentIndexListener(
           transaction,
           reserveDocumentForIndexing,
-          reserveMembershipForIndexing,
+          reserveKnowledgeBaseDocumentForIndexing,
           jobs,
           documentIndexRepository,
           replaceIndexChunk,
@@ -71,7 +71,7 @@ import { ReserveMembershipForIndexingUseCaseContract } from '../../Application/M
       inject: [
         PersistenceTransactionContract,
         ReserveDocumentForIndexingUseCaseContract,
-        ReserveMembershipForIndexingUseCaseContract,
+        ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
         DocumentIndexExecutionQueue,
         DocumentIndexRepositoryContract,
         ReplaceIndexChunkUseCaseContract,

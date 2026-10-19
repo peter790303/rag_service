@@ -11,11 +11,11 @@ import {
   ValidateIf,
 } from 'class-validator'
 
-import type { HybridRetrieveDto } from '../../../Application/KnowledgeBases/DataTransferObjects/hybrid-retrieve.dto.ts'
+import type { HybridRetrieveDTO } from '../../../Application/KnowledgeBases/DataTransferObjects/hybrid-retrieve.dto.ts'
 
 const isPresent = (_object: unknown, value: unknown): boolean => value !== undefined
 
-export class HybridKnowledgeRetrievalRequest implements HybridRetrieveDto {
+export class HybridKnowledgeRetrievalRequest implements HybridRetrieveDTO {
   @IsString() @MinLength(1) projectId!: string
 
   @IsString() @MinLength(1) queryText!: string
@@ -36,8 +36,8 @@ export class HybridKnowledgeRetrievalRequest implements HybridRetrieveDto {
 
   @ValidateIf(isPresent) @IsBoolean() includeNonEffective?: boolean
 
-  toDTO(): HybridRetrieveDto {
-    const requestDTO: HybridRetrieveDto = {
+  toDTO(): HybridRetrieveDTO {
+    const requestDTO: HybridRetrieveDTO = {
       projectId: this.projectId,
       queryText: this.queryText,
     }

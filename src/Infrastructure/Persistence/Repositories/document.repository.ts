@@ -7,6 +7,7 @@ import type {
   DocumentGarbageCandidatesQueryObject,
   DocumentIdQueryObject,
   DocumentIdsQueryObject,
+  DocumentSourceQueryObject,
   MarkDocumentUnreferencedQueryObject,
   UpsertDocumentSourceQueryObject,
   UpsertDocumentSourceTitleQueryObject,
@@ -28,7 +29,7 @@ export class DocumentRepository extends DocumentRepositoryContract {
 
   async upsertBySourceTypeAndSourceKeyAndSourcePath(
     upsertDocumentSourceQO: UpsertDocumentSourceQueryObject,
-  ): Promise<Document> {
+  ): Promise<void> {
     // Keep the conflict update even when values match: its row lock lasts for
     // the caller's transaction, protecting document references from GC.
     await this.documentModelRepository.upsert(
@@ -45,19 +46,11 @@ export class DocumentRepository extends DocumentRepositoryContract {
         skipUpdateIfNoValuesChanged: false,
       },
     )
-
-    const persistedDocument = await this.documentModelRepository.findOneByOrFail({
-      sourceType: upsertDocumentSourceQO.sourceType,
-      sourceKey: upsertDocumentSourceQO.sourceKey,
-      sourcePath: upsertDocumentSourceQO.sourcePath,
-    })
-
-    return DocumentFactory.toDocument(persistedDocument)
   }
 
   async upsertTitleBySourceTypeAndSourceKeyAndSourcePath(
     upsertDocumentSourceTitleQO: UpsertDocumentSourceTitleQueryObject,
-  ): Promise<Document> {
+  ): Promise<void> {
     // The conflict write retains the source row lock for the caller's transaction.
     await this.documentModelRepository.upsert(
       {
@@ -74,14 +67,14 @@ export class DocumentRepository extends DocumentRepositoryContract {
         skipUpdateIfNoValuesChanged: false,
       },
     )
+  }
 
-    const persistedDocument = await this.documentModelRepository.findOneByOrFail({
-      sourceType: upsertDocumentSourceTitleQO.sourceType,
-      sourceKey: upsertDocumentSourceTitleQO.sourceKey,
-      sourcePath: upsertDocumentSourceTitleQO.sourcePath,
-    })
+  async findBySourceTypeAndSourceKeyAndSourcePath(
+    documentSourceQO: DocumentSourceQueryObject,
+  ): Promise<Document | null> {
+    const persistedDocument = await this.documentModelRepository.findOneBy(documentSourceQO)
 
-    return DocumentFactory.toDocument(persistedDocument)
+    return persistedDocument === null ? null : DocumentFactory.toDocument(persistedDocument)
   }
 
   async lockByDocumentId(documentIdQO: DocumentIdQueryObject): Promise<Document | null> {
@@ -115,7 +108,7 @@ export class DocumentRepository extends DocumentRepositoryContract {
       unreferencedSince: LessThanOrEqual(documentGarbageCandidatesQO.cutoff),
     })
 
-    return persistedDocuments.map((persistedDocument) => DocumentFactory.toDocument(persistedDocument))
+    return persistedDocuments.map(DocumentFactory.toDocument)
   }
 
   async updateUnreferencedSinceByDocumentIdAndUnreferencedSinceIsNull(
@@ -136,6 +129,6 @@ export class DocumentRepository extends DocumentRepositoryContract {
 
     const persistedDocuments = await this.documentModelRepository.findBy({ id: In(documentIdsQO.ids) })
 
-    return persistedDocuments.map((persistedDocument) => DocumentFactory.toDocument(persistedDocument))
+    return persistedDocuments.map(DocumentFactory.toDocument)
   }
 }

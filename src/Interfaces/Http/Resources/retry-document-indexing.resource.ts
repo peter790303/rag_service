@@ -1,9 +1,9 @@
-import type { RetryDocumentIndexingResultDto } from '../../../Application/DocumentIndexes/DataTransferObjects/retry-document-indexing-result.dto.ts'
+import type { RetryDocumentIndexingResultDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/retry-document-indexing-result.dto.ts'
 
 export class RetryDocumentIndexingResource {
   static toRetryDocumentIndexingResource(
-    failedJobRetry: RetryDocumentIndexingResultDto,
-  ): RetryDocumentIndexingResultDto {
+    failedJobRetry: RetryDocumentIndexingResultDTO,
+  ): RetryDocumentIndexingResultDTO {
     return {
       jobId: failedJobRetry.jobId,
       failedJobId: failedJobRetry.failedJobId,

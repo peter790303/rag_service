@@ -1,4 +1,4 @@
-export type RetrievalProfileSettingsDto = {
+export type RetrievalProfileSettingsDTO = {
   chunkingModel: string
   chunkingProfile: string
   embeddingProfile: string

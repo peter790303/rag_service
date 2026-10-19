@@ -16,9 +16,7 @@ export abstract class DocumentIndexRepository {
     documentIndexRevisionPipelineQO: DocumentIndexRevisionPipelineQueryObject,
   ): Promise<DocumentIndex | null>
 
-  abstract createBuildingIndex(
-    createBuildingDocumentIndexQO: CreateBuildingDocumentIndexQueryObject,
-  ): Promise<DocumentIndex>
+  abstract createBuildingIndex(createBuildingDocumentIndexQO: CreateBuildingDocumentIndexQueryObject): Promise<void>
 
   abstract lockByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQueryObject): Promise<DocumentIndex | null>
 

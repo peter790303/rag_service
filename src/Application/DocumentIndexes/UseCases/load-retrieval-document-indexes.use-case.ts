@@ -1,7 +1,8 @@
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
+import { RetrievalDocumentIndexesAssembler } from '../Assemblers/retrieval-document-indexes.assembler.ts'
 import type { DocumentIndexRepository } from '../Contracts/document-index.repository.ts'
 import { LoadRetrievalDocumentIndexesUseCaseContract } from '../Contracts/load-retrieval-document-indexes.use-case.contract.ts'
-import type { LoadRetrievalDocumentIndexesDto } from '../DataTransferObjects/load-retrieval-document-indexes.dto.ts'
+import type { LoadRetrievalDocumentIndexesDTO } from '../DataTransferObjects/load-retrieval-document-indexes.dto.ts'
 
 /** Publishes only the facts in this feature's requested retrieval scope. */
 export class LoadRetrievalDocumentIndexesUseCase extends LoadRetrievalDocumentIndexesUseCaseContract {
@@ -9,8 +10,10 @@ export class LoadRetrievalDocumentIndexesUseCase extends LoadRetrievalDocumentIn
     super()
   }
 
-  async execute(loadRetrievalDocumentIndexesDTO: LoadRetrievalDocumentIndexesDto): Promise<DocumentIndex[]> {
-    const { documentIds } = loadRetrievalDocumentIndexesDTO
+  async execute(loadRetrievalDocumentIndexesDTO: LoadRetrievalDocumentIndexesDTO): Promise<DocumentIndex[]> {
+    const { documentIds } = RetrievalDocumentIndexesAssembler.toLoadRetrievalDocumentIndexesDTO(
+      loadRetrievalDocumentIndexesDTO,
+    )
     const uniqueRetrievalDocumentIds = [...new Set(documentIds)]
 
     if (uniqueRetrievalDocumentIds.length === 0) return []

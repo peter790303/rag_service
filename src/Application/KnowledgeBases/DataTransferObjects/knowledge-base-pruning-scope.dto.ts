@@ -1,1 +1,1 @@
-export type KnowledgeBasePruningScopeDto = { projectId: string; knowledgeBaseId: string }
+export type KnowledgeBasePruningScopeDTO = { projectId: string; knowledgeBaseId: string }

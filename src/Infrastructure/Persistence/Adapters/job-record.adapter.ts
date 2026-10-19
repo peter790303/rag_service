@@ -1,10 +1,19 @@
-import type { DocumentIndexExecutionFactsDto } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-facts.dto.ts'
-import type { DocumentIndexExecutionRecordDto } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionFactsDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-facts.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
 import type { JobModel } from '../Models/job.model.ts'
 
 /** Copies only persisted technical-record fields; never exposes ORM models or mutable references. */
 export class JobRecordAdapter {
-  static toRecord(model: Pick<JobModel, keyof DocumentIndexExecutionRecordDto>): DocumentIndexExecutionRecordDto {
+  static toExecutionFacts(model: Pick<JobModel, keyof DocumentIndexExecutionFactsDTO>): DocumentIndexExecutionFactsDTO {
+    return {
+      id: model.id,
+      status: model.status,
+      attempts: model.attempts,
+      executionVerification: structuredClone(model.executionVerification),
+    }
+  }
+
+  static toRecord(model: Pick<JobModel, keyof DocumentIndexExecutionRecordDTO>): DocumentIndexExecutionRecordDTO {
     return {
       id: model.id,
       knowledgeBaseId: model.knowledgeBaseId,
@@ -27,20 +36,11 @@ export class JobRecordAdapter {
     }
   }
 
-  static toNullableRecord(model: JobModel | null): DocumentIndexExecutionRecordDto | null {
+  static toNullableRecord(model: JobModel | null): DocumentIndexExecutionRecordDTO | null {
     return model === null ? null : this.toRecord(model)
   }
 
-  static toRecords(models: readonly JobModel[]): DocumentIndexExecutionRecordDto[] {
+  static toRecords(models: readonly JobModel[]): DocumentIndexExecutionRecordDTO[] {
     return models.map((model) => this.toRecord(model))
-  }
-
-  static toExecutionFacts(model: DocumentIndexExecutionFactsDto): DocumentIndexExecutionFactsDto {
-    return {
-      id: model.id,
-      status: model.status,
-      attempts: model.attempts,
-      executionVerification: structuredClone(model.executionVerification),
-    }
   }
 }

@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto'
 
 import { Chunk } from '../../../Domain/Chunk/chunk.ts'
-import type { DocumentIndexChunkReplacementRequestedListenerContract } from '../../DocumentIndexes/Contracts/document-index-chunk-replacement-requested.listener.contract.ts'
-import { DocumentIndexChunkReplacementRequestedEvent } from '../../DocumentIndexes/Events/document-index-chunk-replacement-requested.event.ts'
+import type { AuthorizeDocumentIndexChunkReplacementUseCaseContract } from '../../DocumentIndexes/Contracts/authorize-document-index-chunk-replacement.use-case.contract.ts'
+import { AuthorizeDocumentIndexChunkReplacementInputDTO } from '../../DocumentIndexes/DataTransferObjects/authorize-document-index-chunk-replacement-input.dto.ts'
 import type { ReplacePlannedDocumentRelationsUseCaseContract } from '../../DocumentRelations/Contracts/replace-planned-document-relations.use-case.contract.ts'
 import type { PersistenceTransaction } from '../../KnowledgeBases/Contracts/persistence-transaction.ts'
 import { ReplacementChunkAssembler } from '../Assemblers/replacement-chunk.assembler.ts'
 import type { ChunkRepository } from '../Contracts/chunk.repository.ts'
 import type { ReplaceIndexChunkUseCaseContract } from '../Contracts/replace-index-chunk.use-case.contract.ts'
-import type { ReplaceIndexChunkInputDto } from '../DataTransferObjects/replace-index-chunk-input.dto.ts'
+import type { ReplaceIndexChunkInputDTO } from '../DataTransferObjects/replace-index-chunk-input.dto.ts'
 import { IncompleteChunkReplacementOutputException } from '../Exceptions/incomplete-chunk-replacement-output.exception.ts'
 import { ReplacementChunkGuard } from '../Guards/replacement-chunk.guard.ts'
 
@@ -16,12 +16,12 @@ import { ReplacementChunkGuard } from '../Guards/replacement-chunk.guard.ts'
 export class ReplaceIndexChunkUseCase implements ReplaceIndexChunkUseCaseContract {
   constructor(
     private readonly persistenceTransaction: PersistenceTransaction,
-    private readonly prepareDocumentIndexChunkReplacement: DocumentIndexChunkReplacementRequestedListenerContract,
+    private readonly authorizeDocumentIndexChunkReplacement: AuthorizeDocumentIndexChunkReplacementUseCaseContract,
     private readonly chunkRepository: ChunkRepository,
     private readonly replacePlannedDocumentRelationsUseCase: ReplacePlannedDocumentRelationsUseCaseContract,
   ) {}
 
-  async execute(replaceIndexChunkInputDTO: ReplaceIndexChunkInputDto): Promise<void> {
+  async execute(replaceIndexChunkInputDTO: ReplaceIndexChunkInputDTO): Promise<void> {
     const { job, markdownChunkPlan, chunkEmbeddings, now } = replaceIndexChunkInputDTO
 
     ReplacementChunkGuard.assertValidPlan(markdownChunkPlan)
@@ -49,7 +49,7 @@ export class ReplaceIndexChunkUseCase implements ReplaceIndexChunkUseCaseContrac
 
       return replacementChunk
     })
-    const saveChunksQO = ReplacementChunkAssembler.toSaveChunksQueryObject(replacementChunks)
+    const insertChunksQO = ReplacementChunkAssembler.toInsertChunksQueryObject(replacementChunks)
 
     const chunkIndexQO = ReplacementChunkAssembler.toChunkIndexQueryObject(job.documentIndexId)
     const replacePlannedDocumentRelationsInputDTO = ReplacementChunkAssembler.toReplacePlannedDocumentRelationsInputDTO(
@@ -59,12 +59,14 @@ export class ReplaceIndexChunkUseCase implements ReplaceIndexChunkUseCaseContrac
 
     await this.persistenceTransaction.run(async () => {
       if (
-        !(await this.prepareDocumentIndexChunkReplacement.handle(new DocumentIndexChunkReplacementRequestedEvent(job)))
+        !(await this.authorizeDocumentIndexChunkReplacement.execute(
+          new AuthorizeDocumentIndexChunkReplacementInputDTO(job),
+        ))
       )
         return
 
       await this.chunkRepository.removeByDocumentIndexId(chunkIndexQO)
-      await this.chunkRepository.saveChunks(saveChunksQO)
+      await this.chunkRepository.insertChunks(insertChunksQO)
       await this.replacePlannedDocumentRelationsUseCase.execute(replacePlannedDocumentRelationsInputDTO)
     })
   }

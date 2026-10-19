@@ -7,7 +7,7 @@ import { PersistenceModule } from './persistence.module.ts'
 import { ChunkRepository as ChunkRepositoryContract } from '../../Application/Chunks/Contracts/chunk.repository.ts'
 import { ReplaceIndexChunkUseCaseContract } from '../../Application/Chunks/Contracts/replace-index-chunk.use-case.contract.ts'
 import { ReplaceIndexChunkUseCase } from '../../Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
-import { DocumentIndexChunkReplacementRequestedListenerContract } from '../../Application/DocumentIndexes/Contracts/document-index-chunk-replacement-requested.listener.contract.ts'
+import { AuthorizeDocumentIndexChunkReplacementUseCaseContract } from '../../Application/DocumentIndexes/Contracts/authorize-document-index-chunk-replacement.use-case.contract.ts'
 import { ReplacePlannedDocumentRelationsUseCaseContract } from '../../Application/DocumentRelations/Contracts/replace-planned-document-relations.use-case.contract.ts'
 import { PersistenceTransaction as PersistenceTransactionContract } from '../../Application/KnowledgeBases/Contracts/persistence-transaction.ts'
 
@@ -18,19 +18,19 @@ import { PersistenceTransaction as PersistenceTransactionContract } from '../../
       provide: ReplaceIndexChunkUseCase,
       useFactory: (
         persistenceTransaction: PersistenceTransactionContract,
-        prepareChunkReplacementUseCase: DocumentIndexChunkReplacementRequestedListenerContract,
+        authorizeChunkReplacementUseCase: AuthorizeDocumentIndexChunkReplacementUseCaseContract,
         chunkRepository: ChunkRepositoryContract,
         replacePlannedDocumentRelationsUseCase: ReplacePlannedDocumentRelationsUseCaseContract,
       ) =>
         new ReplaceIndexChunkUseCase(
           persistenceTransaction,
-          prepareChunkReplacementUseCase,
+          authorizeChunkReplacementUseCase,
           chunkRepository,
           replacePlannedDocumentRelationsUseCase,
         ),
       inject: [
         PersistenceTransactionContract,
-        DocumentIndexChunkReplacementRequestedListenerContract,
+        AuthorizeDocumentIndexChunkReplacementUseCaseContract,
         ChunkRepositoryContract,
         ReplacePlannedDocumentRelationsUseCaseContract,
       ],

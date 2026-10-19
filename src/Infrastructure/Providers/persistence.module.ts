@@ -9,19 +9,20 @@ import {
 import { KNOWLEDGE_SERVICE_CONFIG, type KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
 import { PersistenceTransaction as PersistenceTransactionContract } from '../../Application/KnowledgeBases/Contracts/persistence-transaction.ts'
 import { ChunkModel } from '../Persistence/Models/chunk.model.ts'
+import { DocumentIndexSuccessReceiptModel } from '../Persistence/Models/document-index-success-receipt.model.ts'
 import { DocumentIndexModel } from '../Persistence/Models/document-index.model.ts'
 import { DocumentRelationModel } from '../Persistence/Models/document-relation.model.ts'
 import { DocumentRevisionModel } from '../Persistence/Models/document-revision.model.ts'
 import { DocumentModel } from '../Persistence/Models/document.model.ts'
 import { FailedJobModel } from '../Persistence/Models/failed-job.model.ts'
 import { JobModel } from '../Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from '../Persistence/Models/knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from '../Persistence/Models/knowledge-base-document.model.ts'
 import { KnowledgeBaseModel } from '../Persistence/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../Persistence/persistence-transaction.ts'
 
 const knowledgePersistenceModels = [
   KnowledgeBaseModel,
-  KnowledgeBaseDocumentMembershipModel,
+  KnowledgeBaseDocumentModel,
   DocumentModel,
   DocumentRevisionModel,
   DocumentIndexModel,
@@ -29,6 +30,7 @@ const knowledgePersistenceModels = [
   DocumentRelationModel,
   JobModel,
   FailedJobModel,
+  DocumentIndexSuccessReceiptModel,
 ]
 
 @Module({

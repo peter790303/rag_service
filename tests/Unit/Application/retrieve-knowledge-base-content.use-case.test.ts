@@ -50,13 +50,13 @@ test('retrieve reads project facts inside the readonly snapshot before validatin
   assert.deepEqual(persistence.calls, [
     'snapshot:start',
     'knowledgeBase',
-    'memberships',
+    'knowledgeBaseDocuments',
     'documents',
     'indexes',
     'snapshot:end',
   ])
   assert.deepEqual(persistence.ownerCalls, [
-    { owner: 'memberships', input: { knowledgeBaseId: 'kb' } },
+    { owner: 'knowledgeBaseDocuments', input: { knowledgeBaseId: 'kb' } },
     { owner: 'documents', input: { documentIds: ['doc'] } },
     { owner: 'indexes', input: { documentIds: ['doc'] } },
     { owner: 'revisions', input: { revisionIds: [] } },
@@ -68,7 +68,7 @@ test('retrieve ranks Chinese lexical keywords and queries context only for the s
   const contextQueries: ChunkIndexOrdinalsQueryObject[] = []
   const snapshot = {
     knowledgeBaseId: 'kb',
-    memberships: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
+    knowledgeBaseDocuments: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
     documents: [{ id: 'doc', sourcePath: 'guide.md', sourceType: 'repository' }],
     chunks: [
       {
@@ -146,7 +146,7 @@ test('retrieve ranks Chinese lexical keywords and queries context only for the s
   assert.deepEqual(persistence.calls, [
     'snapshot:start',
     'knowledgeBase',
-    'memberships',
+    'knowledgeBaseDocuments',
     'documents',
     'indexes',
     'revisions',
@@ -168,7 +168,7 @@ test('retrieve groups neighboring ordinals per index and keeps each root context
   const contextQueries: ChunkIndexOrdinalsQueryObject[] = []
   const snapshot = {
     knowledgeBaseId: 'kb',
-    memberships: ['a', 'b'].map((suffix) => ({
+    knowledgeBaseDocuments: ['a', 'b'].map((suffix) => ({
       documentId: `doc-${suffix}`,
       activeDocumentIndexId: `index-${suffix}`,
     })),
@@ -236,7 +236,9 @@ test('retrieve groups neighboring ordinals per index and keeps each root context
 test('retrieve includes required full-content documents beyond topK', async () => {
   const snapshot = {
     knowledgeBaseId: 'kb',
-    memberships: [{ documentId: 'doc', activeDocumentIndexId: 'index', isEntry: true, alwaysIncludeFullContent: true }],
+    knowledgeBaseDocuments: [
+      { documentId: 'doc', activeDocumentIndexId: 'index', isEntry: true, alwaysIncludeFullContent: true },
+    ],
     documents: [{ id: 'doc', sourcePath: 'index.md', sourceType: 'obsidian' }],
     chunks: [
       {
@@ -311,7 +313,7 @@ test('retrieve includes required full-content documents beyond topK', async () =
 test('isEntry alone does not add full content or displace a ranked topK match', async () => {
   const snapshot = {
     knowledgeBaseId: 'kb',
-    memberships: [
+    knowledgeBaseDocuments: [
       { documentId: 'doc', activeDocumentIndexId: 'index', isEntry: true, alwaysIncludeFullContent: false },
     ],
     documents: [{ id: 'doc', sourcePath: 'index.md', sourceType: 'obsidian' }],
@@ -388,7 +390,7 @@ test('isEntry alone does not add full content or displace a ranked topK match', 
 test('retrieve serializes matches using the HTTP adapter contract', async () => {
   const snapshot = {
     knowledgeBaseId: 'kb',
-    memberships: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
+    knowledgeBaseDocuments: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
     documents: [{ id: 'doc', sourcePath: 'guide.md', sourceType: 'repository' }],
     chunks: [
       {

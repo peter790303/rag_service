@@ -1,26 +1,31 @@
 import { randomUUID } from 'node:crypto'
 
+import { concatMap, every, firstValueFrom, from, lastValueFrom, range, takeWhile } from 'rxjs'
+
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import type { ReserveDocumentForIndexingUseCaseContract } from '../../Documents/Contracts/reserve-document-for-indexing.use-case.contract.ts'
+import type { ActivateKnowledgeBaseDocumentIndexUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/activate-knowledge-base-document-index.use-case.contract.ts'
+import type { ReserveKnowledgeBaseDocumentForIndexingUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/reserve-knowledge-base-document-for-indexing.use-case.contract.ts'
+import type { GetIndexingKnowledgeBaseUseCaseContract } from '../../KnowledgeBases/Contracts/get-indexing-knowledge-base.use-case.contract.ts'
 import type { PersistenceTransaction } from '../../KnowledgeBases/Contracts/persistence-transaction.ts'
-import type { ActivateMembershipIndexUseCaseContract } from '../../Memberships/Contracts/activate-membership-index.use-case.contract.ts'
-import type { ReserveMembershipForIndexingUseCaseContract } from '../../Memberships/Contracts/reserve-membership-for-indexing.use-case.contract.ts'
 import { WriteClaimDocumentIndexesAssembler } from '../Assemblers/write-claim-document-indexes.assembler.ts'
 import { WriteFailDocumentIndexesAssembler } from '../Assemblers/write-fail-document-indexes.assembler.ts'
 import { WriteLifecycleDocumentIndexAssembler } from '../Assemblers/write-lifecycle-document-index.assembler.ts'
 import type { DocumentIndexExecutionQueue } from '../Contracts/document-index-execution.queue.ts'
 import type { DocumentIndexFailureArchive } from '../Contracts/document-index-failure.archive.ts'
+import type { DocumentIndexSuccessArchive } from '../Contracts/document-index-success.archive.ts'
 import type { DocumentIndexRepository } from '../Contracts/document-index.repository.ts'
 import { DOCUMENT_INDEXING_CLAIM_CANDIDATE_RESULT_KINDS } from '../DataTransferObjects/document-indexing-claim-candidate.dto.ts'
 import type {
-  DocumentIndexingClaimCandidateResultDto,
-  DocumentIndexingClaimExecutionDto,
-  DocumentIndexingClaimMembershipDto,
+  DocumentIndexingClaimCandidateResultDTO,
+  DocumentIndexingClaimExecutionDTO,
+  DocumentIndexingClaimKnowledgeBaseDocumentDTO,
 } from '../DataTransferObjects/document-indexing-claim-candidate.dto.ts'
-import type { DocumentIndexingClaimDto } from '../DataTransferObjects/document-indexing-claim.dto.ts'
-import type { ExpiredDocumentIndexExecutionDto } from '../DataTransferObjects/expired-document-index-execution.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../DataTransferObjects/document-indexing-claim.dto.ts'
+import type { ExpiredDocumentIndexExecutionDTO } from '../DataTransferObjects/expired-document-index-execution.dto.ts'
 import { DocumentIndexExecutionClaimConflictException } from '../Exceptions/document-index-execution-claim-conflict.exception.ts'
+import { DocumentIndexingNotFoundException } from '../Exceptions/document-indexing-not-found.exception.ts'
 import {
   DocumentIndexExecutionLifecycle,
   DOCUMENT_INDEX_EXECUTION_STATUS,
@@ -41,22 +46,24 @@ type JobClaimAttempt =
   | { kind: typeof DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.done }
   | { kind: typeof DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.skip; documentIndexId: string }
   | { kind: typeof DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.continue }
-  | { kind: typeof DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.claimed; job: DocumentIndexingClaimDto }
+  | { kind: typeof DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.claimed; job: DocumentIndexingClaimDTO }
 
 /** Coordinates lease recovery and decides which eligible queued job should receive a lease. */
 export class DispatchDocumentIndexingListener {
   constructor(
     private readonly transaction: PersistenceTransaction,
     private readonly reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
-    private readonly reserveMembershipForIndexing: ReserveMembershipForIndexingUseCaseContract,
+    private readonly reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
     private readonly documentIndexRepository: DocumentIndexRepository,
     private readonly documentIndexExecutionQueue: DocumentIndexExecutionQueue,
     private readonly documentIndexFailureArchive: DocumentIndexFailureArchive,
     private readonly workerLeaseSeconds: number,
-    private readonly activateMembershipIndex: ActivateMembershipIndexUseCaseContract,
+    private readonly activateKnowledgeBaseDocumentIndex: ActivateKnowledgeBaseDocumentIndexUseCaseContract,
+    private readonly getIndexingKnowledgeBase: GetIndexingKnowledgeBaseUseCaseContract,
+    private readonly documentIndexSuccessArchive: DocumentIndexSuccessArchive,
   ) {}
 
-  async handle(): Promise<DocumentIndexingClaimDto | null> {
+  async handle(): Promise<DocumentIndexingClaimDTO | null> {
     const claimTimestamp = new Date()
 
     await this.transaction.run(async () => {
@@ -68,43 +75,37 @@ export class DispatchDocumentIndexingListener {
       )
       const orderedExpiredJobs = [...expiredJobs].sort(compareRecoveryLockOrder)
 
-      await orderedExpiredJobs.reduce(async (previousRecovery, expiredJob) => {
-        await previousRecovery
-        await this.recoverExpiredJob(expiredJob)
-      }, Promise.resolve())
+      await lastValueFrom(
+        from(orderedExpiredJobs).pipe(concatMap((expiredJob) => this.recoverExpiredJob(expiredJob))),
+        { defaultValue: undefined },
+      )
     })
 
     const excludedDocumentIndexIds: string[] = []
     const candidateCount = await this.transaction.run(() =>
       this.documentIndexExecutionQueue.countAvailableExecutions({ availableAt: claimTimestamp }),
     )
-    const candidateScanSlots = Array.from({ length: candidateCount }, () => undefined)
-    const finalClaimAttempt = await candidateScanSlots.reduce(
-      async (previousAttempt) => {
-        const currentClaimAttempt = await previousAttempt
+    const claimCandidate = async (): Promise<JobClaimAttempt> => {
+      const nextAttempt = await this.claimNextCandidate(claimTimestamp, excludedDocumentIndexIds)
 
-        if (
-          currentClaimAttempt.kind === DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.done ||
-          currentClaimAttempt.kind === DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.claimed
-        ) {
-          return currentClaimAttempt
-        }
+      if (nextAttempt.kind === DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.skip) {
+        excludedDocumentIndexIds.push(nextAttempt.documentIndexId)
+      }
 
-        const nextAttempt = await this.claimNextCandidate(claimTimestamp, excludedDocumentIndexIds)
-
-        if (nextAttempt.kind === DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.skip) {
-          excludedDocumentIndexIds.push(nextAttempt.documentIndexId)
-        }
-
-        return nextAttempt
-      },
-      Promise.resolve<JobClaimAttempt>({ kind: DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.continue }),
+      return nextAttempt
+    }
+    const canContinueClaiming = (attempt: JobClaimAttempt): boolean =>
+      attempt.kind !== DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.done &&
+      attempt.kind !== DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.claimed
+    const finalClaimAttempt = await lastValueFrom(
+      range(0, candidateCount).pipe(concatMap(claimCandidate), takeWhile(canContinueClaiming, true)),
+      { defaultValue: { kind: DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.continue } as JobClaimAttempt },
     )
 
     return finalClaimAttempt.kind === DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.claimed ? finalClaimAttempt.job : null
   }
 
-  private async recoverExpiredJob(expiredJobSnapshot: ExpiredDocumentIndexExecutionDto): Promise<void> {
+  private async recoverExpiredJob(expiredJobSnapshot: ExpiredDocumentIndexExecutionDTO): Promise<void> {
     if (
       !(await this.reserveDocumentForIndexing.execute({
         documentId: expiredJobSnapshot.documentId,
@@ -113,16 +114,17 @@ export class DispatchDocumentIndexingListener {
     )
       return
 
-    const membershipSourceQO = {
+    const knowledgeBaseDocumentSourceQO = {
       knowledgeBaseId: expiredJobSnapshot.knowledgeBaseId,
       documentId: expiredJobSnapshot.documentId,
     }
-    const membershipReservation = await this.reserveMembershipForIndexing.execute({
-      ...membershipSourceQO,
+    const knowledgeBaseDocumentReservation = await this.reserveKnowledgeBaseDocumentForIndexing.execute({
+      ...knowledgeBaseDocumentSourceQO,
       skipLocked: true,
     })
 
-    if (membershipReservation !== null && !membershipReservation.indexingReservationLockAcquired) return
+    if (knowledgeBaseDocumentReservation !== null && !knowledgeBaseDocumentReservation.indexingReservationLockAcquired)
+      return
 
     const recoveredAt = new Date()
     const expiredJobRecord = await this.documentIndexExecutionQueue.lockExpiredExecution({
@@ -199,7 +201,7 @@ export class DispatchDocumentIndexingListener {
   private async lockByQueuedStatusAndAvailableAtOrBeforeAndDocumentIndexIdNotInOldestSkipLockedWithClaimCandidateResult(
     availableAt: Date,
     excludedDocumentIndexIds: readonly string[],
-  ): Promise<DocumentIndexingClaimCandidateResultDto> {
+  ): Promise<DocumentIndexingClaimCandidateResultDTO> {
     const queuedJobSnapshot = await this.documentIndexExecutionQueue.findOldestAvailableExecution({
       availableAt,
       excludedDocumentIndexIds,
@@ -220,16 +222,16 @@ export class DispatchDocumentIndexingListener {
     )
       return skippedJobCandidate
 
-    const membershipSourceQO = {
+    const knowledgeBaseDocumentSourceQO = {
       knowledgeBaseId: queuedJobSnapshot.knowledgeBaseId,
       documentId: queuedJobSnapshot.documentId,
     }
-    const membershipReservation = await this.reserveMembershipForIndexing.execute({
-      ...membershipSourceQO,
+    const knowledgeBaseDocumentReservation = await this.reserveKnowledgeBaseDocumentForIndexing.execute({
+      ...knowledgeBaseDocumentSourceQO,
       skipLocked: true,
     })
 
-    if (membershipReservation !== null && !membershipReservation.indexingReservationLockAcquired)
+    if (knowledgeBaseDocumentReservation !== null && !knowledgeBaseDocumentReservation.indexingReservationLockAcquired)
       return skippedJobCandidate
 
     const queuedJobRecord = await this.documentIndexExecutionQueue.lockAvailableExecution({
@@ -240,8 +242,11 @@ export class DispatchDocumentIndexingListener {
     if (!queuedJobRecord) return skippedJobCandidate
 
     const claimJob = WriteClaimDocumentIndexesAssembler.toDocumentIndexingClaimExecution(queuedJobRecord)
-    const claimMembership = membershipReservation
-    const claimIndexes = await this.lockByDocumentIndexIdsSkipLockedWithClaimIndexMap(claimJob, claimMembership)
+    const claimKnowledgeBaseDocument = knowledgeBaseDocumentReservation
+    const claimIndexes = await this.lockByDocumentIndexIdsSkipLockedWithClaimIndexMap(
+      claimJob,
+      claimKnowledgeBaseDocument,
+    )
 
     if (!claimIndexes) return skippedJobCandidate
 
@@ -256,8 +261,10 @@ export class DispatchDocumentIndexingListener {
     const claimCandidate = WriteClaimDocumentIndexesAssembler.toDocumentIndexingClaimCandidate(
       claimJob,
       claimIndex,
-      claimMembership?.activeDocumentIndexId ? (claimIndexes.get(claimMembership.activeDocumentIndexId) ?? null) : null,
-      claimMembership,
+      claimKnowledgeBaseDocument?.activeDocumentIndexId
+        ? (claimIndexes.get(claimKnowledgeBaseDocument.activeDocumentIndexId) ?? null)
+        : null,
+      claimKnowledgeBaseDocument,
       runningSiblingLeases,
     )
 
@@ -265,31 +272,35 @@ export class DispatchDocumentIndexingListener {
   }
 
   private async lockByDocumentIndexIdsSkipLockedWithClaimIndexMap(
-    claimJob: DocumentIndexingClaimExecutionDto,
-    claimMembership: DocumentIndexingClaimMembershipDto | null,
+    claimJob: DocumentIndexingClaimExecutionDTO,
+    claimKnowledgeBaseDocument: DocumentIndexingClaimKnowledgeBaseDocumentDTO | null,
   ): Promise<Map<string, DocumentIndex> | null> {
     const documentIndexIds = new Set([claimJob.documentIndexId])
-    const previousDocumentIndexId = claimMembership?.activeDocumentIndexId
+    const previousDocumentIndexId = claimKnowledgeBaseDocument?.activeDocumentIndexId
 
     if (previousDocumentIndexId) documentIndexIds.add(previousDocumentIndexId)
 
     const orderedDocumentIndexIds = [...documentIndexIds].sort()
+    const claimIndexes = new Map<string, DocumentIndex>()
+    const lockClaimIndex = async (documentIndexId: string): Promise<boolean> => {
+      const documentIndex = await this.documentIndexRepository.lockByDocumentIndexIdSkipLocked({ documentIndexId })
 
-    return orderedDocumentIndexIds.reduce(async (previousIndexLocks, documentIndexId) => {
-      const claimIndexes = await previousIndexLocks
+      if (documentIndex) {
+        claimIndexes.set(documentIndexId, documentIndex)
 
-      if (!claimIndexes) return null
+        return true
+      }
 
-      const restoredDocumentIndexDTO = await this.documentIndexRepository.lockByDocumentIndexIdSkipLocked({
-        documentIndexId,
-      })
+      return (await this.documentIndexRepository.findByDocumentIndexId({ documentIndexId })) === null
+    }
+    const allIndexesAvailable = await firstValueFrom(
+      from(orderedDocumentIndexIds).pipe(
+        concatMap(lockClaimIndex),
+        every((indexAvailable) => indexAvailable),
+      ),
+    )
 
-      if (restoredDocumentIndexDTO) {
-        claimIndexes.set(documentIndexId, restoredDocumentIndexDTO)
-      } else if (await this.documentIndexRepository.findByDocumentIndexId({ documentIndexId })) return null
-
-      return claimIndexes
-    }, Promise.resolve<Map<string, DocumentIndex> | null>(new Map()))
+    return allIndexesAvailable ? claimIndexes : null
   }
 
   private async claimNextCandidate(
@@ -316,8 +327,8 @@ export class DispatchDocumentIndexingListener {
       const claimedAt = new Date()
 
       if (
-        !claimCandidate.membership ||
-        claimCandidate.membership.requestedGeneration !== claimCandidate.job.generation
+        !claimCandidate.knowledgeBaseDocument ||
+        claimCandidate.knowledgeBaseDocument.requestedGeneration !== claimCandidate.job.generation
       ) {
         await this.documentIndexExecutionQueue.releaseQueuedExecution({ jobId: claimCandidate.job.id })
 
@@ -325,8 +336,8 @@ export class DispatchDocumentIndexingListener {
       }
 
       if (claimCandidate.documentIndex?.status === DocumentIndexStatusEnum.READY) {
-        const previousDocumentIndexId = claimCandidate.membership.activeDocumentIndexId
-        const membershipActivated = await this.activateMembershipIndex.execute({
+        const previousDocumentIndexId = claimCandidate.knowledgeBaseDocument.activeDocumentIndexId
+        const knowledgeBaseDocumentActivated = await this.activateKnowledgeBaseDocumentIndex.execute({
           knowledgeBaseId: claimCandidate.job.knowledgeBaseId,
           documentId: claimCandidate.job.documentId,
           generation: claimCandidate.job.generation,
@@ -334,7 +345,7 @@ export class DispatchDocumentIndexingListener {
           documentIndexId: claimCandidate.job.documentIndexId,
         })
 
-        if (!membershipActivated) {
+        if (!knowledgeBaseDocumentActivated) {
           return {
             kind: DOCUMENT_INDEXING_CLAIM_ATTEMPT_KINDS.skip,
             documentIndexId: claimCandidate.job.documentIndexId,
@@ -362,6 +373,25 @@ export class DispatchDocumentIndexingListener {
             previousDocumentIndexRetentionQO,
           )
         }
+
+        const knowledgeBase = await this.getIndexingKnowledgeBase.execute({
+          knowledgeBaseId: claimCandidate.job.knowledgeBaseId,
+        })
+
+        if (knowledgeBase === null) throw new DocumentIndexingNotFoundException(claimCandidate.job.id)
+
+        // Completion here is activation of an existing index, without provider execution by this job.
+        await this.documentIndexSuccessArchive.archiveSuccess({
+          projectId: knowledgeBase.projectId,
+          jobId: claimCandidate.job.id,
+          knowledgeBaseId: claimCandidate.job.knowledgeBaseId,
+          documentId: claimCandidate.job.documentId,
+          documentIndexId: claimCandidate.job.documentIndexId,
+          generation: claimCandidate.job.generation,
+          attempts: claimCandidate.job.attempts,
+          executionVerification: null,
+          completedAt: claimedAt,
+        })
 
         const queuedJobRemoved = await this.documentIndexExecutionQueue.releaseQueuedExecution({
           jobId: claimCandidate.job.id,
@@ -437,8 +467,8 @@ export class DispatchDocumentIndexingListener {
 }
 
 const compareRecoveryLockOrder = (
-  left: ExpiredDocumentIndexExecutionDto,
-  right: ExpiredDocumentIndexExecutionDto,
+  left: ExpiredDocumentIndexExecutionDTO,
+  right: ExpiredDocumentIndexExecutionDTO,
 ): number =>
   left.documentId.localeCompare(right.documentId) ||
   left.knowledgeBaseId.localeCompare(right.knowledgeBaseId) ||

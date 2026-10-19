@@ -3,13 +3,13 @@ import test from 'node:test'
 
 import {
   createDocumentFixture,
-  createRestoredMembershipFixture,
+  createRestoredKnowledgeBaseDocumentFixture,
   createRestoredDocumentIndexFixture,
   createJobRecordFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
-import type { DocumentIndexExecutionRecordDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexingDeliveryDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
 import { DocumentIndexingFailedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-failed.event.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
 import { InvalidDocumentIndexingFailureDecisionException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-indexing-failure-decision.exception.ts'
@@ -19,12 +19,12 @@ import type { DocumentIndexExecutionStatusFields } from '../../../src/Applicatio
 import type { ArchiveDocumentIndexFailureQueryObject } from '../../../src/Application/DocumentIndexes/QueryObjects/document-index-failure.query-object.ts'
 import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import type { MembershipRepository } from '../../../src/Application/Memberships/Contracts/membership.repository.ts'
-import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 
 const now = new Date('2026-10-14T00:00:30.000Z')
-const claimedJobFixture: DocumentIndexingDeliveryDto = {
+const claimedJobFixture: DocumentIndexingDeliveryDTO = {
   id: 'job-id',
   knowledgeBaseId: 'base-id',
   documentId: 'document-id',
@@ -63,7 +63,7 @@ test('failure event rejects missing required fields before a listener can persis
 const createFailedJobScenario = (
   requestedGeneration = '4',
   claimed = claimedJobFixture,
-  lockedOverrides: Partial<DocumentIndexExecutionRecordDto> = {},
+  lockedOverrides: Partial<DocumentIndexExecutionRecordDTO> = {},
 ) => {
   const calls: string[] = []
   let archive: ArchiveDocumentIndexFailureQueryObject | null = null
@@ -89,12 +89,12 @@ const createFailedJobScenario = (
         },
       }),
     ),
-    new ReserveMembershipForIndexingUseCase(
-      createRepositoryStub<MembershipRepository>({
+    new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+      createRepositoryStub<KnowledgeBaseDocumentRepository>({
         lockByKnowledgeBaseIdAndDocumentId: async () => {
-          calls.push('membership')
+          calls.push('knowledgeBaseDocument')
 
-          return createRestoredMembershipFixture({ requestedGeneration })
+          return createRestoredKnowledgeBaseDocumentFixture({ requestedGeneration })
         },
       }),
     ),
@@ -145,8 +145,6 @@ const createFailedJobScenario = (
       archive: async (saveFailedJobQO) => {
         calls.push('archive')
         archive = saveFailedJobQO
-
-        return { ...saveFailedJobQO, id: 'archive-id', createdAt: now, updatedAt: now }
       },
     }),
   )
@@ -170,7 +168,7 @@ test('archives the terminal failure before deleting the claim in the same transa
   assert.deepEqual(context.calls, [
     'begin',
     'document',
-    'membership',
+    'knowledgeBaseDocument',
     'claim',
     'index',
     'archive',
@@ -203,7 +201,7 @@ test('retry keeps the claim history and execution progress without archiving or 
       },
     }),
   )
-  assert.deepEqual(context.calls, ['begin', 'document', 'membership', 'claim', 'index', 'retry', 'commit'])
+  assert.deepEqual(context.calls, ['begin', 'document', 'knowledgeBaseDocument', 'claim', 'index', 'retry', 'commit'])
   assert.equal(context.retryState()?.completedUnits, 2)
   assert.equal(context.retryWrite()?.status, DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED)
   assert.equal(context.retryWrite()?.reservedAt, null)
@@ -228,7 +226,7 @@ test('rejects a superseded generation before changing retry or archive state', a
     ),
     InvalidDocumentIndexExecutionLeaseException,
   )
-  assert.deepEqual(context.calls, ['begin', 'document', 'membership'])
+  assert.deepEqual(context.calls, ['begin', 'document', 'knowledgeBaseDocument'])
 })
 
 test('the fourth attempt is archived even when a caller requests another retry', async () => {
@@ -267,7 +265,7 @@ test('rejects a replaced claim without retrying, archiving or changing index ret
     InvalidDocumentIndexExecutionLeaseException,
   )
 
-  assert.deepEqual(context.calls, ['begin', 'document', 'membership', 'claim'])
+  assert.deepEqual(context.calls, ['begin', 'document', 'knowledgeBaseDocument', 'claim'])
   assert.equal(context.archive(), null)
   assert.equal(context.retryState(), null)
 })

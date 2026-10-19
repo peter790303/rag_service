@@ -1,29 +1,33 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
+import { concatMap, firstValueFrom, from, toArray } from 'rxjs'
+
 import {
   createDocumentFixture,
-  createRestoredMembershipFixture,
+  createRestoredKnowledgeBaseDocumentFixture,
   createJobRecordFixture,
   createRestoredDocumentIndexFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
-import type { DocumentIndexExecutionLeaseDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-lease.dto.ts'
+import type { DocumentIndexExecutionLeaseDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-lease.dto.ts'
 import type { DocumentIndexLifecycleFact } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-lifecycle.dto.ts'
-import type { DocumentIndexingClaimDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
 import { DocumentIndexedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexed.event.ts'
+import { DocumentIndexingNotFoundException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-not-found.exception.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
 import { DocumentIndexedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexed.listener.ts'
 import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import type { MembershipRepository } from '../../../src/Application/Memberships/Contracts/membership.repository.ts'
-import { CompleteMembershipIndexingUseCase } from '../../../src/Application/Memberships/UseCases/complete-membership-indexing.use-case.ts'
-import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
+import { CompleteKnowledgeBaseDocumentIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/complete-knowledge-base-document-indexing.use-case.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
+import { KnowledgeBase } from '../../../src/Domain/KnowledgeBase/knowledge-base.ts'
 
-const claimedJobFixture: DocumentIndexingClaimDto = {
+const claimedJobFixture: DocumentIndexingClaimDTO = {
   id: 'job-id',
   knowledgeBaseId: 'knowledge-base-id',
   documentId: 'document-id',
@@ -40,17 +44,20 @@ const claimedJobFixture: DocumentIndexingClaimDto = {
   },
 }
 
-const jobLeaseFactFixture: DocumentIndexExecutionLeaseDto = {
+const jobLeaseFactFixture: DocumentIndexExecutionLeaseDTO = {
   ...claimedJobFixture,
   status: DOCUMENT_INDEX_EXECUTION_STATUS.RUNNING,
 }
 const previousReadyAt = new Date('2026-10-01T00:00:00.000Z')
 const createDocumentIndexedListener = (
   requestedGeneration: string,
-  record: DocumentIndexExecutionLeaseDto | null = jobLeaseFactFixture,
+  record: DocumentIndexExecutionLeaseDTO | null = jobLeaseFactFixture,
   activeDocumentIndexId: string | null = 'previous-index-id',
+  beforeIndexLock: (documentIndexId: string) => Promise<void> = async () => {},
+  knowledgeBaseExists = true,
 ) => {
   const calls: string[] = []
+  const successReceipts: unknown[] = []
   const lifecycleWrites = new Map<string, DocumentIndexLifecycleFact>()
   const useCase = new DocumentIndexedListener(
     {
@@ -66,12 +73,12 @@ const createDocumentIndexedListener = (
         },
       }),
     ),
-    new ReserveMembershipForIndexingUseCase(
-      createRepositoryStub<MembershipRepository>({
+    new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+      createRepositoryStub<KnowledgeBaseDocumentRepository>({
         lockByKnowledgeBaseIdAndDocumentId: async () => {
-          calls.push('lock-membership')
+          calls.push('lock-knowledgeBaseDocument')
 
-          return createRestoredMembershipFixture({
+          return createRestoredKnowledgeBaseDocumentFixture({
             knowledgeBaseId: claimedJobFixture.knowledgeBaseId,
             documentId: claimedJobFixture.documentId,
             requestedGeneration,
@@ -79,7 +86,7 @@ const createDocumentIndexedListener = (
           })
         },
         updateByKnowledgeBaseIdAndDocumentId: async () => {
-          calls.push('activate-membership')
+          calls.push('activate-knowledgeBaseDocument')
         },
       }),
     ),
@@ -98,6 +105,7 @@ const createDocumentIndexedListener = (
         const { documentIndexId } = documentIndexIdQO
 
         calls.push(`lock-index:${documentIndexId}`)
+        await beforeIndexLock(documentIndexId)
 
         return createRestoredDocumentIndexFixture({
           id: documentIndexId,
@@ -112,16 +120,16 @@ const createDocumentIndexedListener = (
         lifecycleWrites.set(documentIndexId, lifecycle)
       },
     }),
-    new CompleteMembershipIndexingUseCase(
-      createRepositoryStub<MembershipRepository>({
+    new CompleteKnowledgeBaseDocumentIndexingUseCase(
+      createRepositoryStub<KnowledgeBaseDocumentRepository>({
         updateActiveDocumentIndexByKnowledgeBaseIdAndDocumentIdAndRequestedGenerationAndActiveDocumentIndexId: async (
           activation,
         ) => {
           assert.equal(activation.requestedGeneration, requestedGeneration)
           assert.equal(activation.expectedActiveDocumentIndexId, activeDocumentIndexId)
-          calls.push('activate-membership')
+          calls.push('activate-knowledgeBaseDocument')
 
-          return createRestoredMembershipFixture({
+          return createRestoredKnowledgeBaseDocumentFixture({
             knowledgeBaseId: activation.knowledgeBaseId,
             documentId: activation.documentId,
             requestedGeneration: activation.requestedGeneration,
@@ -131,9 +139,31 @@ const createDocumentIndexedListener = (
         },
       }),
     ),
+    createRepositoryStub<ConstructorParameters<typeof DocumentIndexedListener>[6]>({
+      execute: async (getKnowledgeBaseQO) => {
+        assert.deepEqual(getKnowledgeBaseQO, { knowledgeBaseId: claimedJobFixture.knowledgeBaseId })
+        calls.push('get-knowledge-base')
+
+        return knowledgeBaseExists
+          ? KnowledgeBase.create({
+              id: claimedJobFixture.knowledgeBaseId,
+              projectId: 'project-id',
+              projectName: 'Project',
+              createdAt: new Date('2026-01-01T00:00:00.000Z'),
+              updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+            })
+          : null
+      },
+    }),
+    createRepositoryStub<ConstructorParameters<typeof DocumentIndexedListener>[7]>({
+      archiveSuccess: async (successQO) => {
+        calls.push('archive-success')
+        successReceipts.push(successQO)
+      },
+    }),
   )
 
-  return { useCase, calls, lifecycleWrites }
+  return { useCase, calls, lifecycleWrites, successReceipts }
 }
 
 test('activates a ready index only after locking completion facts in order', async () => {
@@ -143,15 +173,30 @@ test('activates a ready index only after locking completion facts in order', asy
   await context.useCase.handle(new DocumentIndexedEvent({ jobDelivery: claimedJobFixture, completedAt: completedAt }))
 
   assert.deepEqual(context.calls, [
+    'get-knowledge-base',
     'lock-document',
-    'lock-membership',
+    'lock-knowledgeBaseDocument',
     'lock-job',
     'lock-index:previous-index-id',
     'lock-index:target-index-id',
     'save-index:target-index-id',
-    'activate-membership',
+    'activate-knowledgeBaseDocument',
     'save-index:previous-index-id',
+    'archive-success',
     'remove-job',
+  ])
+  assert.deepEqual(context.successReceipts, [
+    {
+      projectId: 'project-id',
+      jobId: claimedJobFixture.id,
+      knowledgeBaseId: claimedJobFixture.knowledgeBaseId,
+      documentId: claimedJobFixture.documentId,
+      documentIndexId: claimedJobFixture.documentIndexId,
+      generation: claimedJobFixture.generation,
+      attempts: claimedJobFixture.attempts,
+      executionVerification: claimedJobFixture.executionVerification,
+      completedAt,
+    },
   ])
   assert.deepEqual(context.lifecycleWrites.get('target-index-id'), {
     status: DocumentIndexStatusEnum.READY,
@@ -178,11 +223,28 @@ test('rejects a superseded generation without marking ready or deleting the job'
     InvalidDocumentIndexExecutionLeaseException,
   )
 
-  assert.deepEqual(context.calls, ['lock-document', 'lock-membership'])
+  assert.deepEqual(context.calls, ['get-knowledge-base', 'lock-document', 'lock-knowledgeBaseDocument'])
+})
+
+test('does not complete or archive a job when its knowledge base cannot be loaded', async () => {
+  const context = createDocumentIndexedListener('4', jobLeaseFactFixture, 'previous-index-id', async () => {}, false)
+
+  await assert.rejects(
+    context.useCase.handle(
+      new DocumentIndexedEvent({
+        jobDelivery: claimedJobFixture,
+        completedAt: new Date('2026-10-14T00:00:30.000Z'),
+      }),
+    ),
+    DocumentIndexingNotFoundException,
+  )
+
+  assert.deepEqual(context.calls, ['get-knowledge-base'])
+  assert.deepEqual(context.successReceipts, [])
 })
 
 test('rejects stale identity, attempt, token, status and expired lease before any index write', async () => {
-  const invalidRecords: (DocumentIndexExecutionLeaseDto | null)[] = [
+  const invalidRecords: (DocumentIndexExecutionLeaseDTO | null)[] = [
     null,
     { ...jobLeaseFactFixture, id: 'another-job' },
     { ...jobLeaseFactFixture, knowledgeBaseId: 'another-base' },
@@ -196,17 +258,26 @@ test('rejects stale identity, attempt, token, status and expired lease before an
     { ...jobLeaseFactFixture, leaseExpiresAt: new Date('2000-01-01T00:00:00.000Z') },
   ]
 
-  await invalidRecords.reduce(async (previous, record) => {
-    await previous
-    const context = createDocumentIndexedListener('4', record)
+  await firstValueFrom(
+    from(invalidRecords).pipe(
+      concatMap(async (record) => {
+        const context = createDocumentIndexedListener('4', record)
 
-    await assert.rejects(
-      context.useCase.handle(new DocumentIndexedEvent({ jobDelivery: claimedJobFixture, completedAt: new Date() })),
-      InvalidDocumentIndexExecutionLeaseException,
-    )
-    assert.deepEqual(context.calls, ['lock-document', 'lock-membership', 'lock-job'])
-    assert.equal(context.lifecycleWrites.size, 0)
-  }, Promise.resolve())
+        await assert.rejects(
+          context.useCase.handle(new DocumentIndexedEvent({ jobDelivery: claimedJobFixture, completedAt: new Date() })),
+          InvalidDocumentIndexExecutionLeaseException,
+        )
+        assert.deepEqual(context.calls, [
+          'get-knowledge-base',
+          'lock-document',
+          'lock-knowledgeBaseDocument',
+          'lock-job',
+        ])
+        assert.equal(context.lifecycleWrites.size, 0)
+      }),
+      toArray(),
+    ),
+  )
 })
 
 test('locks a shared active target once and does not detach the newly ready index', async () => {
@@ -220,4 +291,56 @@ test('locks a shared active target once and does not detach the newly ready inde
   )
   assert.equal(context.lifecycleWrites.size, 1)
   assert.equal(context.lifecycleWrites.get(claimedJobFixture.documentIndexId)?.unreferencedSince, null)
+})
+
+test('locks previous and target indexes in sorted order and awaits each lock before continuing', async () => {
+  let resolveFirstLock!: () => void
+  const firstLockStarted = new Promise<void>((resolve) => {
+    resolveFirstLock = resolve
+  })
+  let releaseFirstLock!: () => void
+  const firstLockGate = new Promise<void>((resolve) => {
+    releaseFirstLock = resolve
+  })
+  const context = createDocumentIndexedListener('4', jobLeaseFactFixture, 'previous-index-id', async (id) => {
+    if (id === 'previous-index-id') {
+      resolveFirstLock()
+      await firstLockGate
+    }
+  })
+  const pending = context.useCase.handle(
+    new DocumentIndexedEvent({ jobDelivery: claimedJobFixture, completedAt: new Date('2026-10-14T00:00:30.000Z') }),
+  )
+
+  await firstLockStarted
+  const indexLockCallsBeforeFirstLockFinishes = context.calls.filter((call) => call.startsWith('lock-index:'))
+  releaseFirstLock()
+  await pending
+
+  assert.deepEqual(indexLockCallsBeforeFirstLockFinishes, ['lock-index:previous-index-id'])
+  assert.deepEqual(
+    context.calls.filter((call) => call.startsWith('lock-index:')),
+    ['lock-index:previous-index-id', 'lock-index:target-index-id'],
+  )
+})
+
+test('stops locking indexes after the first sorted index lock fails', async () => {
+  const failure = new Error('previous index lock failed')
+  const context = createDocumentIndexedListener('4', jobLeaseFactFixture, 'previous-index-id', async (id) => {
+    if (id === 'previous-index-id') throw failure
+  })
+
+  await assert.rejects(
+    context.useCase.handle(
+      new DocumentIndexedEvent({ jobDelivery: claimedJobFixture, completedAt: new Date('2026-10-14T00:00:30.000Z') }),
+    ),
+    (error: unknown) => error === failure,
+  )
+
+  assert.deepEqual(
+    context.calls.filter((call) => call.startsWith('lock-index:')),
+    ['lock-index:previous-index-id'],
+  )
+  assert.equal(context.lifecycleWrites.size, 0)
+  assert.equal(context.calls.includes('remove-job'), false)
 })

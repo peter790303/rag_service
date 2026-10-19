@@ -1,51 +1,66 @@
+import { concatMap, from, lastValueFrom, toArray } from 'rxjs'
+
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
 import type { ReserveDocumentForIndexingUseCaseContract } from '../../Documents/Contracts/reserve-document-for-indexing.use-case.contract.ts'
+import type { CompleteKnowledgeBaseDocumentIndexingUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/complete-knowledge-base-document-indexing.use-case.contract.ts'
+import type { ReserveKnowledgeBaseDocumentForIndexingUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/reserve-knowledge-base-document-for-indexing.use-case.contract.ts'
+import type { GetIndexingKnowledgeBaseUseCaseContract } from '../../KnowledgeBases/Contracts/get-indexing-knowledge-base.use-case.contract.ts'
 import type { PersistenceTransaction } from '../../KnowledgeBases/Contracts/persistence-transaction.ts'
-import type { CompleteMembershipIndexingUseCaseContract } from '../../Memberships/Contracts/complete-membership-indexing.use-case.contract.ts'
-import type { ReserveMembershipForIndexingUseCaseContract } from '../../Memberships/Contracts/reserve-membership-for-indexing.use-case.contract.ts'
 import { ReadLeaseDocumentIndexesAssembler } from '../Assemblers/read-lease-document-indexes.assembler.ts'
 import { WriteLifecycleDocumentIndexAssembler } from '../Assemblers/write-lifecycle-document-index.assembler.ts'
 import type { DocumentIndexExecutionQueue } from '../Contracts/document-index-execution.queue.ts'
+import type { DocumentIndexSuccessArchive } from '../Contracts/document-index-success.archive.ts'
 import type { DocumentIndexRepository } from '../Contracts/document-index.repository.ts'
 import type { DocumentIndexedEvent } from '../Events/document-indexed.event.ts'
 import { DocumentDisappearedBeforeIndexCompletionException } from '../Exceptions/document-disappeared-before-index-completion.exception.ts'
+import { DocumentIndexingNotFoundException } from '../Exceptions/document-indexing-not-found.exception.ts'
 import { IndexDisappearedBeforeCompletionException } from '../Exceptions/index-disappeared-before-completion.exception.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../Exceptions/invalid-document-index-execution-lease.exception.ts'
 import { DocumentIndexExecutionLeaseGuard } from '../Guards/document-index-execution-lease.guard.ts'
 
-/** Coordinates index readiness, membership activation, and claimed-job removal atomically. */
+/** Coordinates index readiness, knowledgeBaseDocument activation, and claimed-job removal atomically. */
 export class DocumentIndexedListener {
   constructor(
     private readonly transaction: PersistenceTransaction,
     private readonly reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
-    private readonly reserveMembershipForIndexing: ReserveMembershipForIndexingUseCaseContract,
+    private readonly reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
     private readonly documentIndexExecutionQueue: DocumentIndexExecutionQueue,
     private readonly documentIndexRepository: DocumentIndexRepository,
-    private readonly completeMembershipIndexing: CompleteMembershipIndexingUseCaseContract,
+    private readonly completeKnowledgeBaseDocumentIndexing: CompleteKnowledgeBaseDocumentIndexingUseCaseContract,
+    private readonly getIndexingKnowledgeBase: GetIndexingKnowledgeBaseUseCaseContract,
+    private readonly documentIndexSuccessArchive: DocumentIndexSuccessArchive,
   ) {}
 
   async handle({ jobDelivery, completedAt }: DocumentIndexedEvent): Promise<void> {
     await this.transaction.run(async () => {
+      const knowledgeBase = await this.getIndexingKnowledgeBase.execute({
+        knowledgeBaseId: jobDelivery.knowledgeBaseId,
+      })
+
+      if (knowledgeBase === null) throw new DocumentIndexingNotFoundException(jobDelivery.id)
+
       const documentExists = await this.reserveDocumentForIndexing.execute({ documentId: jobDelivery.documentId })
 
       if (!documentExists) throw new DocumentDisappearedBeforeIndexCompletionException()
 
-      const membershipRecord = await this.reserveMembershipForIndexing.execute({
+      const knowledgeBaseDocumentRecord = await this.reserveKnowledgeBaseDocumentForIndexing.execute({
         knowledgeBaseId: jobDelivery.knowledgeBaseId,
         documentId: jobDelivery.documentId,
         generation: jobDelivery.generation,
       })
 
-      if (membershipRecord?.requestedGeneration !== jobDelivery.generation)
+      if (knowledgeBaseDocumentRecord?.requestedGeneration !== jobDelivery.generation)
         throw new InvalidDocumentIndexExecutionLeaseException()
 
       const jobRecord = await this.documentIndexExecutionQueue.lockExecution({ jobId: jobDelivery.id })
-      const jobLease =
-        jobRecord === null ? null : ReadLeaseDocumentIndexesAssembler.toDocumentIndexExecutionLease(jobRecord)
+
+      if (jobRecord === null) throw new InvalidDocumentIndexExecutionLeaseException()
+
+      const jobLease = ReadLeaseDocumentIndexesAssembler.toDocumentIndexExecutionLease(jobRecord)
 
       DocumentIndexExecutionLeaseGuard.assertCurrentClaim(jobDelivery, jobLease, new Date())
 
-      const previousDocumentIndexId = membershipRecord.activeDocumentIndexId
+      const previousDocumentIndexId = knowledgeBaseDocumentRecord.activeDocumentIndexId
       const documentIndexIds = new Set([jobDelivery.documentIndexId])
 
       if (previousDocumentIndexId !== null) documentIndexIds.add(previousDocumentIndexId)
@@ -53,14 +68,16 @@ export class DocumentIndexedListener {
       const lockedDocumentIndexes = new Map<string, DocumentIndex>()
 
       // Row locks must be acquired one at a time in deterministic index order.
-      await [...documentIndexIds].sort().reduce(async (previousIndexLock, documentIndexId) => {
-        await previousIndexLock
+      const lockDocumentIndex = async (documentIndexId: string): Promise<void> => {
         const restoredDocumentIndexDTO = await this.documentIndexRepository.lockByDocumentIndexId({
           documentIndexId: documentIndexId,
         })
 
         if (restoredDocumentIndexDTO !== null) lockedDocumentIndexes.set(documentIndexId, restoredDocumentIndexDTO)
-      }, Promise.resolve())
+      }
+      const orderedDocumentIndexIds = [...documentIndexIds].sort()
+
+      await lastValueFrom(from(orderedDocumentIndexIds).pipe(concatMap(lockDocumentIndex), toArray()))
 
       const targetDocumentIndex = lockedDocumentIndexes.get(jobDelivery.documentIndexId)
 
@@ -71,8 +88,8 @@ export class DocumentIndexedListener {
         WriteLifecycleDocumentIndexAssembler.toSaveDocumentIndexLifecycleQO(readyDocumentIndex)
 
       await this.documentIndexRepository.updateByDocumentIndexIdWithLifecycleFields(readyDocumentIndexLifecycleQO)
-      await this.completeMembershipIndexing.execute({
-        membership: membershipRecord,
+      await this.completeKnowledgeBaseDocumentIndexing.execute({
+        knowledgeBaseDocument: knowledgeBaseDocumentRecord,
         generation: jobDelivery.generation,
         documentIndexId: jobDelivery.documentIndexId,
       })
@@ -91,7 +108,36 @@ export class DocumentIndexedListener {
         }
       }
 
+      await this.documentIndexSuccessArchive.archiveSuccess({
+        projectId: knowledgeBase.projectId,
+        jobId: jobDelivery.id,
+        knowledgeBaseId: jobDelivery.knowledgeBaseId,
+        documentId: jobDelivery.documentId,
+        documentIndexId: jobDelivery.documentIndexId,
+        generation: jobDelivery.generation,
+        attempts: jobRecord.attempts,
+        executionVerification: DocumentIndexedListener.toSuccessfulExecutionVerification(
+          jobRecord.executionVerification,
+        ),
+        completedAt,
+      })
+
       await this.documentIndexExecutionQueue.releaseExecution({ jobId: jobDelivery.id })
     })
+  }
+
+  private static toSuccessfulExecutionVerification(
+    executionVerification: Record<string, unknown> | null,
+  ): Record<string, unknown> | null {
+    if (executionVerification === null) return null
+
+    const successfulExecutionVerification = { ...executionVerification }
+
+    delete successfulExecutionVerification.claim_token
+    delete successfulExecutionVerification.lease_expires_at
+    delete successfulExecutionVerification.claimToken
+    delete successfulExecutionVerification.leaseExpiresAt
+
+    return successfulExecutionVerification
   }
 }

@@ -1,10 +1,14 @@
+import { concatMap, filter, firstValueFrom, from, toArray } from 'rxjs'
+
 import { DocumentRevision } from '../../../Domain/DocumentRevision/document-revision.ts'
 import type { InspectDocumentIndexRetentionUseCaseContract } from '../../DocumentIndexes/Contracts/inspect-document-index-retention.use-case.contract.ts'
-import type { DocumentGarbageCollectionScopeDto } from '../../Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
 import { GarbageDocumentRevisionAssembler } from '../Assemblers/garbage-document-revision.assembler.ts'
 import type { CollectDocumentRevisionGarbageUseCaseContract } from '../Contracts/collect-document-revision-garbage.use-case.contract.ts'
 import type { DocumentRevisionRepository } from '../Contracts/document-revision.repository.ts'
-import type { CollectDocumentRevisionGarbageDto } from '../DataTransferObjects/document-revision-garbage.dto.ts'
+import type {
+  CollectDocumentRevisionGarbageDTO,
+  DocumentRevisionGarbageScopeDTO,
+} from '../DataTransferObjects/document-revision-garbage.dto.ts'
 import { InvalidDocumentRevisionGarbageInputException } from '../Exceptions/invalid-document-revision-garbage-input.exception.ts'
 
 export class CollectDocumentRevisionGarbageUseCase implements CollectDocumentRevisionGarbageUseCaseContract {
@@ -13,7 +17,7 @@ export class CollectDocumentRevisionGarbageUseCase implements CollectDocumentRev
     private readonly indexRetention: InspectDocumentIndexRetentionUseCaseContract,
   ) {}
 
-  async execute(collectDocumentRevisionGarbageDTO: CollectDocumentRevisionGarbageDto): Promise<DocumentRevision[]> {
+  async execute(collectDocumentRevisionGarbageDTO: CollectDocumentRevisionGarbageDTO): Promise<DocumentRevision[]> {
     if (!Array.isArray(collectDocumentRevisionGarbageDTO?.scope?.lockedDocumentIds))
       throw new InvalidDocumentRevisionGarbageInputException('scope.lockedDocumentIds')
 
@@ -28,19 +32,15 @@ export class CollectDocumentRevisionGarbageUseCase implements CollectDocumentRev
     )
       throw new InvalidDocumentRevisionGarbageInputException('candidates')
 
-    const collectedRevisions: DocumentRevision[] = []
-    await candidates.reduce(async (previous, candidate) => {
-      await previous
-      const revision = await this.collectUnreferencedRevision(scope, candidate)
+    const collectRevision = (candidate: DocumentRevision): Promise<DocumentRevision | null> =>
+      this.collectUnreferencedRevision(scope, candidate)
+    const isCollectedRevision = (revision: DocumentRevision | null): revision is DocumentRevision => revision !== null
 
-      if (revision) collectedRevisions.push(revision)
-    }, Promise.resolve())
-
-    return collectedRevisions
+    return firstValueFrom(from(candidates).pipe(concatMap(collectRevision), filter(isCollectedRevision), toArray()))
   }
 
   private async collectUnreferencedRevision(
-    scope: DocumentGarbageCollectionScopeDto,
+    scope: DocumentRevisionGarbageScopeDTO,
     candidate: DocumentRevision,
   ): Promise<DocumentRevision | null> {
     if (!scope.lockedDocumentIds.includes(candidate.documentId)) return null

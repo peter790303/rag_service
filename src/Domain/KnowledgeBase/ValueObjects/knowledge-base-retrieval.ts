@@ -4,7 +4,7 @@ import type { DocumentIndex } from '../../DocumentIndex/document-index.ts'
 import type { DocumentRelation } from '../../DocumentRelation/document-relation.ts'
 import { DocumentRelationResolutionEnum } from '../../DocumentRelation/Enums/document-relation-resolution.enum.ts'
 import type { DocumentRevision } from '../../DocumentRevision/document-revision.ts'
-import type { Membership } from '../../Membership/membership.ts'
+import type { KnowledgeBaseDocument } from '../../KnowledgeBaseDocument/knowledge-base-document.ts'
 import { InvalidKnowledgeBaseRetrievalException } from '../Exceptions/invalid-knowledge-base-retrieval.exception.ts'
 
 export type KnowledgeBaseRelationResolution = {
@@ -21,7 +21,7 @@ export type KnowledgeBaseRetrievalRelation = {
 }
 
 export type KnowledgeBaseRetrievalDocument = {
-  readonly membership: Membership
+  readonly knowledgeBaseDocument: KnowledgeBaseDocument
   readonly document: Document
   readonly index: DocumentIndex
   readonly revision: DocumentRevision
@@ -79,8 +79,8 @@ export class KnowledgeBaseRetrieval {
       KnowledgeBaseRetrieval.validateDocument(knowledgeBaseId, document)
 
       if (
-        !document.membership.alwaysIncludeFullContent ||
-        document.membership.activeDocumentIndexId !== document.index.id
+        !document.knowledgeBaseDocument.alwaysIncludeFullContent ||
+        document.knowledgeBaseDocument.activeDocumentIndexId !== document.index.id
       ) {
         throw new InvalidKnowledgeBaseRetrievalException('required document must use its mandatory active index')
       }
@@ -126,15 +126,15 @@ export class KnowledgeBaseRetrieval {
 
   private static validateDocument(knowledgeBaseId: string, facts: KnowledgeBaseRetrievalDocument): void {
     if (
-      facts.membership.knowledgeBaseId !== knowledgeBaseId ||
-      facts.membership.documentId !== facts.document.id ||
+      facts.knowledgeBaseDocument.knowledgeBaseId !== knowledgeBaseId ||
+      facts.knowledgeBaseDocument.documentId !== facts.document.id ||
       facts.index.documentId !== facts.document.id ||
       facts.revision.documentId !== facts.document.id ||
       facts.index.revisionId !== facts.revision.id ||
       facts.index.readyAt === null
     ) {
       throw new InvalidKnowledgeBaseRetrievalException(
-        'document, revision, ready index and membership must belong to the collection',
+        'document, revision, ready index and knowledgeBaseDocument must belong to the collection',
       )
     }
   }
@@ -155,10 +155,12 @@ export class KnowledgeBaseRetrieval {
     }
 
     if (
-      match.isEffective !== (match.membership.activeDocumentIndexId === match.index.id) ||
-      match.isMandatoryContext !== (match.membership.alwaysIncludeFullContent && match.isEffective)
+      match.isEffective !== (match.knowledgeBaseDocument.activeDocumentIndexId === match.index.id) ||
+      match.isMandatoryContext !== (match.knowledgeBaseDocument.alwaysIncludeFullContent && match.isEffective)
     ) {
-      throw new InvalidKnowledgeBaseRetrievalException('effective and mandatory facts must agree with membership')
+      throw new InvalidKnowledgeBaseRetrievalException(
+        'effective and mandatory facts must agree with knowledgeBaseDocument',
+      )
     }
 
     KnowledgeBaseRetrieval.validateChannel(match.semanticRank, match.rawSemanticScore)

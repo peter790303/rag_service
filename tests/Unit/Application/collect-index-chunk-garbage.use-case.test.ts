@@ -3,12 +3,12 @@ import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
 import type { ChunkRepository } from '../../../src/Application/Chunks/Contracts/chunk.repository.ts'
-import type { IndexChunkGarbageDto } from '../../../src/Application/Chunks/DataTransferObjects/index-chunk-garbage.dto.ts'
+import type { IndexChunkGarbageDTO } from '../../../src/Application/Chunks/DataTransferObjects/index-chunk-garbage.dto.ts'
 import { ChunkGarbageCollectionLockRequiredException } from '../../../src/Application/Chunks/Exceptions/chunk-garbage-collection-lock-required.exception.ts'
 import { IndexChunkGarbageCollectionNotEligibleException } from '../../../src/Application/Chunks/Exceptions/index-chunk-garbage-collection-not-eligible.exception.ts'
 import { CollectIndexChunkGarbageUseCase } from '../../../src/Application/Chunks/UseCases/collect-index-chunk-garbage.use-case.ts'
 
-const eligibleGarbage: IndexChunkGarbageDto = {
+const eligibleGarbage: IndexChunkGarbageDTO = {
   documentIndexId: 'index',
   documentId: 'document',
   unreferencedSince: new Date('2026-01-01T00:00:00.000Z'),

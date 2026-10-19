@@ -11,11 +11,11 @@ import { DocumentRelationsModule } from './document-relations.module.ts'
 import { DocumentRevisionsModule } from './document-revisions.module.ts'
 import { DocumentsModule } from './documents.module.ts'
 import { EmbeddingModule } from './embedding.module.ts'
+import { KnowledgeBaseDocumentPruningModule } from './knowledge-base-document-pruning.module.ts'
+import { KnowledgeBaseDocumentsModule } from './knowledge-base-documents.module.ts'
 import { KnowledgeBaseRetrievalModule } from './knowledge-base-retrieval.module.ts'
 import { KnowledgeBasesModule } from './knowledge-bases.module.ts'
 import { KnowledgeServiceConfigModule } from './knowledge-service-config.module.ts'
-import { MembershipPruningModule } from './membership-pruning.module.ts'
-import { MembershipsModule } from './memberships.module.ts'
 import { PersistenceModule } from './persistence.module.ts'
 import { ServiceAuthenticationModule } from './service-authentication.module.ts'
 
@@ -28,7 +28,7 @@ import { ServiceAuthenticationModule } from './service-authentication.module.ts'
     DocumentsModule,
     DocumentRevisionsModule,
     DocumentIndexesModule,
-    MembershipsModule,
+    KnowledgeBaseDocumentsModule,
     ChunksModule,
     DocumentRelationsModule,
     EmbeddingModule,
@@ -38,7 +38,7 @@ import { ServiceAuthenticationModule } from './service-authentication.module.ts'
     DocumentIndexProcessingModule,
     DocumentGarbageCollectionModule,
     KnowledgeBaseRetrievalModule,
-    MembershipPruningModule,
+    KnowledgeBaseDocumentPruningModule,
   ],
   exports: [
     KnowledgeServiceConfigModule,
@@ -48,7 +48,7 @@ import { ServiceAuthenticationModule } from './service-authentication.module.ts'
     DocumentsModule,
     DocumentRevisionsModule,
     DocumentIndexesModule,
-    MembershipsModule,
+    KnowledgeBaseDocumentsModule,
     ChunksModule,
     DocumentRelationsModule,
     EmbeddingModule,
@@ -58,7 +58,7 @@ import { ServiceAuthenticationModule } from './service-authentication.module.ts'
     DocumentIndexProcessingModule,
     DocumentGarbageCollectionModule,
     KnowledgeBaseRetrievalModule,
-    MembershipPruningModule,
+    KnowledgeBaseDocumentPruningModule,
   ],
 })
 export class KnowledgeServiceInfrastructureModule {}

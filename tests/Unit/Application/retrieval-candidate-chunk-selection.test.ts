@@ -4,7 +4,7 @@ import test from 'node:test'
 import { RetrievalCandidateChunkAssembler } from '../../../src/Application/Chunks/Assemblers/retrieval-candidate-chunk.assembler.ts'
 import type { ChunkRepository } from '../../../src/Application/Chunks/Contracts/chunk.repository.ts'
 import type { FindLexicalChunkCandidatesUseCaseContract } from '../../../src/Application/Chunks/Contracts/find-lexical-chunk-candidates.use-case.contract.ts'
-import type { FindLexicalChunkCandidatesDto } from '../../../src/Application/Chunks/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
+import type { FindLexicalChunkCandidatesDTO } from '../../../src/Application/Chunks/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
 import type { ChunkVectorSimilarityQueryObject } from '../../../src/Application/Chunks/QueryObjects/chunk.query-object.ts'
 import { FindLexicalChunkCandidatesUseCase } from '../../../src/Application/Chunks/UseCases/find-lexical-chunk-candidates.use-case.ts'
 import { FindRetrievalChunkCandidatesUseCase } from '../../../src/Application/Chunks/UseCases/find-retrieval-chunk-candidates.use-case.ts'
@@ -103,7 +103,7 @@ test('candidate assembly preserves selected identities and source ranks without 
 test('retrieval queries scoped entities in sequence and combines overlapping ranked channels in the UseCase', async () => {
   const candidateQueryCalls: {
     channel: string
-    candidateQuery: ChunkVectorSimilarityQueryObject | FindLexicalChunkCandidatesDto
+    candidateQuery: ChunkVectorSimilarityQueryObject | FindLexicalChunkCandidatesDTO
   }[] = []
   const chunkRepository = {
     findByDocumentIndexIdsOrderByVectorCosineDistanceAscAndIdAsc: async (
@@ -119,7 +119,7 @@ test('retrieval queries scoped entities in sequence and combines overlapping ran
     },
   }
   const lexicalCandidates: FindLexicalChunkCandidatesUseCaseContract = {
-    execute: async (findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDto) => {
+    execute: async (findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDTO) => {
       assert.equal(candidateQueryCalls.length, 0)
       candidateQueryCalls.push({ channel: 'lexical', candidateQuery: findLexicalChunkCandidatesDTO })
 

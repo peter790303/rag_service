@@ -1,5 +1,5 @@
-export type CollectDocumentRelationGarbageDto = { sourceIndexId: string; lockedDocumentIds: readonly string[] }
+export type CollectDocumentRelationGarbageDTO = { sourceIndexId: string; lockedDocumentIds: readonly string[] }
 
-export interface PlanDocumentRelationGarbageDto {
+export interface PlanDocumentRelationGarbageDTO {
   readonly sourceIndexIds: readonly string[]
 }

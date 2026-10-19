@@ -26,3 +26,9 @@ export interface UpsertDocumentSourceTitleQueryObject extends UpsertDocumentSour
 export interface MarkDocumentUnreferencedQueryObject extends DocumentIdQueryObject {
   readonly unreferencedSince: Date
 }
+
+export interface DocumentSourceQueryObject {
+  readonly sourceType: string
+  readonly sourceKey: string
+  readonly sourcePath: string
+}

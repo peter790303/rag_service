@@ -1,11 +1,11 @@
 import { IsBoolean, IsEnum, IsObject, IsString, IsUUID, MinLength, ValidateIf } from 'class-validator'
 
-import type { SourceDocumentDto } from '../../../Application/Documents/DataTransferObjects/source-document.dto.ts'
+import type { SourceDocumentDTO } from '../../../Application/Documents/DataTransferObjects/source-document.dto.ts'
 import { DocumentSourceTypeEnum } from '../../../Domain/Document/Enums/document-source-type.enum.ts'
 
 const isPresent = (_object: unknown, value: unknown): boolean => value !== undefined
 
-export class SourceDocumentIndexRequest implements SourceDocumentDto {
+export class SourceDocumentIndexRequest implements SourceDocumentDTO {
   @IsUUID() knowledgeBaseId!: string
 
   @IsString() @MinLength(1) projectId!: string
@@ -28,8 +28,8 @@ export class SourceDocumentIndexRequest implements SourceDocumentDto {
 
   @ValidateIf(isPresent) @IsBoolean() alwaysIncludeFullContent?: boolean
 
-  toDTO(): SourceDocumentDto {
-    const requestDTO: SourceDocumentDto = {
+  toDTO(): SourceDocumentDTO {
+    const requestDTO: SourceDocumentDTO = {
       knowledgeBaseId: this.knowledgeBaseId,
       projectId: this.projectId,
       projectName: this.projectName,

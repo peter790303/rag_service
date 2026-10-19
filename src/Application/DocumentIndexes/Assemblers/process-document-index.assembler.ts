@@ -1,16 +1,16 @@
 import { ChunkDocumentIndexRequiredException } from '../../../Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
 import type { MarkdownChunkPlan } from '../../Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
-import type { ReplaceIndexChunkInputDto } from '../../Chunks/DataTransferObjects/replace-index-chunk-input.dto.ts'
+import type { ReplaceIndexChunkInputDTO } from '../../Chunks/DataTransferObjects/replace-index-chunk-input.dto.ts'
 import { InvalidChunkReplacementTimestampException } from '../../Chunks/Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
-import type { DocumentIndexingDeliveryDto } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
 
 export class ProcessDocumentIndexAssembler {
   static toReplaceIndexChunkInputDTO(
-    job: DocumentIndexingDeliveryDto,
+    job: DocumentIndexingDeliveryDTO,
     markdownChunkPlan: MarkdownChunkPlan,
     chunkEmbeddings: readonly number[][],
     now: Date,
-  ): ReplaceIndexChunkInputDto {
+  ): ReplaceIndexChunkInputDTO {
     if (typeof job?.documentIndexId !== 'string' || !job.documentIndexId.trim())
       throw new ChunkDocumentIndexRequiredException()
 

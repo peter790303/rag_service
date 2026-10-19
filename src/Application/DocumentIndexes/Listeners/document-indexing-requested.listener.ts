@@ -1,15 +1,17 @@
 import { createHash, randomUUID } from 'node:crypto'
 
+import { concatMap, from, lastValueFrom, range, takeWhile } from 'rxjs'
+
 import { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import type { DocumentIndexStatus } from '../../../Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import type { PrepareDocumentRevisionForIndexRequestUseCaseContract } from '../../DocumentRevisions/Contracts/prepare-document-revision-for-index-request.use-case.contract.ts'
 import type { PrepareDocumentForIndexRequestUseCaseContract } from '../../Documents/Contracts/prepare-document-for-index-request.use-case.contract.ts'
-import type { SourceDocumentDto } from '../../Documents/DataTransferObjects/source-document.dto.ts'
+import type { SourceDocumentDTO } from '../../Documents/DataTransferObjects/source-document.dto.ts'
+import type { PrepareKnowledgeBaseDocumentForIndexRequestUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/prepare-knowledge-base-document-for-index-request.use-case.contract.ts'
+import type { SaveKnowledgeBaseDocumentIndexRequestUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/save-knowledge-base-document-index-request.use-case.contract.ts'
 import type { EnsureIndexingKnowledgeBaseUseCaseContract } from '../../KnowledgeBases/Contracts/ensure-indexing-knowledge-base.use-case.contract.ts'
 import type { PersistenceTransaction } from '../../KnowledgeBases/Contracts/persistence-transaction.ts'
-import type { PrepareMembershipForIndexRequestUseCaseContract } from '../../Memberships/Contracts/prepare-membership-for-index-request.use-case.contract.ts'
-import type { SaveMembershipIndexRequestUseCaseContract } from '../../Memberships/Contracts/save-membership-index-request.use-case.contract.ts'
 import { WriteLifecycleDocumentIndexAssembler } from '../Assemblers/write-lifecycle-document-index.assembler.ts'
 import {
   WriteRequestDocumentIndexesAssembler,
@@ -18,6 +20,7 @@ import {
 import type { DocumentIndexExecutionQueue } from '../Contracts/document-index-execution.queue.ts'
 import type { DocumentIndexFailureArchive } from '../Contracts/document-index-failure.archive.ts'
 import type { DocumentIndexRepository } from '../Contracts/document-index.repository.ts'
+import type { StartDocumentIndexPruningRetentionUseCaseContract } from '../Contracts/start-document-index-pruning-retention.use-case.contract.ts'
 import type { DocumentIndexRequestResult } from '../DataTransferObjects/document-index-request.dto.ts'
 import { DOCUMENT_INDEX_REQUEST_OUTCOME_KINDS } from '../Enums/document-index-request-outcome-kind.ts'
 import { DocumentIndexTargetStateEnum } from '../Enums/document-index-target-state.enum.ts'
@@ -48,14 +51,15 @@ export class DocumentIndexingRequestedListener {
     private readonly transaction: PersistenceTransaction,
     private readonly ensureIndexingKnowledgeBase: EnsureIndexingKnowledgeBaseUseCaseContract,
     private readonly prepareDocumentForIndexRequest: PrepareDocumentForIndexRequestUseCaseContract,
-    private readonly prepareMembershipForIndexRequest: PrepareMembershipForIndexRequestUseCaseContract,
+    private readonly prepareKnowledgeBaseDocumentForIndexRequest: PrepareKnowledgeBaseDocumentForIndexRequestUseCaseContract,
     private readonly prepareDocumentRevisionForIndexRequest: PrepareDocumentRevisionForIndexRequestUseCaseContract,
     private readonly documentIndexRepository: DocumentIndexRepository,
     private readonly documentIndexExecutionQueue: DocumentIndexExecutionQueue,
     private readonly documentIndexFailureArchive: DocumentIndexFailureArchive,
     private readonly pipelineSettings: DocumentIndexPipelineSettings,
     private readonly writeRequestDocumentIndexesAssembler: WriteRequestDocumentIndexesAssembler,
-    private readonly saveMembershipIndexRequest: SaveMembershipIndexRequestUseCaseContract,
+    private readonly saveKnowledgeBaseDocumentIndexRequest: SaveKnowledgeBaseDocumentIndexRequestUseCaseContract,
+    private readonly startIndexRetention: StartDocumentIndexPruningRetentionUseCaseContract,
   ) {}
 
   async handle(event: DocumentIndexingRequestedEvent): Promise<DocumentIndexRequestResult> {
@@ -78,13 +82,16 @@ export class DocumentIndexingRequestedListener {
     })
 
     // Each retry opens a fresh transaction after a collector removed the prepared index.
-    const documentIndexRequestResult = await Array.from({ length: MAX_TARGET_REPREPARATIONS }).reduce<
-      Promise<DocumentIndexRequestResult | null>
-    >(async (previousAttempt) => {
-      const previousResult = await previousAttempt
-
-      return previousResult ?? this.transaction.run(() => this.requestWithin(sourceDocumentDTO, pipelineMetadata))
-    }, Promise.resolve(null))
+    const prepareDocumentIndexRequest = async (): Promise<DocumentIndexRequestResult | null> =>
+      this.transaction.run(() => this.requestWithin(sourceDocumentDTO, pipelineMetadata))
+    const canReprepareTarget = (result: DocumentIndexRequestResult | null): boolean => result === null
+    const documentIndexRequestResult = await lastValueFrom(
+      range(0, MAX_TARGET_REPREPARATIONS).pipe(
+        concatMap(prepareDocumentIndexRequest),
+        takeWhile(canReprepareTarget, true),
+      ),
+      { defaultValue: null },
+    )
 
     if (documentIndexRequestResult) return documentIndexRequestResult
 
@@ -92,23 +99,32 @@ export class DocumentIndexingRequestedListener {
   }
 
   private async requestWithin(
-    sourceDocumentDTO: SourceDocumentDto & { readonly payload: Record<string, unknown> },
+    sourceDocumentDTO: SourceDocumentDTO & { readonly payload: Record<string, unknown> },
     pipelineMetadata: ReturnType<WriteRequestDocumentIndexesAssembler['toDocumentIndexPipelineMetadata']>,
   ): Promise<DocumentIndexRequestResult | null> {
     await this.ensureIndexingKnowledgeBase.execute(sourceDocumentDTO)
     const document = await this.prepareDocumentForIndexRequest.execute(sourceDocumentDTO)
     const documentId = document.id
-    const requestMembership = await this.prepareMembershipForIndexRequest.execute({
-      sourceDocument: sourceDocumentDTO,
+    const requestKnowledgeBaseDocument = await this.prepareKnowledgeBaseDocumentForIndexRequest.execute({
+      sourceDocument: {
+        knowledgeBaseId: sourceDocumentDTO.knowledgeBaseId,
+        ...(sourceDocumentDTO.isEntry === undefined ? {} : { isEntry: sourceDocumentDTO.isEntry }),
+        ...(sourceDocumentDTO.alwaysIncludeFullContent === undefined
+          ? {}
+          : { alwaysIncludeFullContent: sourceDocumentDTO.alwaysIncludeFullContent }),
+      },
       documentId,
     })
     const revision = await this.prepareDocumentRevisionForIndexRequest.execute({
-      sourceDocument: sourceDocumentDTO,
+      sourceDocument: {
+        ...(sourceDocumentDTO.title === undefined ? {} : { title: sourceDocumentDTO.title }),
+        content: sourceDocumentDTO.content,
+      },
       documentId,
       contentSha256: pipelineMetadata.contentSha256,
     })
     const revisionId = revision.id
-    const membershipQO = { knowledgeBaseId: sourceDocumentDTO.knowledgeBaseId, documentId }
+    const knowledgeBaseDocumentQO = { knowledgeBaseId: sourceDocumentDTO.knowledgeBaseId, documentId }
     let restoredTargetDocumentIndexDTO = await this.documentIndexRepository.findByDocumentRevisionIdAndPipelineHash({
       revisionId,
       pipelineHash: pipelineMetadata.pipelineHash,
@@ -134,15 +150,17 @@ export class DocumentIndexingRequestedListener {
       })
       const createBuildingDocumentIndexQO =
         this.writeRequestDocumentIndexesAssembler.toBuildingDocumentIndex(buildingDocumentIndex)
-      restoredTargetDocumentIndexDTO =
-        await this.documentIndexRepository.createBuildingIndex(createBuildingDocumentIndexQO)
+      await this.documentIndexRepository.createBuildingIndex(createBuildingDocumentIndexQO)
+      restoredTargetDocumentIndexDTO = buildingDocumentIndex
     }
 
-    const currentJobRecord = await this.documentIndexExecutionQueue.lockMembershipExecution(membershipQO)
+    const currentJobRecord =
+      await this.documentIndexExecutionQueue.lockKnowledgeBaseDocumentExecution(knowledgeBaseDocumentQO)
     const currentJob = this.writeRequestDocumentIndexesAssembler.toDocumentIndexRequestExecution(currentJobRecord)
     const documentIndexIds = new Set([restoredTargetDocumentIndexDTO.id])
 
-    if (requestMembership.activeDocumentIndexId !== null) documentIndexIds.add(requestMembership.activeDocumentIndexId)
+    if (requestKnowledgeBaseDocument.activeDocumentIndexId !== null)
+      documentIndexIds.add(requestKnowledgeBaseDocument.activeDocumentIndexId)
 
     if (currentJob !== null) documentIndexIds.add(currentJob.documentIndexId)
 
@@ -150,18 +168,16 @@ export class DocumentIndexingRequestedListener {
     const targetDocumentIndexId = restoredTargetDocumentIndexDTO.id
 
     // All requests acquire shared index rows in the same order to avoid lock cycles.
-    const lockedDocumentIndexes = await sortedDocumentIndexIds.reduce<Promise<Map<string, DocumentIndex>>>(
-      async (pendingLockedDocumentIndexes, documentIndexId) => {
-        const lockedDocumentIndexes = await pendingLockedDocumentIndexes
-        const restoredDocumentIndexDTO = await this.documentIndexRepository.lockByDocumentIndexId({ documentIndexId })
+    const lockedDocumentIndexes = new Map<string, DocumentIndex>()
+    const lockDocumentIndex = async (documentIndexId: string): Promise<DocumentIndex | null> => {
+      const restoredDocumentIndexDTO = await this.documentIndexRepository.lockByDocumentIndexId({ documentIndexId })
 
-        if (restoredDocumentIndexDTO !== null)
-          lockedDocumentIndexes.set(restoredDocumentIndexDTO.id, restoredDocumentIndexDTO)
+      if (restoredDocumentIndexDTO !== null)
+        lockedDocumentIndexes.set(restoredDocumentIndexDTO.id, restoredDocumentIndexDTO)
 
-        return lockedDocumentIndexes
-      },
-      Promise.resolve(new Map()),
-    )
+      return restoredDocumentIndexDTO
+    }
+    await lastValueFrom(from(sortedDocumentIndexIds).pipe(concatMap(lockDocumentIndex)), { defaultValue: null })
     const lockedTargetDocumentIndex = lockedDocumentIndexes.get(targetDocumentIndexId)
 
     if (lockedTargetDocumentIndex === undefined) return null
@@ -174,7 +190,7 @@ export class DocumentIndexingRequestedListener {
           sourceDocumentDTO.knowledgeBaseId,
           documentId,
           lockedTargetDocumentIndex.id,
-          requestMembership.requestedGeneration,
+          requestKnowledgeBaseDocument.requestedGeneration,
         )
       const unretriedFailedJob =
         await this.documentIndexFailureArchive.findUnretriedTargetFailure(unretriedFailedJobTargetQO)
@@ -182,8 +198,8 @@ export class DocumentIndexingRequestedListener {
     }
 
     const documentIndexTargetDecision = this.decideTarget({
-      currentGeneration: requestMembership.requestedGeneration,
-      activeDocumentIndexId: requestMembership.activeDocumentIndexId,
+      currentGeneration: requestKnowledgeBaseDocument.requestedGeneration,
+      activeDocumentIndexId: requestKnowledgeBaseDocument.activeDocumentIndexId,
       targetDocumentIndexId: lockedTargetDocumentIndex.id,
       targetIndexStatus: lockedTargetDocumentIndex.status,
       currentJob: currentJob,
@@ -191,8 +207,8 @@ export class DocumentIndexingRequestedListener {
     })
 
     if (documentIndexTargetDecision.targetState === DocumentIndexTargetStateEnum.READY) {
-      await this.saveMembershipIndexRequest.execute({
-        membership: requestMembership,
+      await this.saveKnowledgeBaseDocumentIndexRequest.execute({
+        knowledgeBaseDocument: requestKnowledgeBaseDocument,
         generation: documentIndexTargetDecision.generation,
         activeDocumentIndexId: lockedTargetDocumentIndex.id,
       })
@@ -204,8 +220,11 @@ export class DocumentIndexingRequestedListener {
 
       if (currentJob) await this.documentIndexExecutionQueue.releaseExecution({ jobId: currentJob.id })
 
-      const previousActiveDocumentIndex = requestMembership.activeDocumentIndexId
-        ? lockedDocumentIndexes.get(requestMembership.activeDocumentIndexId)
+      if (currentJob && currentJob.documentIndexId !== lockedTargetDocumentIndex.id)
+        await this.startIndexRetention.execute({ documentIndexIds: [currentJob.documentIndexId], now: new Date() })
+
+      const previousActiveDocumentIndex = requestKnowledgeBaseDocument.activeDocumentIndexId
+        ? lockedDocumentIndexes.get(requestKnowledgeBaseDocument.activeDocumentIndexId)
         : undefined
 
       if (previousActiveDocumentIndex !== undefined && previousActiveDocumentIndex.id !== lockedTargetDocumentIndex.id)
@@ -265,7 +284,7 @@ export class DocumentIndexingRequestedListener {
       await this.documentIndexFailureArchive.findUnretriedTargetFailure(requestedGenerationFailureQO)
     const hasRequestedGenerationFailure = requestedGenerationFailedJob !== null
     const jobEnqueueDecision = this.decideEnqueue({
-      currentGeneration: requestMembership.requestedGeneration,
+      currentGeneration: requestKnowledgeBaseDocument.requestedGeneration,
       requestedGeneration,
       targetDocumentIndexId: lockedTargetDocumentIndex.id,
       currentJob: currentJob,
@@ -298,10 +317,10 @@ export class DocumentIndexingRequestedListener {
 
     if (currentJob) await this.documentIndexExecutionQueue.releaseExecution({ jobId: currentJob.id })
 
-    await this.saveMembershipIndexRequest.execute({
-      membership: requestMembership,
+    await this.saveKnowledgeBaseDocumentIndexRequest.execute({
+      knowledgeBaseDocument: requestKnowledgeBaseDocument,
       generation: jobEnqueueDecision.generation,
-      activeDocumentIndexId: requestMembership.activeDocumentIndexId,
+      activeDocumentIndexId: requestKnowledgeBaseDocument.activeDocumentIndexId,
     })
     const queuedJob = this.writeRequestDocumentIndexesAssembler.toQueuedDocumentIndexExecution(
       sourceDocumentDTO,
@@ -310,8 +329,11 @@ export class DocumentIndexingRequestedListener {
       jobEnqueueDecision.generation,
       new Date(),
     )
-    const createdJob = await this.documentIndexExecutionQueue.enqueue(queuedJob)
-    const jobId = createdJob.id
+    await this.documentIndexExecutionQueue.enqueue(queuedJob)
+    const jobId = queuedJob.id
+
+    if (currentJob && currentJob.documentIndexId !== lockedTargetDocumentIndex.id)
+      await this.startIndexRetention.execute({ documentIndexIds: [currentJob.documentIndexId], now: new Date() })
 
     return this.writeRequestDocumentIndexesAssembler.toDocumentIndexRequestResult(
       documentId,

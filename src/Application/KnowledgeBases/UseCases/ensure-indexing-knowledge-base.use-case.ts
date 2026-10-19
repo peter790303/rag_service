@@ -1,24 +1,28 @@
 import { KnowledgeBase } from '../../../Domain/KnowledgeBase/knowledge-base.ts'
 import type { EnsureIndexingKnowledgeBaseUseCaseContract } from '../Contracts/ensure-indexing-knowledge-base.use-case.contract.ts'
 import type { KnowledgeBaseRepository } from '../Contracts/knowledge-base.repository.ts'
+import type { EnsureIndexingKnowledgeBaseDTO } from '../DataTransferObjects/ensure-indexing-knowledge-base.dto.ts'
 import { IndexingKnowledgeBaseInputGuard } from '../Guards/indexing-knowledge-base-input.guard.ts'
+import type {
+  CreateKnowledgeBaseQueryObject,
+  KnowledgeBaseIdQueryObject,
+  UpdateKnowledgeBaseQueryObject,
+} from '../QueryObjects/knowledge-base.query-object.ts'
 
 /** Verifies project ownership before preparing an indexing request's knowledge base. */
 export class EnsureIndexingKnowledgeBaseUseCase implements EnsureIndexingKnowledgeBaseUseCaseContract {
   constructor(private readonly knowledgeBases: KnowledgeBaseRepository) {}
 
-  async execute(ensureIndexingKnowledgeBaseDTO: {
-    knowledgeBaseId: string
-    projectId: string
-    projectName: string
-  }): Promise<void> {
+  async execute(ensureIndexingKnowledgeBaseDTO: EnsureIndexingKnowledgeBaseDTO): Promise<void> {
     IndexingKnowledgeBaseInputGuard.assertValid(
       ensureIndexingKnowledgeBaseDTO.knowledgeBaseId,
       ensureIndexingKnowledgeBaseDTO.projectId,
       ensureIndexingKnowledgeBaseDTO.projectName,
     )
 
-    const knowledgeBaseIdQO = { knowledgeBaseId: ensureIndexingKnowledgeBaseDTO.knowledgeBaseId }
+    const knowledgeBaseIdQO: KnowledgeBaseIdQueryObject = {
+      knowledgeBaseId: ensureIndexingKnowledgeBaseDTO.knowledgeBaseId,
+    }
     const knowledgeBase = await this.knowledgeBases.lockByKnowledgeBaseId(knowledgeBaseIdQO)
 
     if (knowledgeBase === null) {
@@ -30,7 +34,7 @@ export class EnsureIndexingKnowledgeBaseUseCase implements EnsureIndexingKnowled
         createdAt: now,
         updatedAt: now,
       })
-      const createKnowledgeBaseQO = {
+      const createKnowledgeBaseQO: CreateKnowledgeBaseQueryObject = {
         knowledgeBaseId: newKnowledgeBase.id,
         projectId: newKnowledgeBase.projectId,
         projectName: newKnowledgeBase.projectName,
@@ -47,12 +51,12 @@ export class EnsureIndexingKnowledgeBaseUseCase implements EnsureIndexingKnowled
     if (knowledgeBase.projectName === ensureIndexingKnowledgeBaseDTO.projectName) return
 
     knowledgeBase.synchronizeProjectName(ensureIndexingKnowledgeBaseDTO.projectName, new Date())
-    const saveKnowledgeBaseQO = {
+    const updateKnowledgeBaseQO: UpdateKnowledgeBaseQueryObject = {
       knowledgeBaseId: knowledgeBase.id,
       projectId: knowledgeBase.projectId,
       projectName: knowledgeBase.projectName,
       updatedAt: knowledgeBase.updatedAt,
     }
-    await this.knowledgeBases.save(saveKnowledgeBaseQO)
+    await this.knowledgeBases.update(updateKnowledgeBaseQO)
   }
 }

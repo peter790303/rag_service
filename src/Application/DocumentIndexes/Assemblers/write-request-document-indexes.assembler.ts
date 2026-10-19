@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto'
+
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
-import type { SourceDocumentDto } from '../../Documents/DataTransferObjects/source-document.dto.ts'
-import type { DocumentIndexExecutionRecordDto } from '../DataTransferObjects/document-index-execution-record.dto.ts'
+import type { SourceDocumentDTO } from '../../Documents/DataTransferObjects/source-document.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
 import type { DocumentIndexRequestExecution } from '../DataTransferObjects/document-index-request-facts.dto.ts'
 import type { DocumentIndexRequestResult } from '../DataTransferObjects/document-index-request.dto.ts'
 import { InvalidIndexPipelineInputException } from '../Exceptions/invalid-index-pipeline-input.exception.ts'
@@ -106,7 +108,7 @@ export class WriteRequestDocumentIndexesAssembler {
   }
 
   toDocumentIndexRequestExecution(
-    jobRecord: DocumentIndexExecutionRecordDto | null,
+    jobRecord: DocumentIndexExecutionRecordDTO | null,
   ): DocumentIndexRequestExecution | null {
     if (jobRecord === null) return null
 
@@ -152,13 +154,14 @@ export class WriteRequestDocumentIndexesAssembler {
   }
 
   toQueuedDocumentIndexExecution(
-    sourceDocument: SourceDocumentDto & { readonly payload: Record<string, unknown> },
+    sourceDocument: SourceDocumentDTO & { readonly payload: Record<string, unknown> },
     documentId: string,
     documentIndexId: string,
     generation: string,
     availableAt: Date,
   ): EnqueueDocumentIndexExecutionQueryObject {
     return {
+      id: randomUUID(),
       knowledgeBaseId: sourceDocument.knowledgeBaseId,
       documentId,
       documentIndexId,

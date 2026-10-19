@@ -1,6 +1,6 @@
 import { DocumentSourceTypeEnum } from '../../../Domain/Document/Enums/document-source-type.enum.ts'
 
-export type SourceDocumentDto = {
+export type SourceDocumentDTO = {
   knowledgeBaseId: string
   projectId: string
   projectName: string

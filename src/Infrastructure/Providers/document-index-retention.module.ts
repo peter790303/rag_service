@@ -3,7 +3,7 @@ import { Module } from '@nestjs/common'
 import { ChunksModule } from './chunks.module.ts'
 import { DocumentIndexesModule } from './document-indexes.module.ts'
 import { DocumentRelationsModule } from './document-relations.module.ts'
-import { MembershipsModule } from './memberships.module.ts'
+import { KnowledgeBaseDocumentsModule } from './knowledge-base-documents.module.ts'
 import { CollectIndexChunkGarbageUseCaseContract } from '../../Application/Chunks/Contracts/collect-index-chunk-garbage.use-case.contract.ts'
 import { CollectDocumentIndexGarbageUseCaseContract } from '../../Application/DocumentIndexes/Contracts/collect-document-index-garbage.use-case.contract.ts'
 import { DocumentIndexExecutionQueue } from '../../Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
@@ -13,10 +13,10 @@ import { StartDocumentIndexPruningRetentionUseCaseContract } from '../../Applica
 import { CollectDocumentIndexGarbageUseCase } from '../../Application/DocumentIndexes/UseCases/collect-document-index-garbage.use-case.ts'
 import { StartDocumentIndexPruningRetentionUseCase } from '../../Application/DocumentIndexes/UseCases/start-document-index-pruning-retention.use-case.ts'
 import { CollectDocumentRelationGarbageUseCaseContract } from '../../Application/DocumentRelations/Contracts/collect-document-relation-garbage.use-case.contract.ts'
-import { InspectMembershipRetentionUseCaseContract } from '../../Application/Memberships/Contracts/inspect-membership-retention.use-case.contract.ts'
+import { InspectKnowledgeBaseDocumentRetentionUseCaseContract } from '../../Application/KnowledgeBaseDocuments/Contracts/inspect-knowledge-base-document-retention.use-case.contract.ts'
 
 @Module({
-  imports: [DocumentIndexesModule, MembershipsModule, DocumentRelationsModule, ChunksModule],
+  imports: [DocumentIndexesModule, KnowledgeBaseDocumentsModule, DocumentRelationsModule, ChunksModule],
   providers: [
     {
       provide: CollectDocumentIndexGarbageUseCase,
@@ -24,7 +24,7 @@ import { InspectMembershipRetentionUseCaseContract } from '../../Application/Mem
         documentIndexRepository: DocumentIndexRepositoryContract,
         jobRepository: DocumentIndexExecutionQueue,
         failedJobRepository: DocumentIndexFailureArchive,
-        membershipRetention: InspectMembershipRetentionUseCaseContract,
+        knowledgeBaseDocumentRetention: InspectKnowledgeBaseDocumentRetentionUseCaseContract,
         relationGarbage: CollectDocumentRelationGarbageUseCaseContract,
         chunkGarbage: CollectIndexChunkGarbageUseCaseContract,
       ) =>
@@ -32,7 +32,7 @@ import { InspectMembershipRetentionUseCaseContract } from '../../Application/Mem
           documentIndexRepository,
           jobRepository,
           failedJobRepository,
-          membershipRetention,
+          knowledgeBaseDocumentRetention,
           relationGarbage,
           chunkGarbage,
         ),
@@ -40,7 +40,7 @@ import { InspectMembershipRetentionUseCaseContract } from '../../Application/Mem
         DocumentIndexRepositoryContract,
         DocumentIndexExecutionQueue,
         DocumentIndexFailureArchive,
-        InspectMembershipRetentionUseCaseContract,
+        InspectKnowledgeBaseDocumentRetentionUseCaseContract,
         CollectDocumentRelationGarbageUseCaseContract,
         CollectIndexChunkGarbageUseCaseContract,
       ],
@@ -50,9 +50,18 @@ import { InspectMembershipRetentionUseCaseContract } from '../../Application/Mem
       useFactory: (
         documentIndexRepository: DocumentIndexRepositoryContract,
         jobRepository: DocumentIndexExecutionQueue,
-        membershipRetention: InspectMembershipRetentionUseCaseContract,
-      ) => new StartDocumentIndexPruningRetentionUseCase(documentIndexRepository, jobRepository, membershipRetention),
-      inject: [DocumentIndexRepositoryContract, DocumentIndexExecutionQueue, InspectMembershipRetentionUseCaseContract],
+        knowledgeBaseDocumentRetention: InspectKnowledgeBaseDocumentRetentionUseCaseContract,
+      ) =>
+        new StartDocumentIndexPruningRetentionUseCase(
+          documentIndexRepository,
+          jobRepository,
+          knowledgeBaseDocumentRetention,
+        ),
+      inject: [
+        DocumentIndexRepositoryContract,
+        DocumentIndexExecutionQueue,
+        InspectKnowledgeBaseDocumentRetentionUseCaseContract,
+      ],
     },
     { provide: CollectDocumentIndexGarbageUseCaseContract, useExisting: CollectDocumentIndexGarbageUseCase },
     {

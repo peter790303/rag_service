@@ -1,19 +1,21 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import test from 'node:test'
+import test, { type TestContext } from 'node:test'
 
 import {
   createDocumentFixture,
   createRepositoryStub,
   createJobRecordFixture,
   createRestoredDocumentIndexFixture,
-  createRestoredMembershipFixture,
+  createRestoredKnowledgeBaseDocumentFixture,
 } from './document-index-lifecycle.fixture.ts'
-import type { ReplaceIndexChunkInputDto } from '../../../src/Application/Chunks/DataTransferObjects/replace-index-chunk-input.dto.ts'
+import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { ReplaceIndexChunkInputDTO } from '../../../src/Application/Chunks/DataTransferObjects/replace-index-chunk-input.dto.ts'
+import { ChunkPlanningUnavailableException } from '../../../src/Application/Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
 import type { DocumentIndexExecutionQueue } from '../../../src/Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
 import type { DocumentIndexRepository } from '../../../src/Application/DocumentIndexes/Contracts/document-index.repository.ts'
-import type { DocumentIndexExecutionLeaseDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-lease.dto.ts'
-import { type DocumentIndexingClaimDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
+import type { DocumentIndexExecutionLeaseDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-lease.dto.ts'
+import { type DocumentIndexingClaimDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
 import type { DocumentIndexedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexed.event.ts'
 import { DocumentIndexingDispatchedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-dispatched.event.ts'
@@ -27,14 +29,14 @@ import type {
 import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
 import type { DocumentIdQueryObject } from '../../../src/Application/Documents/QueryObjects/document.query-object.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
+import type { KnowledgeBaseDocumentSourceQueryObject } from '../../../src/Application/KnowledgeBaseDocuments/QueryObjects/knowledge-base-document.query-object.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
 import type { PersistenceTransaction } from '../../../src/Application/KnowledgeBases/Contracts/persistence-transaction.ts'
-import type { MembershipRepository } from '../../../src/Application/Memberships/Contracts/membership.repository.ts'
-import type { MembershipSourceQueryObject } from '../../../src/Application/Memberships/QueryObjects/membership.query-object.ts'
-import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
 import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 
-const createClaimedJobFixture: DocumentIndexingClaimDto = {
+const createClaimedJobFixture: DocumentIndexingClaimDTO = {
   id: 'job',
   knowledgeBaseId: 'kb',
   documentId: 'document',
@@ -64,12 +66,16 @@ const createProcessJobScenario = (
   options: {
     blockLoading?: boolean
     failRenewal?: boolean
-    leaseFact?: Partial<DocumentIndexExecutionLeaseDto>
+    renewalFailureAt?: number
+    renewalError?: Error
+    plan?: (source: string, signal?: AbortSignal) => Promise<MarkdownChunkPlan>
+    embed?: (texts: string[], signal?: AbortSignal) => Promise<number[][]>
+    leaseFact?: Partial<DocumentIndexExecutionLeaseDTO>
     requestedGeneration?: string
     expireDuringParentLock?: boolean
   } = {},
 ) => {
-  const currentJob: DocumentIndexingClaimDto = {
+  const currentJob: DocumentIndexingClaimDTO = {
     ...createClaimedJobFixture,
     leaseExpiresAt: new Date(Date.now() + 120),
   }
@@ -85,7 +91,7 @@ const createProcessJobScenario = (
   let heartbeatCount = 0
   let completeCount = 0
   const lockOrder: string[] = []
-  const leaseFact: DocumentIndexExecutionLeaseDto = {
+  const leaseFact: DocumentIndexExecutionLeaseDTO = {
     id: createClaimedJobFixture.id,
     knowledgeBaseId: createClaimedJobFixture.knowledgeBaseId,
     documentId: createClaimedJobFixture.documentId,
@@ -119,24 +125,26 @@ const createProcessJobScenario = (
       return createDocumentFixture({ id: currentJob.documentId })
     },
   } as DocumentRepository
-  const membershipRepository = {
-    lockByKnowledgeBaseIdAndDocumentId: async (membershipSourceQO: MembershipSourceQueryObject) => {
+  const knowledgeBaseDocumentRepository = {
+    lockByKnowledgeBaseIdAndDocumentId: async (
+      knowledgeBaseDocumentSourceQO: KnowledgeBaseDocumentSourceQueryObject,
+    ) => {
       assert.ok(activeTransactions > 0)
-      assert.deepEqual(membershipSourceQO, {
+      assert.deepEqual(knowledgeBaseDocumentSourceQO, {
         knowledgeBaseId: currentJob.knowledgeBaseId,
         documentId: currentJob.documentId,
       })
-      lockOrder.push('membership')
+      lockOrder.push('knowledgeBaseDocument')
 
       if (options.expireDuringParentLock) leaseFact.leaseExpiresAt = new Date(Date.now() - 1)
 
-      return createRestoredMembershipFixture({
+      return createRestoredKnowledgeBaseDocumentFixture({
         knowledgeBaseId: currentJob.knowledgeBaseId,
         documentId: currentJob.documentId,
         requestedGeneration: options.requestedGeneration ?? createClaimedJobFixture.generation,
       })
     },
-  } as MembershipRepository
+  } as KnowledgeBaseDocumentRepository
   const jobRepository = {
     lockExecution: async (jobIdQO: DocumentIndexExecutionIdQueryObject) => {
       assert.ok(activeTransactions > 0)
@@ -155,10 +163,10 @@ const createProcessJobScenario = (
       leaseFact.leaseExpiresAt = new Date(verification.leaseExpiresAt)
       heartbeatCount += 1
 
-      if (heartbeatCount === 4) {
+      if (heartbeatCount === (options.renewalFailureAt ?? 4)) {
         renewalObserved.resolve()
 
-        if (options.failRenewal) throw new Error('heartbeat failed')
+        if (options.failRenewal) throw options.renewalError ?? new Error('heartbeat failed')
       }
     },
   } as DocumentIndexExecutionQueue
@@ -185,17 +193,17 @@ const createProcessJobScenario = (
     },
   }
   const replaceIndexPlan = {
-    execute: async ({ markdownChunkPlan, chunkEmbeddings }: ReplaceIndexChunkInputDto) => {
+    execute: async ({ markdownChunkPlan, chunkEmbeddings }: ReplaceIndexChunkInputDTO) => {
       savedPlans.push({ vectors: chunkEmbeddings, contents: markdownChunkPlan.chunks.map((chunk) => chunk.content) })
       assert.equal(chunkEmbeddings.length, markdownChunkPlan.chunks.length)
     },
   }
   const chunkPlanner = {
-    plan: async (source: string) => createMarkdownChunkPlan(source),
+    plan: options.plan ?? (async (source: string) => createMarkdownChunkPlan(source)),
     modelId: 'planner',
   }
   const embeddings = {
-    embed: async () => embeddingResult.promise,
+    embed: options.embed ?? (async () => embeddingResult.promise),
     modelId: 'embeddings',
   }
   const completeJob = {
@@ -219,7 +227,7 @@ const createProcessJobScenario = (
     useCase: new ProcessDocumentIndexListener(
       persistenceTransaction,
       new ReserveDocumentForIndexingUseCase(documentRepository),
-      new ReserveMembershipForIndexingUseCase(membershipRepository),
+      new ReserveKnowledgeBaseDocumentForIndexingUseCase(knowledgeBaseDocumentRepository),
       jobRepository,
       documentIndexRepository,
       replaceIndexPlan,
@@ -274,7 +282,7 @@ test('renews the lease while waiting for a long embedding request', { timeout: 1
   await execution
 
   assert.equal(context.completeCount, 1)
-  assert.deepEqual(context.lockOrder.slice(0, 3), ['document', 'membership', 'job'])
+  assert.deepEqual(context.lockOrder.slice(0, 3), ['document', 'knowledgeBaseDocument', 'job'])
   assert.deepEqual(context.failed, [])
   assert.deepEqual(context.savedPlans, [
     {
@@ -336,6 +344,63 @@ test('fails the claimed job when lease renewal fails during an embedding request
   assert.equal((context.failed[0] as { errorMessage: string }).errorMessage, 'RAG indexing failed')
 })
 
+const assertLeaseLossCancelsProvider = async (phase: 'planning' | 'embedding', context: TestContext): Promise<void> => {
+  context.mock.timers.enable({ apis: ['setTimeout'] })
+  const started = createDeferredJobPromise<void>()
+  const aborted = createDeferredJobPromise<void>()
+  const cleanup = createDeferredJobPromise<void>()
+  const renewalError = new ChunkPlanningUnavailableException()
+  let providerSignal: AbortSignal | undefined
+  const waitForCancellation = async (signal?: AbortSignal): Promise<never> => {
+    providerSignal = signal
+    assert.ok(signal)
+    signal.addEventListener('abort', () => aborted.resolve(), { once: true })
+    started.resolve()
+    await aborted.promise
+    await cleanup.promise
+    throw new Error('provider cancelled after cleanup')
+  }
+  const scenario = createProcessJobScenario({
+    failRenewal: true,
+    renewalFailureAt: phase === 'planning' ? 3 : 4,
+    renewalError,
+    ...(phase === 'planning'
+      ? { plan: async (_source: string, signal?: AbortSignal) => waitForCancellation(signal) }
+      : { embed: async (_texts: string[], signal?: AbortSignal) => waitForCancellation(signal) }),
+  })
+  const execution = scenario.useCase.handle(new DocumentIndexingDispatchedEvent(scenario.job))
+  try {
+    await started.promise
+    context.mock.timers.tick(40)
+    await aborted.promise
+    assert.equal(providerSignal?.aborted, true)
+    assert.equal(providerSignal?.reason, renewalError)
+    assert.equal(scenario.failed.length, 0, 'failure handling must wait for provider cleanup')
+    assert.deepEqual(scenario.savedPlans, [])
+    cleanup.resolve()
+    await execution
+    assert.equal(scenario.completeCount, 0)
+    assert.equal(scenario.failed.length, 1)
+    assert.equal(
+      (scenario.failed[0] as { errorMessage: string }).errorMessage,
+      renewalError.message,
+      'renewal failure must survive a different provider cancellation error',
+    )
+  } finally {
+    aborted.resolve()
+    cleanup.resolve()
+    await execution
+  }
+}
+
+test('cancels planning on lease loss and awaits cleanup before failing', { timeout: 1000 }, async (context) => {
+  await assertLeaseLossCancelsProvider('planning', context)
+})
+
+test('cancels embedding on lease loss and awaits cleanup before failing', { timeout: 1000 }, async (context) => {
+  await assertLeaseLossCancelsProvider('embedding', context)
+})
+
 test('rejects a heartbeat with a replaced fencing token before writing progress', async () => {
   const context = createProcessJobScenario({ leaseFact: { leaseToken: 'replacement-token' } })
 
@@ -347,7 +412,7 @@ test('rejects a heartbeat with a replaced fencing token before writing progress'
   assert.deepEqual(context.savedPlans, [])
 })
 
-test('rejects a heartbeat when the membership requests a later generation', async () => {
+test('rejects a heartbeat when the knowledgeBaseDocument requests a later generation', async () => {
   const context = createProcessJobScenario({ requestedGeneration: '2' })
 
   await context.useCase.handle(new DocumentIndexingDispatchedEvent(context.job))
@@ -374,6 +439,6 @@ test('checks the live lease with a fresh clock after acquiring the parent locks'
 
   assert.equal(context.heartbeatCount, 0)
   assert.equal(context.failed.length, 1)
-  assert.deepEqual(context.lockOrder, ['document', 'membership', 'job'])
+  assert.deepEqual(context.lockOrder, ['document', 'knowledgeBaseDocument', 'job'])
   assert.deepEqual(context.savedPlans, [])
 })

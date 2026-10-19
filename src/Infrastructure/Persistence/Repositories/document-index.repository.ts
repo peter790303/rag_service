@@ -44,12 +44,8 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
     return persistedDocumentIndex === null ? null : DocumentIndexFactory.toDocumentIndex(persistedDocumentIndex)
   }
 
-  async createBuildingIndex(
-    createBuildingDocumentIndexQO: CreateBuildingDocumentIndexQueryObject,
-  ): Promise<DocumentIndex> {
-    const persistedDocumentIndex = await this.documentIndexModelRepository.save({ ...createBuildingDocumentIndexQO })
-
-    return DocumentIndexFactory.toDocumentIndex(persistedDocumentIndex)
+  async createBuildingIndex(createBuildingDocumentIndexQO: CreateBuildingDocumentIndexQueryObject): Promise<void> {
+    await this.documentIndexModelRepository.insert(createBuildingDocumentIndexQO)
   }
 
   async lockByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQueryObject): Promise<DocumentIndex | null> {

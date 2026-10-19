@@ -19,11 +19,19 @@ import type { KnowledgeBase } from '../../../Domain/KnowledgeBase/knowledge-base
 import type { FindRetrievalChunkCandidatesUseCaseContract } from '../../Chunks/Contracts/find-retrieval-chunk-candidates.use-case.contract.ts'
 import type { LoadRetrievalChunkContextUseCaseContract } from '../../Chunks/Contracts/load-retrieval-chunk-context.use-case.contract.ts'
 import type { LoadRetrievalIndexChunksUseCaseContract } from '../../Chunks/Contracts/load-retrieval-index-chunks.use-case.contract.ts'
+import type { FindRetrievalChunkCandidatesDTO } from '../../Chunks/DataTransferObjects/find-retrieval-chunk-candidates.dto.ts'
+import type { LoadRetrievalChunkContextDTO } from '../../Chunks/DataTransferObjects/load-retrieval-chunk-context.dto.ts'
+import type { LoadRetrievalIndexChunksDTO } from '../../Chunks/DataTransferObjects/load-retrieval-index-chunks.dto.ts'
 import type { LoadRetrievalDocumentIndexesUseCaseContract } from '../../DocumentIndexes/Contracts/load-retrieval-document-indexes.use-case.contract.ts'
+import type { LoadRetrievalDocumentIndexesDTO } from '../../DocumentIndexes/DataTransferObjects/load-retrieval-document-indexes.dto.ts'
 import type { LoadRetrievalDocumentRelationsUseCaseContract } from '../../DocumentRelations/Contracts/load-retrieval-document-relations.use-case.contract.ts'
+import type { LoadRetrievalDocumentRelationsDTO } from '../../DocumentRelations/DataTransferObjects/load-retrieval-document-relations.dto.ts'
 import type { LoadRetrievalDocumentRevisionsUseCaseContract } from '../../DocumentRevisions/Contracts/load-retrieval-document-revisions.use-case.contract.ts'
+import type { LoadRetrievalDocumentRevisionsDTO } from '../../DocumentRevisions/DataTransferObjects/load-retrieval-document-revisions.dto.ts'
 import type { LoadRetrievalDocumentsUseCaseContract } from '../../Documents/Contracts/load-retrieval-documents.use-case.contract.ts'
-import type { LoadRetrievalMembershipsUseCaseContract } from '../../Memberships/Contracts/load-retrieval-memberships.use-case.contract.ts'
+import type { LoadRetrievalDocumentsDTO } from '../../Documents/DataTransferObjects/load-retrieval-documents.dto.ts'
+import type { LoadRetrievalKnowledgeBaseDocumentsUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/load-retrieval-knowledge-base-documents.use-case.contract.ts'
+import type { LoadRetrievalKnowledgeBaseDocumentsDTO } from '../../KnowledgeBaseDocuments/DataTransferObjects/load-retrieval-knowledge-base-documents.dto.ts'
 import { RetrievalKnowledgeBaseChunkAssembler } from '../Assemblers/retrieval-knowledge-base-chunk.assembler.ts'
 import {
   RetrievalKnowledgeBaseContentAssembler,
@@ -33,9 +41,10 @@ import { RetrievalSnapshotKnowledgeBaseAssembler } from '../Assemblers/retrieval
 import { EmbeddingProvider } from '../Contracts/embedding-provider.ts'
 import type { KnowledgeBaseRepository } from '../Contracts/knowledge-base.repository.ts'
 import type { PersistenceTransaction } from '../Contracts/persistence-transaction.ts'
-import type { HybridRetrieveDto } from '../DataTransferObjects/hybrid-retrieve.dto.ts'
-import type { RetrievalProfileSettingsDto } from '../DataTransferObjects/retrieval-profile-settings.dto.ts'
+import type { HybridRetrieveDTO } from '../DataTransferObjects/hybrid-retrieve.dto.ts'
+import type { RetrievalProfileSettingsDTO } from '../DataTransferObjects/retrieval-profile-settings.dto.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../Exceptions/knowledge-embedding-unavailable.exception.ts'
+import type { KnowledgeBaseProjectQueryObject } from '../QueryObjects/knowledge-base.query-object.ts'
 import type { RankedCandidate } from '../Types/ranked-candidate.ts'
 import type { HybridChunkCandidate, RetrievalChunk } from '../Types/retrieval-chunk.ts'
 import type {
@@ -60,7 +69,7 @@ export class RetrieveKnowledgeBaseContentUseCase {
   constructor(
     private readonly persistenceTransaction: PersistenceTransaction,
     private readonly knowledgeBaseRepository: KnowledgeBaseRepository,
-    private readonly loadRetrievalMemberships: LoadRetrievalMembershipsUseCaseContract,
+    private readonly loadRetrievalKnowledgeBaseDocuments: LoadRetrievalKnowledgeBaseDocumentsUseCaseContract,
     private readonly loadRetrievalDocuments: LoadRetrievalDocumentsUseCaseContract,
     private readonly loadRetrievalDocumentIndexes: LoadRetrievalDocumentIndexesUseCaseContract,
     private readonly loadRetrievalDocumentRevisions: LoadRetrievalDocumentRevisionsUseCaseContract,
@@ -69,10 +78,10 @@ export class RetrieveKnowledgeBaseContentUseCase {
     private readonly findRetrievalChunkCandidates: FindRetrievalChunkCandidatesUseCaseContract,
     private readonly loadRetrievalChunkContext: LoadRetrievalChunkContextUseCaseContract,
     private readonly embeddingProvider: EmbeddingProvider,
-    private readonly retrievalProfiles: RetrievalProfileSettingsDto,
+    private readonly retrievalProfiles: RetrievalProfileSettingsDTO,
   ) {}
 
-  async execute(retrievalRequest: HybridRetrieveDto): Promise<KnowledgeBase | null> {
+  async execute(retrievalRequest: HybridRetrieveDTO): Promise<KnowledgeBase | null> {
     const queryEmbedding =
       retrievalRequest.queryVector ?? (await this.embeddingProvider.embed([retrievalRequest.queryText]))[0] ?? []
     const queryEmbeddingModelId = retrievalRequest.queryVector
@@ -97,29 +106,32 @@ export class RetrieveKnowledgeBaseContentUseCase {
         documentReference: retrievalRequest.documentReference,
         includeNonEffective: retrievalRequest.includeNonEffective ?? false,
         knowledgeBaseId: facts.knowledgeBaseId,
-        memberships: facts.memberships,
+        knowledgeBaseDocuments: facts.knowledgeBaseDocuments,
         documents: facts.documents,
         indexes: facts.indexes,
         revisions: facts.revisions,
       })
-      const candidateChunks = await this.findRetrievalChunkCandidates.execute({
+      const candidateQueryDTO: FindRetrievalChunkCandidatesDTO = {
         documentIndexIds: scope.retrievalIndexIds,
         queryVector: queryEmbedding,
         queryText: retrievalRequest.queryText,
         limit: candidateLimit,
-      })
+      }
+      const candidateChunks = await this.findRetrievalChunkCandidates.execute(candidateQueryDTO)
       const candidates = RetrievalKnowledgeBaseChunkAssembler.toHybridChunkCandidates(candidateChunks)
       const ranking = this.rankRetrievalCandidates(candidates, scope.retrievalIndexIds, [], retrievalMatchLimit)
-      const neighboringChunks = await this.loadRetrievalChunkContext.execute({
+      const contextDTO: LoadRetrievalChunkContextDTO = {
         candidates: candidateChunks,
         rootChunkIds: ranking.fusedChunkRanking.map(({ candidate }) => candidate.id),
         activeDocumentIndexIds: scope.retrievalIndexIds,
-      })
+      }
+      const neighboringChunks = await this.loadRetrievalChunkContext.execute(contextDTO)
       const fullContentIndexIds = [...scope.requiredIndexIds, ...scope.relationTargetIndexIds]
-      const indexChunks = await this.loadRetrievalIndexChunks.execute({
+      const indexChunksDTO: LoadRetrievalIndexChunksDTO = {
         fullContentIndexIds,
         countedIndexIds: facts.indexes.map((index) => index.id),
-      })
+      }
+      const indexChunks = await this.loadRetrievalIndexChunks.execute(indexChunksDTO)
       const requiredChunks = indexChunks.filter((chunk) => scope.requiredIndexIds.includes(chunk.documentIndexId))
       const relationTargetChunks = indexChunks.filter((chunk) =>
         scope.relationTargetIndexIds.includes(chunk.documentIndexId),
@@ -147,7 +159,7 @@ export class RetrieveKnowledgeBaseContentUseCase {
     )
     const relationResolutionById = this.resolveRelationTargets({
       relations: snapshot.relations,
-      projectMembers: snapshot.memberships,
+      projectMembers: snapshot.knowledgeBaseDocuments,
       eligibleTargetIndexIds: scope.relationTargetIndexIds,
       documents: snapshot.documents,
       indexes: snapshot.indexes,
@@ -160,7 +172,7 @@ export class RetrieveKnowledgeBaseContentUseCase {
       relationTargetChunks,
     })
     const context = this.selectContext({
-      activeIndexIds: snapshot.memberships.flatMap((member) => member.activeDocumentIndexId ?? []),
+      activeIndexIds: snapshot.knowledgeBaseDocuments.flatMap((member) => member.activeDocumentIndexId ?? []),
       requiredMembers: scope.requiredMembers,
       activeIndexChunks: ranking.activeIndexChunks,
       snapshotChunks: snapshot.chunks,
@@ -200,25 +212,34 @@ export class RetrieveKnowledgeBaseContentUseCase {
   }
 
   private async loadSnapshotFacts(projectId: string): Promise<RetrievalSnapshot> {
-    const knowledgeBaseProjectQO = { projectId }
+    const knowledgeBaseProjectQO: KnowledgeBaseProjectQueryObject = { projectId }
     const knowledgeBase = await this.knowledgeBaseRepository.findByProjectId(knowledgeBaseProjectQO)
-    const memberships = knowledgeBase
-      ? await this.loadRetrievalMemberships.execute({ knowledgeBaseId: knowledgeBase.id })
-      : []
-    const documentIds = memberships.map((membership) => membership.documentId)
-    const documents = await this.loadRetrievalDocuments.execute({ documentIds })
-    const indexes = await this.loadRetrievalDocumentIndexes.execute({ documentIds })
-    const revisions = await this.loadRetrievalDocumentRevisions.execute({
+
+    let knowledgeBaseDocuments: RetrievalSnapshot['knowledgeBaseDocuments'] = []
+
+    if (knowledgeBase) {
+      const knowledgeBaseDocumentsDTO: LoadRetrievalKnowledgeBaseDocumentsDTO = { knowledgeBaseId: knowledgeBase.id }
+      knowledgeBaseDocuments = await this.loadRetrievalKnowledgeBaseDocuments.execute(knowledgeBaseDocumentsDTO)
+    }
+
+    const documentIds = knowledgeBaseDocuments.map((knowledgeBaseDocument) => knowledgeBaseDocument.documentId)
+    const documentsDTO: LoadRetrievalDocumentsDTO = { documentIds }
+    const documents = await this.loadRetrievalDocuments.execute(documentsDTO)
+    const indexesDTO: LoadRetrievalDocumentIndexesDTO = { documentIds }
+    const indexes = await this.loadRetrievalDocumentIndexes.execute(indexesDTO)
+    const revisionsDTO: LoadRetrievalDocumentRevisionsDTO = {
       revisionIds: indexes.map((index) => index.revisionId),
-    })
-    const relations = await this.loadRetrievalDocumentRelations.execute({
+    }
+    const revisions = await this.loadRetrievalDocumentRevisions.execute(revisionsDTO)
+    const relationsDTO: LoadRetrievalDocumentRelationsDTO = {
       documentIndexIds: indexes.map((index) => index.id),
-    })
+    }
+    const relations = await this.loadRetrievalDocumentRelations.execute(relationsDTO)
 
     return RetrievalSnapshotKnowledgeBaseAssembler.toRetrievalSnapshot({
       knowledgeBase,
       knowledgeBaseId: knowledgeBase?.id ?? null,
-      memberships,
+      knowledgeBaseDocuments,
       documents,
       indexes,
       revisions,
@@ -227,7 +248,7 @@ export class RetrieveKnowledgeBaseContentUseCase {
   }
 
   private selectScope<
-    TMembership extends {
+    TKnowledgeBaseDocument extends {
       documentId: string
       activeDocumentIndexId: string | null
       alwaysIncludeFullContent: boolean
@@ -248,8 +269,8 @@ export class RetrieveKnowledgeBaseContentUseCase {
     },
     TRevision extends { id: string; content: string },
   >(
-    retrievalScopeFacts: RetrievalScopeInput<TMembership, TDocument, TIndex, TRevision>,
-  ): RetrievalScopeSelection<TMembership, TIndex> {
+    retrievalScopeFacts: RetrievalScopeInput<TKnowledgeBaseDocument, TDocument, TIndex, TRevision>,
+  ): RetrievalScopeSelection<TKnowledgeBaseDocument, TIndex> {
     if (
       !retrievalScopeFacts.queryEmbedding.length ||
       retrievalScopeFacts.queryEmbedding.some((embeddingComponent) => !Number.isFinite(embeddingComponent))
@@ -274,12 +295,14 @@ export class RetrieveKnowledgeBaseContentUseCase {
       ? DocumentReference.tryCreate(retrievalScopeFacts.documentReference)
       : null
     const requestedMembers = retrievalScopeFacts.documentReference
-      ? retrievalScopeFacts.memberships.filter((membership) => {
-          const documentReference = DocumentReference.tryCreate(documentById.get(membership.documentId)?.sourcePath)
+      ? retrievalScopeFacts.knowledgeBaseDocuments.filter((knowledgeBaseDocument) => {
+          const documentReference = DocumentReference.tryCreate(
+            documentById.get(knowledgeBaseDocument.documentId)?.sourcePath,
+          )
 
           return Boolean(requestedReference && documentReference?.refersToSameDocument(requestedReference))
         })
-      : retrievalScopeFacts.memberships
+      : retrievalScopeFacts.knowledgeBaseDocuments
 
     if (retrievalScopeFacts.documentReference && (!requestedReference || requestedMembers.length !== 1)) {
       throw new DocumentReferenceResolutionAmbiguousException({ matchingDocumentCount: requestedMembers.length })
@@ -287,7 +310,9 @@ export class RetrieveKnowledgeBaseContentUseCase {
 
     const activeIndexIds = requestedMembers.flatMap((member) => member.activeDocumentIndexId ?? [])
     const requestedDocumentIds = new Set(requestedMembers.map((member) => member.documentId))
-    const requiredMembers = retrievalScopeFacts.memberships.filter((member) => member.alwaysIncludeFullContent)
+    const requiredMembers = retrievalScopeFacts.knowledgeBaseDocuments.filter(
+      (member) => member.alwaysIncludeFullContent,
+    )
     const revisionById = new Map(retrievalScopeFacts.revisions.map((revision) => [revision.id, revision]))
     const indexById = new Map(retrievalScopeFacts.indexes.map((index) => [index.id, index]))
     const unavailableRequiredMember = requiredMembers.some((member) => {
@@ -323,7 +348,7 @@ export class RetrieveKnowledgeBaseContentUseCase {
     )
     const retrievalIndexIds = retrievalIndexes.map((index) => index.id)
     const projectActiveIndexIds = new Set(
-      retrievalScopeFacts.memberships.flatMap((member) => member.activeDocumentIndexId ?? []),
+      retrievalScopeFacts.knowledgeBaseDocuments.flatMap((member) => member.activeDocumentIndexId ?? []),
     )
     const hasCompatibleProfiles = (index: TIndex): boolean =>
       index.chunkingModel === retrievalScopeFacts.profiles.chunkingModel &&
@@ -332,7 +357,7 @@ export class RetrieveKnowledgeBaseContentUseCase {
       index.lexicalProfile === retrievalScopeFacts.profiles.lexicalProfile &&
       index.relationProfile === retrievalScopeFacts.profiles.relationProfile
     const projectDocumentByActiveIndex = new Map(
-      retrievalScopeFacts.memberships.flatMap((member) =>
+      retrievalScopeFacts.knowledgeBaseDocuments.flatMap((member) =>
         member.activeDocumentIndexId ? [[member.activeDocumentIndexId, member.documentId] as const] : [],
       ),
     )
@@ -483,13 +508,13 @@ export class RetrieveKnowledgeBaseContentUseCase {
       targetAnchor: string | null
       relationType: DocumentRelationTypeEnum
     },
-    TMembership extends { documentId: string; activeDocumentIndexId: string | null },
+    TKnowledgeBaseDocument extends { documentId: string; activeDocumentIndexId: string | null },
     TDocument extends { id: string; sourcePath: string },
     TIndex extends { id: string; documentId: string; readyAt: DateTime | null },
     TChunk extends { documentIndexId: string; headingPath: string[] },
   >(relationTargetFacts: {
     relations: TRelation[]
-    projectMembers: TMembership[]
+    projectMembers: TKnowledgeBaseDocument[]
     eligibleTargetIndexIds: readonly string[]
     documents: TDocument[]
     indexes: TIndex[]
@@ -500,7 +525,7 @@ export class RetrieveKnowledgeBaseContentUseCase {
     const eligibleTargetIndexIds = new Set(relationTargetFacts.eligibleTargetIndexIds)
 
     type ReadyTarget = { document: TDocument; index: TIndex; reference: DocumentReference }
-    const resolveReadyTarget = (member: TMembership): ReadyTarget[] => {
+    const resolveReadyTarget = (member: TKnowledgeBaseDocument): ReadyTarget[] => {
       if (!member.activeDocumentIndexId) return []
 
       const document = documentById.get(member.documentId)
@@ -885,7 +910,11 @@ export class RetrieveKnowledgeBaseContentUseCase {
     retrievalContentFacts.requiredMembers.forEach((member) => {
       const activeIndexId = this.requireActiveIndexId(member.activeDocumentIndexId, member.documentId)
       const index = this.requireReadyIndex(indexesById.get(activeIndexId), activeIndexId)
-      this.requireMembershipIndexDocument(index.documentId === member.documentId, member.documentId, index.id)
+      this.requireKnowledgeBaseDocumentIndexDocument(
+        index.documentId === member.documentId,
+        member.documentId,
+        index.id,
+      )
       const document = this.requireDocument(documentsById.get(member.documentId), member.documentId)
       const revision = this.requireRevision(revisionsById.get(index.revisionId), index.revisionId)
       this.requireRevisionIdentity(revision.contentSha256, document.id)
@@ -960,7 +989,7 @@ export class RetrieveKnowledgeBaseContentUseCase {
     return indexId
   }
 
-  private requireMembershipIndexDocument(matches: boolean, documentId: string, indexId: string): void {
+  private requireKnowledgeBaseDocumentIndexDocument(matches: boolean, documentId: string, indexId: string): void {
     if (!matches) {
       throw new RequiredDocumentActiveIndexMismatchException({ indexId, documentId })
     }

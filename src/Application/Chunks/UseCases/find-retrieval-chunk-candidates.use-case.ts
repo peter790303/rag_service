@@ -3,7 +3,7 @@ import { RetrievalCandidateChunkAssembler } from '../Assemblers/retrieval-candid
 import type { ChunkRepository } from '../Contracts/chunk.repository.ts'
 import type { FindLexicalChunkCandidatesUseCaseContract } from '../Contracts/find-lexical-chunk-candidates.use-case.contract.ts'
 import { FindRetrievalChunkCandidatesUseCaseContract } from '../Contracts/find-retrieval-chunk-candidates.use-case.contract.ts'
-import type { FindRetrievalChunkCandidatesDto } from '../DataTransferObjects/find-retrieval-chunk-candidates.dto.ts'
+import type { FindRetrievalChunkCandidatesDTO } from '../DataTransferObjects/find-retrieval-chunk-candidates.dto.ts'
 
 export class FindRetrievalChunkCandidatesUseCase extends FindRetrievalChunkCandidatesUseCaseContract {
   constructor(
@@ -13,7 +13,7 @@ export class FindRetrievalChunkCandidatesUseCase extends FindRetrievalChunkCandi
     super()
   }
 
-  async execute(findRetrievalChunkCandidatesDTO: FindRetrievalChunkCandidatesDto): Promise<Chunk[]> {
+  async execute(findRetrievalChunkCandidatesDTO: FindRetrievalChunkCandidatesDTO): Promise<Chunk[]> {
     const lexicalCandidateChunks = await this.findLexicalChunkCandidatesUseCase.execute(
       RetrievalCandidateChunkAssembler.toFindLexicalChunkCandidatesDTO(findRetrievalChunkCandidatesDTO),
     )

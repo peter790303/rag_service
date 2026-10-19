@@ -3,7 +3,7 @@ import { createHash, createHmac } from 'node:crypto'
 import test from 'node:test'
 
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import type { ServiceAuthCredentialsDto } from '../../../src/Application/KnowledgeBases/DataTransferObjects/service-auth-credentials.dto.ts'
+import type { ServiceAuthCredentialsDTO } from '../../../src/Application/KnowledgeBases/DataTransferObjects/service-auth-credentials.dto.ts'
 import { HmacProjectServiceAuthenticator } from '../../../src/Infrastructure/Auth/hmac-project-service.authenticator.ts'
 
 const secret = 'a-test-secret-that-is-at-least-32-characters-long'
@@ -11,7 +11,7 @@ const body = { projectId: 'project-a', documents: [] }
 const method = 'POST'
 const path = '/v1/index-requests'
 
-const signedCredentials = (issuedAt = String(Date.now())): ServiceAuthCredentialsDto => {
+const signedCredentials = (issuedAt = String(Date.now())): ServiceAuthCredentialsDTO => {
   const payloadHash = createHash('sha256').update(JSON.stringify(body)).digest('hex')
   const canonicalRequest = [method, path, issuedAt, 'project-a', payloadHash].join('\n')
   const signature = createHmac('sha256', secret).update(canonicalRequest).digest('hex')

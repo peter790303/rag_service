@@ -1,5 +1,5 @@
 /** Committed claim identifiers and fencing metadata required to process one durable job. */
-export type DocumentIndexingDeliveryDto = {
+export type DocumentIndexingDeliveryDTO = {
   readonly id: string
   readonly knowledgeBaseId: string
   readonly documentId: string

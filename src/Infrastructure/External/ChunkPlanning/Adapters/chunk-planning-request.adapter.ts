@@ -18,3 +18,7 @@ export const createChunkPlanningRequestBody = (
     ],
   })
 }
+
+/** Sends the same source blocks through stdin to the host CLI. */
+export const createChunkPlanningPrompt = (sourceBlocks: readonly MarkdownSourceBlock[]): string =>
+  `${SYSTEM_MESSAGE}\n${JSON.stringify({ blocks: sourceBlocks.map((block) => ({ id: `block-${block.id}`, content: block.text })) })}`

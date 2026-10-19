@@ -7,7 +7,7 @@ import type {
   KnowledgeBaseIdQueryObject,
   KnowledgeBaseProjectQueryObject,
   KnowledgeBaseProjectScopeQueryObject,
-  SaveKnowledgeBaseQueryObject,
+  UpdateKnowledgeBaseQueryObject,
 } from '../../../Application/KnowledgeBases/QueryObjects/knowledge-base.query-object.ts'
 import type { KnowledgeBase } from '../../../Domain/KnowledgeBase/knowledge-base.ts'
 import { KnowledgeBaseFactory } from '../Factories/knowledge-base.factory.ts'
@@ -43,13 +43,15 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
     })
   }
 
-  async save(saveKnowledgeBaseQO: SaveKnowledgeBaseQueryObject): Promise<void> {
-    await this.knowledgeBaseModelRepository.save({
-      id: saveKnowledgeBaseQO.knowledgeBaseId,
-      projectId: saveKnowledgeBaseQO.projectId,
-      projectName: saveKnowledgeBaseQO.projectName,
-      updatedAt: saveKnowledgeBaseQO.updatedAt,
-    })
+  async update(updateKnowledgeBaseQO: UpdateKnowledgeBaseQueryObject): Promise<void> {
+    await this.knowledgeBaseModelRepository.update(
+      { id: updateKnowledgeBaseQO.knowledgeBaseId },
+      {
+        projectId: updateKnowledgeBaseQO.projectId,
+        projectName: updateKnowledgeBaseQO.projectName,
+        updatedAt: updateKnowledgeBaseQO.updatedAt,
+      },
+    )
   }
 
   async findByKnowledgeBaseIdAndProjectId(

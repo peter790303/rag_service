@@ -1,52 +1,56 @@
 import { Module } from '@nestjs/common'
 
+import { DocumentIndexRetentionModule } from './document-index-retention.module.ts'
 import { DocumentIndexesModule } from './document-indexes.module.ts'
 import { DocumentRevisionsModule } from './document-revisions.module.ts'
 import { DocumentsModule } from './documents.module.ts'
 import { EmbeddingModule } from './embedding.module.ts'
 import { IndexingProfilesModule, DOCUMENT_INDEX_PIPELINE_SETTINGS } from './indexing-profiles.module.ts'
+import { KnowledgeBaseDocumentsModule } from './knowledge-base-documents.module.ts'
 import { KnowledgeBasesModule } from './knowledge-bases.module.ts'
 import { KnowledgeServiceConfigModule } from './knowledge-service-config.module.ts'
-import { MembershipsModule } from './memberships.module.ts'
 import { PersistenceModule } from './persistence.module.ts'
 import { type KnowledgeServiceConfig, KNOWLEDGE_SERVICE_CONFIG } from '../../../config/knowledge-service.config.ts'
 import {
   type DocumentIndexPipelineSettings,
   WriteRequestDocumentIndexesAssembler,
 } from '../../Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
-import { DocumentIndexChunkReplacementRequestedListenerContract } from '../../Application/DocumentIndexes/Contracts/document-index-chunk-replacement-requested.listener.contract.ts'
+import { AuthorizeDocumentIndexChunkReplacementUseCaseContract } from '../../Application/DocumentIndexes/Contracts/authorize-document-index-chunk-replacement.use-case.contract.ts'
 import { DocumentIndexExecutionQueue } from '../../Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
 import { DocumentIndexFailureArchive } from '../../Application/DocumentIndexes/Contracts/document-index-failure.archive.ts'
+import { DocumentIndexSuccessArchive } from '../../Application/DocumentIndexes/Contracts/document-index-success.archive.ts'
 import { DocumentIndexRepository as DocumentIndexRepositoryContract } from '../../Application/DocumentIndexes/Contracts/document-index.repository.ts'
+import { StartDocumentIndexPruningRetentionUseCaseContract } from '../../Application/DocumentIndexes/Contracts/start-document-index-pruning-retention.use-case.contract.ts'
 import { DispatchDocumentIndexingListener } from '../../Application/DocumentIndexes/Listeners/dispatch-document-indexing.listener.ts'
-import { DocumentIndexChunkReplacementRequestedListener } from '../../Application/DocumentIndexes/Listeners/document-index-chunk-replacement-requested.listener.ts'
 import { DocumentIndexedListener } from '../../Application/DocumentIndexes/Listeners/document-indexed.listener.ts'
 import { DocumentIndexingFailedListener } from '../../Application/DocumentIndexes/Listeners/document-indexing-failed.listener.ts'
 import { DocumentIndexingRequestedListener } from '../../Application/DocumentIndexes/Listeners/document-indexing-requested.listener.ts'
 import { ReadDocumentIndexingStatusListener } from '../../Application/DocumentIndexes/Listeners/read-document-indexing-status.listener.ts'
 import { RetryDocumentIndexingListener } from '../../Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
+import { AuthorizeDocumentIndexChunkReplacementUseCase } from '../../Application/DocumentIndexes/UseCases/authorize-document-index-chunk-replacement.use-case.ts'
 import { GetDocumentRevisionForIndexRetryUseCaseContract } from '../../Application/DocumentRevisions/Contracts/get-document-revision-for-index-retry.use-case.contract.ts'
 import { PrepareDocumentRevisionForIndexRequestUseCaseContract } from '../../Application/DocumentRevisions/Contracts/prepare-document-revision-for-index-request.use-case.contract.ts'
 import { GetDocumentForIndexRetryUseCaseContract } from '../../Application/Documents/Contracts/get-document-for-index-retry.use-case.contract.ts'
 import { PrepareDocumentForIndexRequestUseCaseContract } from '../../Application/Documents/Contracts/prepare-document-for-index-request.use-case.contract.ts'
 import { ReserveDocumentForIndexingUseCaseContract } from '../../Application/Documents/Contracts/reserve-document-for-indexing.use-case.contract.ts'
+import { ActivateKnowledgeBaseDocumentIndexUseCaseContract } from '../../Application/KnowledgeBaseDocuments/Contracts/activate-knowledge-base-document-index.use-case.contract.ts'
+import { CompleteKnowledgeBaseDocumentIndexingUseCaseContract } from '../../Application/KnowledgeBaseDocuments/Contracts/complete-knowledge-base-document-indexing.use-case.contract.ts'
+import { GetKnowledgeBaseDocumentIndexingStateUseCaseContract } from '../../Application/KnowledgeBaseDocuments/Contracts/get-knowledge-base-document-indexing-state.use-case.contract.ts'
+import { PrepareKnowledgeBaseDocumentForIndexRequestUseCaseContract } from '../../Application/KnowledgeBaseDocuments/Contracts/prepare-knowledge-base-document-for-index-request.use-case.contract.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCaseContract } from '../../Application/KnowledgeBaseDocuments/Contracts/reserve-knowledge-base-document-for-indexing.use-case.contract.ts'
+import { SaveKnowledgeBaseDocumentIndexRequestUseCaseContract } from '../../Application/KnowledgeBaseDocuments/Contracts/save-knowledge-base-document-index-request.use-case.contract.ts'
 import { EmbeddingProvider } from '../../Application/KnowledgeBases/Contracts/embedding-provider.ts'
 import { EnsureIndexingKnowledgeBaseUseCaseContract } from '../../Application/KnowledgeBases/Contracts/ensure-indexing-knowledge-base.use-case.contract.ts'
 import { GetIndexingKnowledgeBaseUseCaseContract } from '../../Application/KnowledgeBases/Contracts/get-indexing-knowledge-base.use-case.contract.ts'
 import { PersistenceTransaction as PersistenceTransactionContract } from '../../Application/KnowledgeBases/Contracts/persistence-transaction.ts'
-import { ActivateMembershipIndexUseCaseContract } from '../../Application/Memberships/Contracts/activate-membership-index.use-case.contract.ts'
-import { CompleteMembershipIndexingUseCaseContract } from '../../Application/Memberships/Contracts/complete-membership-indexing.use-case.contract.ts'
-import { GetMembershipIndexingStateUseCaseContract } from '../../Application/Memberships/Contracts/get-membership-indexing-state.use-case.contract.ts'
-import { PrepareMembershipForIndexRequestUseCaseContract } from '../../Application/Memberships/Contracts/prepare-membership-for-index-request.use-case.contract.ts'
-import { ReserveMembershipForIndexingUseCaseContract } from '../../Application/Memberships/Contracts/reserve-membership-for-indexing.use-case.contract.ts'
-import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Memberships/Contracts/save-membership-index-request.use-case.contract.ts'
 
 @Module({
   imports: [
     PersistenceModule,
     DocumentsModule,
-    MembershipsModule,
+    KnowledgeBaseDocumentsModule,
     DocumentIndexesModule,
+    DocumentIndexRetentionModule,
     KnowledgeServiceConfigModule,
     KnowledgeBasesModule,
     DocumentRevisionsModule,
@@ -59,32 +63,38 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
       useFactory: (
         transaction: PersistenceTransactionContract,
         reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
-        reserveMembershipForIndexing: ReserveMembershipForIndexingUseCaseContract,
+        reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
         indexes: DocumentIndexRepositoryContract,
         jobs: DocumentIndexExecutionQueue,
         failedJobs: DocumentIndexFailureArchive,
         serviceConfig: KnowledgeServiceConfig,
-        activateMembershipIndex: ActivateMembershipIndexUseCaseContract,
+        activateKnowledgeBaseDocumentIndex: ActivateKnowledgeBaseDocumentIndexUseCaseContract,
+        knowledgeBases: GetIndexingKnowledgeBaseUseCaseContract,
+        successReceipts: DocumentIndexSuccessArchive,
       ) =>
         new DispatchDocumentIndexingListener(
           transaction,
           reserveDocumentForIndexing,
-          reserveMembershipForIndexing,
+          reserveKnowledgeBaseDocumentForIndexing,
           indexes,
           jobs,
           failedJobs,
           serviceConfig.workerLeaseSeconds,
-          activateMembershipIndex,
+          activateKnowledgeBaseDocumentIndex,
+          knowledgeBases,
+          successReceipts,
         ),
       inject: [
         PersistenceTransactionContract,
         ReserveDocumentForIndexingUseCaseContract,
-        ReserveMembershipForIndexingUseCaseContract,
+        ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
         DocumentIndexRepositoryContract,
         DocumentIndexExecutionQueue,
         DocumentIndexFailureArchive,
         KNOWLEDGE_SERVICE_CONFIG,
-        ActivateMembershipIndexUseCaseContract,
+        ActivateKnowledgeBaseDocumentIndexUseCaseContract,
+        GetIndexingKnowledgeBaseUseCaseContract,
+        DocumentIndexSuccessArchive,
       ],
     },
     {
@@ -92,26 +102,32 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
       useFactory: (
         transaction: PersistenceTransactionContract,
         reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
-        reserveMembershipForIndexing: ReserveMembershipForIndexingUseCaseContract,
+        reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
         jobs: DocumentIndexExecutionQueue,
         indexes: DocumentIndexRepositoryContract,
-        completeMembershipIndexing: CompleteMembershipIndexingUseCaseContract,
+        completeKnowledgeBaseDocumentIndexing: CompleteKnowledgeBaseDocumentIndexingUseCaseContract,
+        knowledgeBases: GetIndexingKnowledgeBaseUseCaseContract,
+        successReceipts: DocumentIndexSuccessArchive,
       ) =>
         new DocumentIndexedListener(
           transaction,
           reserveDocumentForIndexing,
-          reserveMembershipForIndexing,
+          reserveKnowledgeBaseDocumentForIndexing,
           jobs,
           indexes,
-          completeMembershipIndexing,
+          completeKnowledgeBaseDocumentIndexing,
+          knowledgeBases,
+          successReceipts,
         ),
       inject: [
         PersistenceTransactionContract,
         ReserveDocumentForIndexingUseCaseContract,
-        ReserveMembershipForIndexingUseCaseContract,
+        ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
         DocumentIndexExecutionQueue,
         DocumentIndexRepositoryContract,
-        CompleteMembershipIndexingUseCaseContract,
+        CompleteKnowledgeBaseDocumentIndexingUseCaseContract,
+        GetIndexingKnowledgeBaseUseCaseContract,
+        DocumentIndexSuccessArchive,
       ],
     },
     {
@@ -119,7 +135,7 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
       useFactory: (
         transaction: PersistenceTransactionContract,
         reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
-        reserveMembershipForIndexing: ReserveMembershipForIndexingUseCaseContract,
+        reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
         jobs: DocumentIndexExecutionQueue,
         indexes: DocumentIndexRepositoryContract,
         failedJobs: DocumentIndexFailureArchive,
@@ -127,7 +143,7 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
         new DocumentIndexingFailedListener(
           transaction,
           reserveDocumentForIndexing,
-          reserveMembershipForIndexing,
+          reserveKnowledgeBaseDocumentForIndexing,
           jobs,
           indexes,
           failedJobs,
@@ -135,7 +151,7 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
       inject: [
         PersistenceTransactionContract,
         ReserveDocumentForIndexingUseCaseContract,
-        ReserveMembershipForIndexingUseCaseContract,
+        ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
         DocumentIndexExecutionQueue,
         DocumentIndexRepositoryContract,
         DocumentIndexFailureArchive,
@@ -145,40 +161,43 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
       provide: ReadDocumentIndexingStatusListener,
       useFactory: (
         jobRepository: DocumentIndexExecutionQueue,
-        getMembershipIndexingState: GetMembershipIndexingStateUseCaseContract,
+        getKnowledgeBaseDocumentIndexingState: GetKnowledgeBaseDocumentIndexingStateUseCaseContract,
         documentIndexRepository: DocumentIndexRepositoryContract,
         failedJobRepository: DocumentIndexFailureArchive,
+        successReceiptRepository: DocumentIndexSuccessArchive,
       ) =>
         new ReadDocumentIndexingStatusListener(
           jobRepository,
-          getMembershipIndexingState,
+          getKnowledgeBaseDocumentIndexingState,
           documentIndexRepository,
           failedJobRepository,
+          successReceiptRepository,
         ),
       inject: [
         DocumentIndexExecutionQueue,
-        GetMembershipIndexingStateUseCaseContract,
+        GetKnowledgeBaseDocumentIndexingStateUseCaseContract,
         DocumentIndexRepositoryContract,
         DocumentIndexFailureArchive,
+        DocumentIndexSuccessArchive,
       ],
     },
     {
-      provide: DocumentIndexChunkReplacementRequestedListener,
+      provide: AuthorizeDocumentIndexChunkReplacementUseCase,
       useFactory: (
         reserveDocumentForIndexingUseCase: ReserveDocumentForIndexingUseCaseContract,
-        reserveMembershipForIndexingUseCase: ReserveMembershipForIndexingUseCaseContract,
+        reserveKnowledgeBaseDocumentForIndexingUseCase: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
         jobRepository: DocumentIndexExecutionQueue,
         documentIndexRepository: DocumentIndexRepositoryContract,
       ) =>
-        new DocumentIndexChunkReplacementRequestedListener(
+        new AuthorizeDocumentIndexChunkReplacementUseCase(
           reserveDocumentForIndexingUseCase,
-          reserveMembershipForIndexingUseCase,
+          reserveKnowledgeBaseDocumentForIndexingUseCase,
           jobRepository,
           documentIndexRepository,
         ),
       inject: [
         ReserveDocumentForIndexingUseCaseContract,
-        ReserveMembershipForIndexingUseCaseContract,
+        ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
         DocumentIndexExecutionQueue,
         DocumentIndexRepositoryContract,
       ],
@@ -189,40 +208,43 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
         transaction: PersistenceTransactionContract,
         ensureIndexingKnowledgeBase: EnsureIndexingKnowledgeBaseUseCaseContract,
         prepareDocumentForIndexRequest: PrepareDocumentForIndexRequestUseCaseContract,
-        prepareMembershipForIndexRequest: PrepareMembershipForIndexRequestUseCaseContract,
+        prepareKnowledgeBaseDocumentForIndexRequest: PrepareKnowledgeBaseDocumentForIndexRequestUseCaseContract,
         prepareDocumentRevisionForIndexRequest: PrepareDocumentRevisionForIndexRequestUseCaseContract,
         indexes: DocumentIndexRepositoryContract,
         jobs: DocumentIndexExecutionQueue,
         failedJobs: DocumentIndexFailureArchive,
         pipelineSettings: DocumentIndexPipelineSettings,
         writeRequestDocumentIndexesAssembler: WriteRequestDocumentIndexesAssembler,
-        saveMembershipIndexRequest: SaveMembershipIndexRequestUseCaseContract,
+        saveKnowledgeBaseDocumentIndexRequest: SaveKnowledgeBaseDocumentIndexRequestUseCaseContract,
+        startIndexRetention: StartDocumentIndexPruningRetentionUseCaseContract,
       ) =>
         new DocumentIndexingRequestedListener(
           transaction,
           ensureIndexingKnowledgeBase,
           prepareDocumentForIndexRequest,
-          prepareMembershipForIndexRequest,
+          prepareKnowledgeBaseDocumentForIndexRequest,
           prepareDocumentRevisionForIndexRequest,
           indexes,
           jobs,
           failedJobs,
           pipelineSettings,
           writeRequestDocumentIndexesAssembler,
-          saveMembershipIndexRequest,
+          saveKnowledgeBaseDocumentIndexRequest,
+          startIndexRetention,
         ),
       inject: [
         PersistenceTransactionContract,
         EnsureIndexingKnowledgeBaseUseCaseContract,
         PrepareDocumentForIndexRequestUseCaseContract,
-        PrepareMembershipForIndexRequestUseCaseContract,
+        PrepareKnowledgeBaseDocumentForIndexRequestUseCaseContract,
         PrepareDocumentRevisionForIndexRequestUseCaseContract,
         DocumentIndexRepositoryContract,
         DocumentIndexExecutionQueue,
         DocumentIndexFailureArchive,
         DOCUMENT_INDEX_PIPELINE_SETTINGS,
         WriteRequestDocumentIndexesAssembler,
-        SaveMembershipIndexRequestUseCaseContract,
+        SaveKnowledgeBaseDocumentIndexRequestUseCaseContract,
+        StartDocumentIndexPruningRetentionUseCaseContract,
       ],
     },
     {
@@ -231,7 +253,7 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
         transaction: PersistenceTransactionContract,
         knowledgeBases: GetIndexingKnowledgeBaseUseCaseContract,
         documents: GetDocumentForIndexRetryUseCaseContract,
-        memberships: GetMembershipIndexingStateUseCaseContract,
+        knowledgeBaseDocuments: GetKnowledgeBaseDocumentIndexingStateUseCaseContract,
         revisions: GetDocumentRevisionForIndexRetryUseCaseContract,
         indexes: DocumentIndexRepositoryContract,
         jobs: DocumentIndexExecutionQueue,
@@ -240,13 +262,13 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
         config: KnowledgeServiceConfig,
         writeRequestDocumentIndexesAssembler: WriteRequestDocumentIndexesAssembler,
         reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
-        reserveMembershipForIndexing: ReserveMembershipForIndexingUseCaseContract,
+        reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
       ) =>
         new RetryDocumentIndexingListener(
           transaction,
           knowledgeBases,
           documents,
-          memberships,
+          knowledgeBaseDocuments,
           revisions,
           indexes,
           jobs,
@@ -255,13 +277,13 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
           config,
           writeRequestDocumentIndexesAssembler,
           reserveDocumentForIndexing,
-          reserveMembershipForIndexing,
+          reserveKnowledgeBaseDocumentForIndexing,
         ),
       inject: [
         PersistenceTransactionContract,
         GetIndexingKnowledgeBaseUseCaseContract,
         GetDocumentForIndexRetryUseCaseContract,
-        GetMembershipIndexingStateUseCaseContract,
+        GetKnowledgeBaseDocumentIndexingStateUseCaseContract,
         GetDocumentRevisionForIndexRetryUseCaseContract,
         DocumentIndexRepositoryContract,
         DocumentIndexExecutionQueue,
@@ -270,7 +292,7 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
         KNOWLEDGE_SERVICE_CONFIG,
         WriteRequestDocumentIndexesAssembler,
         ReserveDocumentForIndexingUseCaseContract,
-        ReserveMembershipForIndexingUseCaseContract,
+        ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
       ],
     },
     {
@@ -280,12 +302,12 @@ import { SaveMembershipIndexRequestUseCaseContract } from '../../Application/Mem
       inject: [DOCUMENT_INDEX_PIPELINE_SETTINGS],
     },
     {
-      provide: DocumentIndexChunkReplacementRequestedListenerContract,
-      useExisting: DocumentIndexChunkReplacementRequestedListener,
+      provide: AuthorizeDocumentIndexChunkReplacementUseCaseContract,
+      useExisting: AuthorizeDocumentIndexChunkReplacementUseCase,
     },
   ],
   exports: [
-    DocumentIndexChunkReplacementRequestedListenerContract,
+    AuthorizeDocumentIndexChunkReplacementUseCaseContract,
     DocumentIndexedListener,
     DocumentIndexingFailedListener,
     DispatchDocumentIndexingListener,

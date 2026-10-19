@@ -1,4 +1,4 @@
-export type ExpiredDocumentIndexExecutionDto = {
+export type ExpiredDocumentIndexExecutionDTO = {
   id: string
   knowledgeBaseId: string
   documentId: string

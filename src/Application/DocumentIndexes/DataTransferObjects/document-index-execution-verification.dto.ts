@@ -1,6 +1,6 @@
 import { DocumentIndexExecutionStageEnum } from '../Enums/document-index-execution-stage.enum.ts'
 
-export type DocumentIndexExecutionVerificationDto = {
+export type DocumentIndexExecutionVerificationDTO = {
   readonly stage: DocumentIndexExecutionStageEnum
   readonly completedUnits: number
   readonly totalUnits: number | null

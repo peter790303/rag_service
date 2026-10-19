@@ -3,33 +3,33 @@ import test from 'node:test'
 
 import {
   createDocumentFixture,
-  createRestoredMembershipFixture,
+  createRestoredKnowledgeBaseDocumentFixture,
   createRestoredDocumentIndexFixture,
   createJobRecordFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
 import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
-import type { ReplaceIndexChunkInputDto } from '../../../src/Application/Chunks/DataTransferObjects/replace-index-chunk-input.dto.ts'
+import type { ReplaceIndexChunkInputDTO } from '../../../src/Application/Chunks/DataTransferObjects/replace-index-chunk-input.dto.ts'
 import { ChunkPlanningUnavailableException } from '../../../src/Application/Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
-import type { SaveChunksQueryObject } from '../../../src/Application/Chunks/QueryObjects/save-chunks.query-object.ts'
+import type { InsertChunksQueryObject } from '../../../src/Application/Chunks/QueryObjects/insert-chunks.query-object.ts'
 import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
-import type { DocumentIndexExecutionLeaseDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-lease.dto.ts'
-import type { DocumentIndexingClaimDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
+import type { DocumentIndexExecutionLeaseDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-lease.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { DocumentIndexChunkReplacementRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-index-chunk-replacement-requested.listener.ts'
+import { AuthorizeDocumentIndexChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/authorize-document-index-chunk-replacement.use-case.ts'
 import type { PlannedDocumentRelationWrite } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
 import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
 import { InvalidChunkBlockStartException } from '../../../src/Domain/Chunk/Exceptions/invalid-chunk-block-start.exception.ts'
 import { InvalidChunkTokenCountException } from '../../../src/Domain/Chunk/Exceptions/invalid-chunk-token-count.exception.ts'
 import type { DocumentIndex } from '../../../src/Domain/DocumentIndex/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 
-const claimedJobFixture: DocumentIndexingClaimDto = {
+const claimedJobFixture: DocumentIndexingClaimDTO = {
   id: 'job-1',
   knowledgeBaseId: 'kb-1',
   documentId: 'doc-1',
@@ -60,7 +60,7 @@ const createChunkReplacementPlanFixture = (): MarkdownChunkPlan => ({
   ],
 })
 
-const createReplacementJobLeaseFixture = (): DocumentIndexExecutionLeaseDto => ({
+const createReplacementJobLeaseFixture = (): DocumentIndexExecutionLeaseDTO => ({
   id: claimedJobFixture.id,
   knowledgeBaseId: claimedJobFixture.knowledgeBaseId,
   documentId: claimedJobFixture.documentId,
@@ -75,17 +75,17 @@ const createReplacementJobLeaseFixture = (): DocumentIndexExecutionLeaseDto => (
 interface ChunkReplacementScenario {
   lockDocument(): Promise<boolean>
   lockByKnowledgeBaseIdAndDocumentId(): Promise<{ requestedGeneration: number } | null>
-  lockJob(): Promise<DocumentIndexExecutionLeaseDto | null>
+  lockJob(): Promise<DocumentIndexExecutionLeaseDTO | null>
   lockDocumentIndex(): Promise<DocumentIndex | null>
   deleteChunksForIndex(): Promise<void>
   deleteRelationsForIndex(): Promise<void>
-  saveChunks(replacementChunksQO: SaveChunksQueryObject['chunks']): Promise<void>
+  insertChunks(replacementChunksQO: InsertChunksQueryObject['chunks']): Promise<void>
   saveRelations(plannedRelationsQO: readonly PlannedDocumentRelationWrite[]): Promise<void>
 }
 
 const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacementScenario> = {}) => {
   const events: string[] = []
-  const savedChunks: SaveChunksQueryObject['chunks'][number][] = []
+  const insertedChunks: InsertChunksQueryObject['chunks'][number][] = []
   const savedRelations: PlannedDocumentRelationWrite[] = []
   const chunkReplacementOperations: ChunkReplacementScenario = {
     lockDocument: async () => {
@@ -94,7 +94,7 @@ const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacem
       return true
     },
     lockByKnowledgeBaseIdAndDocumentId: async () => {
-      events.push('lock-membership')
+      events.push('lock-knowledgeBaseDocument')
 
       return { requestedGeneration: 1 }
     },
@@ -119,9 +119,9 @@ const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacem
     deleteRelationsForIndex: async () => {
       events.push('delete-relations')
     },
-    saveChunks: async (replacementChunksQO) => {
-      events.push('save-chunks')
-      savedChunks.push(...replacementChunksQO)
+    insertChunks: async (replacementChunksQO) => {
+      events.push('insert-chunks')
+      insertedChunks.push(...replacementChunksQO)
     },
     saveRelations: async (plannedRelationsQO) => {
       events.push('save-relations')
@@ -147,34 +147,35 @@ const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacem
 
   const useCase = new ReplaceIndexChunkUseCase(
     chunkReplacementTransaction,
-    new DocumentIndexChunkReplacementRequestedListener(
+    new AuthorizeDocumentIndexChunkReplacementUseCase(
       new ReserveDocumentForIndexingUseCase(
         createRepositoryStub<ConstructorParameters<typeof ReserveDocumentForIndexingUseCase>[0]>({
           lockByDocumentId: async () =>
             (await chunkReplacementOperations.lockDocument()) ? createDocumentFixture() : null,
         }),
       ),
-      new ReserveMembershipForIndexingUseCase(
-        createRepositoryStub<ConstructorParameters<typeof ReserveMembershipForIndexingUseCase>[0]>({
+      new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+        createRepositoryStub<ConstructorParameters<typeof ReserveKnowledgeBaseDocumentForIndexingUseCase>[0]>({
           lockByKnowledgeBaseIdAndDocumentId: async () => {
-            const lockedMembershipState = await chunkReplacementOperations.lockByKnowledgeBaseIdAndDocumentId()
+            const lockedKnowledgeBaseDocumentState =
+              await chunkReplacementOperations.lockByKnowledgeBaseIdAndDocumentId()
 
-            return lockedMembershipState === null
+            return lockedKnowledgeBaseDocumentState === null
               ? null
-              : createRestoredMembershipFixture({
-                  requestedGeneration: String(lockedMembershipState.requestedGeneration),
+              : createRestoredKnowledgeBaseDocumentFixture({
+                  requestedGeneration: String(lockedKnowledgeBaseDocumentState.requestedGeneration),
                 })
           },
         }),
       ),
-      createRepositoryStub<ConstructorParameters<typeof DocumentIndexChunkReplacementRequestedListener>[2]>({
+      createRepositoryStub<ConstructorParameters<typeof AuthorizeDocumentIndexChunkReplacementUseCase>[2]>({
         lockExecution: async () => {
           const lockedJobLease = await chunkReplacementOperations.lockJob()
 
           return lockedJobLease === null ? null : createJobRecordFixture(lockedJobLease)
         },
       }),
-      createRepositoryStub<ConstructorParameters<typeof DocumentIndexChunkReplacementRequestedListener>[3]>({
+      createRepositoryStub<ConstructorParameters<typeof AuthorizeDocumentIndexChunkReplacementUseCase>[3]>({
         lockByDocumentIndexId: async () => {
           const lockedDocumentIndex = await chunkReplacementOperations.lockDocumentIndex()
 
@@ -191,24 +192,24 @@ const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacem
     ),
     createRepositoryStub<ConstructorParameters<typeof ReplaceIndexChunkUseCase>[2]>({
       removeByDocumentIndexId: chunkReplacementOperations.deleteChunksForIndex,
-      saveChunks: (saveChunksQO) => chunkReplacementOperations.saveChunks(saveChunksQO.chunks),
+      insertChunks: (insertChunksQO) => chunkReplacementOperations.insertChunks(insertChunksQO.chunks),
     }),
     new ReplacePlannedDocumentRelationsUseCase(
       createRepositoryStub<ConstructorParameters<typeof ReplacePlannedDocumentRelationsUseCase>[0]>({
         removeBySourceIndexId: chunkReplacementOperations.deleteRelationsForIndex,
-        savePlanned: (savePlannedDocumentRelationsQO) =>
-          chunkReplacementOperations.saveRelations(savePlannedDocumentRelationsQO.relations),
+        insertPlanned: (insertPlannedDocumentRelationsQO) =>
+          chunkReplacementOperations.saveRelations(insertPlannedDocumentRelationsQO.relations),
       }),
     ),
   )
 
-  return { useCase, events, savedChunks, savedRelations }
+  return { useCase, events, insertedChunks, savedRelations }
 }
 
 test('replacement rejects missing, fenced or expired job facts before inspecting or mutating the index', async (t) => {
   const facts: {
     name: string
-    fact: DocumentIndexExecutionLeaseDto | null
+    fact: DocumentIndexExecutionLeaseDTO | null
   }[] = [
     { name: 'missing job', fact: null },
     { name: 'different job', fact: { ...createReplacementJobLeaseFixture(), id: 'job-2' } },
@@ -245,20 +246,20 @@ test('replacement rejects missing, fenced or expired job facts before inspecting
       assert.deepEqual(chunkReplacementScenario.events, [
         'transaction-open',
         'lock-document',
-        'lock-membership',
+        'lock-knowledgeBaseDocument',
         'transaction-error',
       ])
-      assert.deepEqual(chunkReplacementScenario.savedChunks, [])
+      assert.deepEqual(chunkReplacementScenario.insertedChunks, [])
       assert.deepEqual(chunkReplacementScenario.savedRelations, [])
     })
 
   await Promise.all(facts.map(assertRejectedFact))
 })
 
-test('replacement rejects missing document or membership and stale generation before destructive writes', async (t) => {
+test('replacement rejects missing document or knowledgeBaseDocument and stale generation before destructive writes', async (t) => {
   const scenarios: { name: string; overrides: Partial<ChunkReplacementScenario> }[] = [
     { name: 'missing document', overrides: { lockDocument: async () => false } },
-    { name: 'missing membership', overrides: { lockByKnowledgeBaseIdAndDocumentId: async () => null } },
+    { name: 'missing knowledgeBaseDocument', overrides: { lockByKnowledgeBaseIdAndDocumentId: async () => null } },
     {
       name: 'superseded generation',
       overrides: { lockByKnowledgeBaseIdAndDocumentId: async () => ({ requestedGeneration: 2 }) },
@@ -280,7 +281,9 @@ test('replacement rejects missing document or membership and stale generation be
         assert.ok(!chunkReplacementScenario.events.includes('lock-job'))
         assert.ok(!chunkReplacementScenario.events.includes('lock-index'))
         assert.ok(
-          !chunkReplacementScenario.events.some((event) => event.startsWith('delete-') || event.startsWith('save-')),
+          !chunkReplacementScenario.events.some(
+            (event) => event.startsWith('delete-') || event.startsWith('insert-') || event.startsWith('save-'),
+          ),
         )
       }),
     ),
@@ -307,11 +310,11 @@ test('READY replacement validates ownership but preserves all chunks and relatio
   assert.deepEqual(chunkReplacementScenario.events, [
     'transaction-open',
     'lock-document',
-    'lock-membership',
+    'lock-knowledgeBaseDocument',
     'lock-job',
     'transaction-success',
   ])
-  assert.deepEqual(chunkReplacementScenario.savedChunks, [])
+  assert.deepEqual(chunkReplacementScenario.insertedChunks, [])
   assert.deepEqual(chunkReplacementScenario.savedRelations, [])
 })
 
@@ -335,11 +338,11 @@ test('relation persistence failure propagates through the transaction after chun
   assert.deepEqual(chunkReplacementScenario.events, [
     'transaction-open',
     'lock-document',
-    'lock-membership',
+    'lock-knowledgeBaseDocument',
     'lock-job',
     'lock-index',
     'delete-chunks',
-    'save-chunks',
+    'insert-chunks',
     'delete-relations',
     'transaction-error',
   ])
@@ -370,12 +373,12 @@ test('replacement snapshots chunk, vector, relation and creation time before awa
     now: replacementCreatedAt,
   })
   assert.match(
-    chunkReplacementScenario.savedChunks[0]?.id ?? '',
+    chunkReplacementScenario.insertedChunks[0]?.id ?? '',
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   )
-  assert.deepEqual(chunkReplacementScenario.savedChunks, [
+  assert.deepEqual(chunkReplacementScenario.insertedChunks, [
     {
-      id: chunkReplacementScenario.savedChunks[0]?.id,
+      id: chunkReplacementScenario.insertedChunks[0]?.id,
       documentIndexId: claimedJobFixture.documentIndexId,
       ordinal: 0,
       content: 'Original body',
@@ -400,9 +403,9 @@ test('replacement snapshots chunk, vector, relation and creation time before awa
       ...relation,
     })),
   )
-  assert.notEqual(chunkReplacementScenario.savedChunks[0]!.headingPath, markdownChunkPlan.chunks[0]!.headingPath)
-  assert.notEqual(chunkReplacementScenario.savedChunks[0]!.embedding, chunkEmbeddings[0])
-  assert.notEqual(chunkReplacementScenario.savedChunks[0]!.createdAt, replacementCreatedAt)
+  assert.notEqual(chunkReplacementScenario.insertedChunks[0]!.headingPath, markdownChunkPlan.chunks[0]!.headingPath)
+  assert.notEqual(chunkReplacementScenario.insertedChunks[0]!.embedding, chunkEmbeddings[0])
+  assert.notEqual(chunkReplacementScenario.insertedChunks[0]!.createdAt, replacementCreatedAt)
   assert.notEqual(chunkReplacementScenario.savedRelations[0], markdownChunkPlan.relations[0])
 })
 
@@ -510,7 +513,7 @@ test('missing or sparse replacement inputs fail before locks or destructive writ
     scenarios.map(({ name, input, exception }) =>
       context.test(name, async () => {
         const scenario = createChunkReplacementScenario()
-        await assert.rejects(scenario.useCase.execute(input as ReplaceIndexChunkInputDto), exception)
+        await assert.rejects(scenario.useCase.execute(input as ReplaceIndexChunkInputDTO), exception)
         assert.deepEqual(scenario.events, [])
       }),
     ),

@@ -5,15 +5,15 @@ import { DocumentRelationModel } from './document-relation.model.ts'
 import { DocumentRevisionModel } from './document-revision.model.ts'
 import { FailedJobModel } from './failed-job.model.ts'
 import { JobModel } from './job.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from './knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from './knowledge-base-document.model.ts'
 
 @Entity('documents')
 @Unique('UQ_documents_source_identity', ['sourceType', 'sourceKey', 'sourcePath'])
 export class DocumentModel {
-  @OneToMany(() => KnowledgeBaseDocumentMembershipModel, (membership) => membership.document, {
+  @OneToMany(() => KnowledgeBaseDocumentModel, (knowledgeBaseDocument) => knowledgeBaseDocument.document, {
     createForeignKeyConstraints: false,
   })
-  declare memberships: Relation<KnowledgeBaseDocumentMembershipModel[]>
+  declare knowledgeBaseDocuments: Relation<KnowledgeBaseDocumentModel[]>
 
   @OneToMany(() => DocumentRevisionModel, (revision) => revision.document, { createForeignKeyConstraints: false })
   declare revisions: Relation<DocumentRevisionModel[]>

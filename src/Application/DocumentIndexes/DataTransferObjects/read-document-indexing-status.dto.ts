@@ -1,4 +1,4 @@
-export interface ReadDocumentIndexingStatusDto {
+export interface ReadDocumentIndexingStatusDTO {
   readonly projectId: string
   readonly jobId: string
 }

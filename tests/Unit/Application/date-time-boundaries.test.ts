@@ -10,7 +10,7 @@ import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/D
 import { IndexingDocumentRevisionAssembler } from '../../../src/Application/DocumentRevisions/Assemblers/indexing-document-revision.assembler.ts'
 import { IndexingDocumentAssembler } from '../../../src/Application/Documents/Assemblers/indexing-document.assembler.ts'
 import { RetentionDocumentAssembler } from '../../../src/Application/Documents/Assemblers/retention-document.assembler.ts'
-import { IndexingMembershipAssembler } from '../../../src/Application/Memberships/Assemblers/indexing-membership.assembler.ts'
+import { IndexingKnowledgeBaseDocumentAssembler } from '../../../src/Application/KnowledgeBaseDocuments/Assemblers/indexing-knowledge-base-document.assembler.ts'
 import type { DateTime } from '../../../src/Domain/Document/ValueObjects/date-time.ts'
 
 test('entity dates cross persistence and application record boundaries as independent native dates', () => {
@@ -18,15 +18,16 @@ test('entity dates cross persistence and application record boundaries as indepe
   const document = snapshot.documents[0]!
   const revision = snapshot.revisions[0]!
   const index = snapshot.indexes[0]!
-  const membership = snapshot.memberships[0]!
+  const knowledgeBaseDocument = snapshot.knowledgeBaseDocuments[0]!
   const chunk = snapshot.chunks[0]!
   const documentWrite = IndexingDocumentAssembler.toUpsertDocumentSourceQO(document)
   const revisionWrite = IndexingDocumentRevisionAssembler.toCreateDocumentRevisionQueryObject(revision)
   const indexWrite = new WriteRequestDocumentIndexesAssembler(index).toBuildingDocumentIndex(index)
   const lifecycleWrite = WriteLifecycleDocumentIndexAssembler.toSaveDocumentIndexLifecycleQO(index)
   const indexRecord = ReadDocumentIndexAssembler.toDocumentIndexRecordDTO(index)
-  const membershipWrite = IndexingMembershipAssembler.toUpdateMembershipQO(membership)
-  const chunkWrite = ReplacementChunkAssembler.toSaveChunksQueryObject([chunk]).chunks[0]!
+  const knowledgeBaseDocumentWrite =
+    IndexingKnowledgeBaseDocumentAssembler.toUpdateKnowledgeBaseDocumentQO(knowledgeBaseDocument)
+  const chunkWrite = ReplacementChunkAssembler.toInsertChunksQueryObject([chunk]).chunks[0]!
   const boundaryDates: readonly [Date, DateTime][] = [
     [documentWrite.createdAt, document.createdAt],
     [revisionWrite.capturedAt, revision.capturedAt],
@@ -36,7 +37,7 @@ test('entity dates cross persistence and application record boundaries as indepe
     [lifecycleWrite.readyAt!, index.readyAt!],
     [indexRecord.createdAt, index.createdAt],
     [indexRecord.readyAt!, index.readyAt!],
-    [membershipWrite.updatedAt, membership.updatedAt],
+    [knowledgeBaseDocumentWrite.updatedAt, knowledgeBaseDocument.updatedAt],
     [chunkWrite.createdAt, chunk.createdAt],
   ]
 

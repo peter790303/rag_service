@@ -12,23 +12,25 @@ import { CreateChunks1729000000006 } from './migrations/1729000000006-create-chu
 import { CreateDocumentRelations1729000000007 } from './migrations/1729000000007-create-document-relations.ts'
 import { CreateJobs1729000000008 } from './migrations/1729000000008-create-jobs.ts'
 import { CreateFailedJobs1729000000009 } from './migrations/1729000000009-create-failed-jobs.ts'
-import { AddJobLeaseExpiry1729000000010 } from './migrations/1729000000010-add-job-lease-expiry.ts'
+import { CreateDocumentIndexSuccessReceipts1729000000014 } from './migrations/1729000000014-create-document-index-success-receipts.ts'
 import { ChunkModel } from '../src/Infrastructure/Persistence/Models/chunk.model.ts'
+import { DocumentIndexSuccessReceiptModel } from '../src/Infrastructure/Persistence/Models/document-index-success-receipt.model.ts'
 import { DocumentIndexModel } from '../src/Infrastructure/Persistence/Models/document-index.model.ts'
 import { DocumentRelationModel } from '../src/Infrastructure/Persistence/Models/document-relation.model.ts'
 import { DocumentRevisionModel } from '../src/Infrastructure/Persistence/Models/document-revision.model.ts'
 import { DocumentModel } from '../src/Infrastructure/Persistence/Models/document.model.ts'
 import { FailedJobModel } from '../src/Infrastructure/Persistence/Models/failed-job.model.ts'
 import { JobModel } from '../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from '../src/Infrastructure/Persistence/Models/knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from '../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
 import { KnowledgeBaseModel } from '../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
 
 const entities = [
   KnowledgeBaseModel,
-  KnowledgeBaseDocumentMembershipModel,
+  KnowledgeBaseDocumentModel,
   DocumentModel,
   DocumentRevisionModel,
   DocumentIndexModel,
+  DocumentIndexSuccessReceiptModel,
   ChunkModel,
   DocumentRelationModel,
   JobModel,
@@ -54,7 +56,7 @@ export const createDataSource = (schema?: string): DataSource => {
       CreateDocumentRelations1729000000007,
       CreateJobs1729000000008,
       CreateFailedJobs1729000000009,
-      AddJobLeaseExpiry1729000000010,
+      CreateDocumentIndexSuccessReceipts1729000000014,
     ],
     synchronize: false,
   })

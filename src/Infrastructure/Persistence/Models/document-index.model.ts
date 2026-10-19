@@ -16,7 +16,7 @@ import { DocumentRevisionModel } from './document-revision.model.ts'
 import { DocumentModel } from './document.model.ts'
 import { FailedJobModel } from './failed-job.model.ts'
 import { JobModel } from './job.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from './knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from './knowledge-base-document.model.ts'
 import type { DocumentIndexStatus } from '../../../Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 
 @Entity('document_indexes')
@@ -37,10 +37,10 @@ export class DocumentIndexModel {
   @OneToMany(() => DocumentRelationModel, (relation) => relation.sourceIndex, { createForeignKeyConstraints: false })
   declare relations: Relation<DocumentRelationModel[]>
 
-  @OneToMany(() => KnowledgeBaseDocumentMembershipModel, (membership) => membership.activeDocumentIndex, {
+  @OneToMany(() => KnowledgeBaseDocumentModel, (knowledgeBaseDocument) => knowledgeBaseDocument.activeDocumentIndex, {
     createForeignKeyConstraints: false,
   })
-  declare activeMemberships: Relation<KnowledgeBaseDocumentMembershipModel[]>
+  declare activeKnowledgeBaseDocuments: Relation<KnowledgeBaseDocumentModel[]>
 
   @OneToMany(() => JobModel, (job) => job.documentIndex, { createForeignKeyConstraints: false })
   declare jobs: Relation<JobModel[]>

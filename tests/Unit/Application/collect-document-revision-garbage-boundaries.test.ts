@@ -4,7 +4,7 @@ import test from 'node:test'
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
 import type { InspectDocumentIndexRetentionUseCaseContract } from '../../../src/Application/DocumentIndexes/Contracts/inspect-document-index-retention.use-case.contract.ts'
 import type { DocumentRevisionRepository } from '../../../src/Application/DocumentRevisions/Contracts/document-revision.repository.ts'
-import type { CollectDocumentRevisionGarbageDto } from '../../../src/Application/DocumentRevisions/DataTransferObjects/document-revision-garbage.dto.ts'
+import type { CollectDocumentRevisionGarbageDTO } from '../../../src/Application/DocumentRevisions/DataTransferObjects/document-revision-garbage.dto.ts'
 import { InvalidDocumentRevisionGarbageInputException } from '../../../src/Application/DocumentRevisions/Exceptions/invalid-document-revision-garbage-input.exception.ts'
 import { CollectDocumentRevisionGarbageUseCase } from '../../../src/Application/DocumentRevisions/UseCases/collect-document-revision-garbage.use-case.ts'
 import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
@@ -44,7 +44,7 @@ test('revision collection rejects malformed batch inputs before acquiring locks 
         )
 
         await assert.rejects(
-          useCase.execute(input as CollectDocumentRevisionGarbageDto),
+          useCase.execute(input as CollectDocumentRevisionGarbageDTO),
           InvalidDocumentRevisionGarbageInputException,
         )
       }),

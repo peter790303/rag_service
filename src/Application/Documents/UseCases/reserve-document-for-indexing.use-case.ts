@@ -2,7 +2,7 @@ import type { Document } from '../../../Domain/Document/document.ts'
 import type { DocumentRepository } from '../Contracts/document.repository.ts'
 import type { ReserveDocumentForIndexingUseCaseContract } from '../Contracts/reserve-document-for-indexing.use-case.contract.ts'
 
-/** Holds the source row before indexing takes membership or job locks. */
+/** Holds the source row before indexing takes knowledgeBaseDocument or job locks. */
 export class ReserveDocumentForIndexingUseCase implements ReserveDocumentForIndexingUseCaseContract {
   constructor(private readonly documents: DocumentRepository) {}
 

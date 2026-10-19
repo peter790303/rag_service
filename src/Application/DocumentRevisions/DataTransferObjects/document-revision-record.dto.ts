@@ -1,4 +1,4 @@
-export type DocumentRevisionRecordDto = {
+export type DocumentRevisionRecordDTO = {
   id: string
   documentId: string
   contentSha256: string

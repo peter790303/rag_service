@@ -2,14 +2,15 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
-import type { SourceDocumentDto } from '../../../src/Application/Documents/DataTransferObjects/source-document.dto.ts'
+import type { SourceDocumentDTO } from '../../../src/Application/Documents/DataTransferObjects/source-document.dto.ts'
+import { IndexRequestDocumentUnavailableException } from '../../../src/Application/Documents/Exceptions/index-request-document-unavailable.exception.ts'
 import { InvalidDocumentSourceInputException } from '../../../src/Application/Documents/Exceptions/invalid-document-source-input.exception.ts'
 import { PrepareDocumentForIndexRequestUseCase } from '../../../src/Application/Documents/UseCases/prepare-document-for-index-request.use-case.ts'
 import { Document } from '../../../src/Domain/Document/document.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import { InvalidDocumentSourceException } from '../../../src/Domain/Document/Exceptions/invalid-document-source.exception.ts'
 
-const sourceDocument: SourceDocumentDto = {
+const sourceDocument: SourceDocumentDTO = {
   knowledgeBaseId: 'kb-1',
   projectId: 'project-1',
   projectName: 'Project',
@@ -26,21 +27,34 @@ test('source identity and title are validated before any document repository acc
   const repository = {
     upsertBySourceTypeAndSourceKeyAndSourcePath: access,
     upsertTitleBySourceTypeAndSourceKeyAndSourcePath: access,
+    findBySourceTypeAndSourceKeyAndSourcePath: access,
     lockByDocumentId: access,
   } as unknown as DocumentRepository
   const useCase = new PrepareDocumentForIndexRequestUseCase(repository)
 
   await Promise.all(
     ['sourceType', 'sourceKey', 'sourcePath'].map(async (field) => {
-      await assert.rejects(useCase.execute({ ...sourceDocument, [field]: undefined }), InvalidDocumentSourceException)
+      await assert.rejects(
+        useCase.execute({ ...sourceDocument, [field]: undefined } as unknown as SourceDocumentDTO),
+        (error: unknown) => error instanceof InvalidDocumentSourceInputException && error.field === field,
+      )
+    }),
+  )
+  await Promise.all(
+    ['sourceType', 'sourceKey', 'sourcePath', 'title'].map(async (field) => {
+      await assert.rejects(
+        useCase.execute({ ...sourceDocument, [field]: false } as unknown as SourceDocumentDTO),
+        (error: unknown) => error instanceof InvalidDocumentSourceInputException && error.field === field,
+      )
     }),
   )
   await assert.rejects(
-    useCase.execute({ ...sourceDocument, title: false } as unknown as SourceDocumentDto),
+    useCase.execute({ ...sourceDocument, sourceType: 'other' } as unknown as SourceDocumentDTO),
     InvalidDocumentSourceException,
   )
-  await assert.rejects(useCase.execute(undefined as unknown as SourceDocumentDto), InvalidDocumentSourceInputException)
-  await assert.rejects(useCase.execute(null as unknown as SourceDocumentDto), InvalidDocumentSourceInputException)
+  await assert.rejects(useCase.execute({ ...sourceDocument, sourceKey: '  ' }), InvalidDocumentSourceException)
+  await assert.rejects(useCase.execute(undefined as unknown as SourceDocumentDTO), InvalidDocumentSourceInputException)
+  await assert.rejects(useCase.execute(null as unknown as SourceDocumentDTO), InvalidDocumentSourceInputException)
   assert.equal(access.mock.callCount(), 0)
 })
 
@@ -54,16 +68,16 @@ test('omitted, null, empty and supplied titles select explicit persistence opera
     createdAt: new Date(0),
     unreferencedSince: null,
   })
-  const preserve = context.mock.fn<DocumentRepository['upsertBySourceTypeAndSourceKeyAndSourcePath']>(
-    async () => document,
-  )
+  const preserve = context.mock.fn<DocumentRepository['upsertBySourceTypeAndSourceKeyAndSourcePath']>(async () => {})
   const replace = context.mock.fn<DocumentRepository['upsertTitleBySourceTypeAndSourceKeyAndSourcePath']>(
-    async () => document,
+    async () => {},
   )
-  const lock = context.mock.fn(async () => document)
+  const find = context.mock.fn<DocumentRepository['findBySourceTypeAndSourceKeyAndSourcePath']>(async () => document)
+  const lock = context.mock.fn<DocumentRepository['lockByDocumentId']>(async () => document)
   const useCase = new PrepareDocumentForIndexRequestUseCase({
     upsertBySourceTypeAndSourceKeyAndSourcePath: preserve,
     upsertTitleBySourceTypeAndSourceKeyAndSourcePath: replace,
+    findBySourceTypeAndSourceKeyAndSourcePath: find,
     lockByDocumentId: lock,
   } as unknown as DocumentRepository)
   const expectedSource = {
@@ -98,5 +112,51 @@ test('omitted, null, empty and supplied titles select explicit persistence opera
     ],
   )
   assert.equal(preserve.mock.callCount(), 1)
+  assert.equal(find.mock.callCount(), 4)
+  assert.deepEqual(find.mock.calls[0]?.arguments, [
+    {
+      sourceType: sourceDocument.sourceType,
+      sourceKey: sourceDocument.sourceKey,
+      sourcePath: sourceDocument.sourcePath,
+    },
+  ])
+  assert.deepEqual(lock.mock.calls[0]?.arguments, [{ documentId: document.id }])
   assert.equal(lock.mock.callCount(), 4)
+})
+
+test('missing source after the write fails before locking a candidate document ID', async (context) => {
+  const events: string[] = []
+  const lock = context.mock.fn(async () => null)
+  const useCase = new PrepareDocumentForIndexRequestUseCase({
+    upsertBySourceTypeAndSourceKeyAndSourcePath: async () => {
+      events.push('write')
+    },
+    findBySourceTypeAndSourceKeyAndSourcePath: async () => {
+      events.push('read')
+
+      return null
+    },
+    lockByDocumentId: lock,
+  } as unknown as DocumentRepository)
+
+  await assert.rejects(useCase.execute(sourceDocument), IndexRequestDocumentUnavailableException)
+  assert.deepEqual(events, ['write', 'read'])
+  assert.equal(lock.mock.callCount(), 0)
+})
+
+test('a failed source write propagates without reading or locking a document', async (context) => {
+  const failure = new Error('source write failed')
+  const read = context.mock.fn(async () => null)
+  const lock = context.mock.fn(async () => null)
+  const useCase = new PrepareDocumentForIndexRequestUseCase({
+    upsertBySourceTypeAndSourceKeyAndSourcePath: async () => {
+      throw failure
+    },
+    findBySourceTypeAndSourceKeyAndSourcePath: read,
+    lockByDocumentId: lock,
+  } as unknown as DocumentRepository)
+
+  await assert.rejects(useCase.execute(sourceDocument), (error: unknown) => error === failure)
+  assert.equal(read.mock.callCount(), 0)
+  assert.equal(lock.mock.callCount(), 0)
 })

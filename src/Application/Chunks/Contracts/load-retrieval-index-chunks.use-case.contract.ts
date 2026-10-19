@@ -1,6 +1,6 @@
 import type { Chunk } from '../../../Domain/Chunk/chunk.ts'
-import type { LoadRetrievalIndexChunksDto } from '../DataTransferObjects/load-retrieval-index-chunks.dto.ts'
+import type { LoadRetrievalIndexChunksDTO } from '../DataTransferObjects/load-retrieval-index-chunks.dto.ts'
 
 export abstract class LoadRetrievalIndexChunksUseCaseContract {
-  abstract execute(loadRetrievalIndexChunksDTO: LoadRetrievalIndexChunksDto): Promise<Chunk[]>
+  abstract execute(loadRetrievalIndexChunksDTO: LoadRetrievalIndexChunksDTO): Promise<Chunk[]>
 }

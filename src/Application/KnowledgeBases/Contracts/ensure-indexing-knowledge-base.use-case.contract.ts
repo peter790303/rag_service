@@ -1,7 +1,5 @@
+import type { EnsureIndexingKnowledgeBaseDTO } from '../DataTransferObjects/ensure-indexing-knowledge-base.dto.ts'
+
 export abstract class EnsureIndexingKnowledgeBaseUseCaseContract {
-  abstract execute(ensureIndexingKnowledgeBaseDTO: {
-    knowledgeBaseId: string
-    projectId: string
-    projectName: string
-  }): Promise<void>
+  abstract execute(ensureIndexingKnowledgeBaseDTO: EnsureIndexingKnowledgeBaseDTO): Promise<void>
 }

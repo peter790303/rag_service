@@ -1,24 +1,24 @@
 import { ReadLeaseDocumentIndexesAssembler } from './read-lease-document-indexes.assembler.ts'
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
-import type { DocumentIndexExecutionFactsDto } from '../DataTransferObjects/document-index-execution-facts.dto.ts'
-import type { DocumentIndexExecutionRecordDto } from '../DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexExecutionVerificationDto } from '../DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexExecutionFactsDTO } from '../DataTransferObjects/document-index-execution-facts.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../DataTransferObjects/document-index-execution-verification.dto.ts'
 import type {
-  DocumentIndexingClaimCandidateDto,
-  DocumentIndexingClaimExecutionDto,
-  DocumentIndexingClaimMembershipDto,
-  DocumentIndexExecutionSiblingLeaseDto,
+  DocumentIndexingClaimCandidateDTO,
+  DocumentIndexingClaimExecutionDTO,
+  DocumentIndexingClaimKnowledgeBaseDocumentDTO,
+  DocumentIndexExecutionSiblingLeaseDTO,
 } from '../DataTransferObjects/document-indexing-claim-candidate.dto.ts'
-import type { DocumentIndexingClaimDto } from '../DataTransferObjects/document-indexing-claim.dto.ts'
-import type { DocumentIndexingLeaseClaimDto } from '../DataTransferObjects/document-indexing-lease-claim.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../DataTransferObjects/document-indexing-claim.dto.ts'
+import type { DocumentIndexingLeaseClaimDTO } from '../DataTransferObjects/document-indexing-lease-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../Enums/document-index-execution-stage.enum.ts'
 import type { DocumentIndexExecutionClaimFields } from '../QueryObjects/document-index-execution.query-object.ts'
 
 /** Maps queued-job candidates, their new leases, and the claimed worker result. */
 export class WriteClaimDocumentIndexesAssembler {
   static toDocumentIndexingClaimExecution(
-    jobRecord: DocumentIndexExecutionRecordDto,
-  ): DocumentIndexingClaimExecutionDto {
+    jobRecord: DocumentIndexExecutionRecordDTO,
+  ): DocumentIndexingClaimExecutionDTO {
     return {
       id: jobRecord.id,
       knowledgeBaseId: jobRecord.knowledgeBaseId,
@@ -30,21 +30,27 @@ export class WriteClaimDocumentIndexesAssembler {
   }
 
   static toDocumentIndexExecutionSiblingLease(
-    jobRecord: DocumentIndexExecutionFactsDto,
-  ): DocumentIndexExecutionSiblingLeaseDto {
+    jobRecord: DocumentIndexExecutionFactsDTO,
+  ): DocumentIndexExecutionSiblingLeaseDTO {
     const leaseExpiresAt = ReadLeaseDocumentIndexesAssembler.toLeaseExpiresAt(jobRecord)
 
     return { id: jobRecord.id, attempts: jobRecord.attempts, leaseExpiresAt }
   }
 
   static toDocumentIndexingClaimCandidate(
-    claimJob: DocumentIndexingClaimExecutionDto,
+    claimJob: DocumentIndexingClaimExecutionDTO,
     documentIndex: DocumentIndex | null,
     previousDocumentIndex: DocumentIndex | null,
-    claimMembership: DocumentIndexingClaimMembershipDto | null,
-    runningSiblingLeases: readonly DocumentIndexExecutionSiblingLeaseDto[],
-  ): DocumentIndexingClaimCandidateDto {
-    return { job: claimJob, documentIndex, previousDocumentIndex, membership: claimMembership, runningSiblingLeases }
+    claimKnowledgeBaseDocument: DocumentIndexingClaimKnowledgeBaseDocumentDTO | null,
+    runningSiblingLeases: readonly DocumentIndexExecutionSiblingLeaseDTO[],
+  ): DocumentIndexingClaimCandidateDTO {
+    return {
+      job: claimJob,
+      documentIndex,
+      previousDocumentIndex,
+      knowledgeBaseDocument: claimKnowledgeBaseDocument,
+      runningSiblingLeases,
+    }
   }
 
   static toDocumentIndexingLeaseClaim(
@@ -52,7 +58,7 @@ export class WriteClaimDocumentIndexesAssembler {
     leaseToken: string,
     leaseExpiresAt: Date,
     claimedAt: Date,
-  ): DocumentIndexingLeaseClaimDto {
+  ): DocumentIndexingLeaseClaimDTO {
     const executionVerification = this.toDocumentIndexExecutionClaimVerification(leaseToken, leaseExpiresAt, claimedAt)
 
     return { attempts, leaseToken, leaseExpiresAt, executionVerification }
@@ -61,7 +67,7 @@ export class WriteClaimDocumentIndexesAssembler {
   static toDocumentIndexExecutionClaimWrite(
     status: 'running',
     reservedAt: Date,
-    jobClaim: DocumentIndexingLeaseClaimDto,
+    jobClaim: DocumentIndexingLeaseClaimDTO,
   ): DocumentIndexExecutionClaimFields {
     return {
       status,
@@ -74,9 +80,9 @@ export class WriteClaimDocumentIndexesAssembler {
   }
 
   static toDocumentIndexingClaim(
-    claimJob: DocumentIndexingClaimExecutionDto,
-    jobClaim: DocumentIndexingLeaseClaimDto,
-  ): DocumentIndexingClaimDto {
+    claimJob: DocumentIndexingClaimExecutionDTO,
+    jobClaim: DocumentIndexingLeaseClaimDTO,
+  ): DocumentIndexingClaimDTO {
     const executionVerification = this.toDocumentIndexExecutionVerification(jobClaim.executionVerification)
 
     return {
@@ -96,7 +102,7 @@ export class WriteClaimDocumentIndexesAssembler {
     leaseToken: string,
     leaseExpiresAt: Date,
     claimedAt: Date,
-  ): DocumentIndexExecutionVerificationDto {
+  ): DocumentIndexExecutionVerificationDTO {
     return {
       stage: DocumentIndexExecutionStageEnum.CLAIMED,
       completedUnits: 0,
@@ -108,8 +114,8 @@ export class WriteClaimDocumentIndexesAssembler {
   }
 
   private static toDocumentIndexExecutionVerification(
-    executionVerification: DocumentIndexExecutionVerificationDto,
-  ): DocumentIndexExecutionVerificationDto {
+    executionVerification: DocumentIndexExecutionVerificationDTO,
+  ): DocumentIndexExecutionVerificationDTO {
     return {
       stage: executionVerification.stage,
       completedUnits: executionVerification.completedUnits,

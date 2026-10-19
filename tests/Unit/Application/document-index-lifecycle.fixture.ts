@@ -1,17 +1,20 @@
-import type { DocumentIndexExecutionRecordDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexRecordDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-record.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-record.dto.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import type { DocumentRecordDto } from '../../../src/Application/Documents/DataTransferObjects/document-record.dto.ts'
+import type { DocumentRecordDTO } from '../../../src/Application/Documents/DataTransferObjects/document-record.dto.ts'
 import { Document, type DocumentState } from '../../../src/Domain/Document/document.ts'
 import { DocumentIndex, type DocumentIndexState } from '../../../src/Domain/DocumentIndex/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { Membership, type MembershipState } from '../../../src/Domain/Membership/membership.ts'
+import {
+  KnowledgeBaseDocument,
+  type KnowledgeBaseDocumentState,
+} from '../../../src/Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
 
 const lifecycleFixtureCreatedAt = new Date('2020-01-01T00:00:00.000Z')
 
 export const createRepositoryStub = <T>(methods: Partial<T>): T => methods as T
 
-export const createDocumentRecordFixture = (overrides: Partial<DocumentRecordDto> = {}): DocumentRecordDto => ({
+export const createDocumentRecordFixture = (overrides: Partial<DocumentRecordDTO> = {}): DocumentRecordDTO => ({
   id: 'document',
   sourceType: 'repository',
   sourceKey: 'document.md',
@@ -22,7 +25,9 @@ export const createDocumentRecordFixture = (overrides: Partial<DocumentRecordDto
   ...overrides,
 })
 
-export const createMembershipRecordFixture = (overrides: Partial<MembershipState> = {}): MembershipState => ({
+export const createKnowledgeBaseDocumentRecordFixture = (
+  overrides: Partial<KnowledgeBaseDocumentState> = {},
+): KnowledgeBaseDocumentState => ({
   knowledgeBaseId: 'kb',
   documentId: 'document',
   activeDocumentIndexId: null,
@@ -36,12 +41,14 @@ export const createMembershipRecordFixture = (overrides: Partial<MembershipState
 export const createDocumentFixture = (documentOverrides: Partial<DocumentState> = {}): Document =>
   new Document({ ...createDocumentRecordFixture(), ...documentOverrides })
 
-export const createRestoredMembershipFixture = (membershipOverrides: Partial<MembershipState> = {}): Membership =>
-  new Membership(createMembershipRecordFixture(membershipOverrides))
+export const createRestoredKnowledgeBaseDocumentFixture = (
+  knowledgeBaseDocumentOverrides: Partial<KnowledgeBaseDocumentState> = {},
+): KnowledgeBaseDocument =>
+  new KnowledgeBaseDocument(createKnowledgeBaseDocumentRecordFixture(knowledgeBaseDocumentOverrides))
 
 export const createDocumentIndexRecordFixture = (
-  overrides: Partial<DocumentIndexRecordDto> = {},
-): DocumentIndexRecordDto => ({
+  overrides: Partial<DocumentIndexRecordDTO> = {},
+): DocumentIndexRecordDTO => ({
   id: 'index',
   documentId: 'document',
   revisionId: 'revision',
@@ -65,9 +72,9 @@ export const createRestoredDocumentIndexFixture = (
 ): DocumentIndex => new DocumentIndex({ ...createDocumentIndexRecordFixture(), ...documentIndexOverrides })
 
 export const createJobRecordFixture = (
-  overrides: Partial<DocumentIndexExecutionRecordDto> = {},
-): DocumentIndexExecutionRecordDto => {
-  const record: DocumentIndexExecutionRecordDto = {
+  overrides: Partial<DocumentIndexExecutionRecordDTO> = {},
+): DocumentIndexExecutionRecordDTO => {
+  const record: DocumentIndexExecutionRecordDTO = {
     id: 'job',
     knowledgeBaseId: 'kb',
     documentId: 'document',

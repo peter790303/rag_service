@@ -1,1 +1,1 @@
-export type LoadRetrievalDocumentRevisionsDto = { revisionIds: readonly string[] }
+export type LoadRetrievalDocumentRevisionsDTO = { revisionIds: readonly string[] }

@@ -2,26 +2,26 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { test } from 'node:test'
 
-import { PruningMembershipAssembler } from '../../../src/Application/Memberships/Assemblers/pruning-membership.assembler.ts'
+import { PruningKnowledgeBaseDocumentAssembler } from '../../../src/Application/KnowledgeBaseDocuments/Assemblers/pruning-knowledge-base-document.assembler.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
 import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
 import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
 import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
 import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
-import { KnowledgeBaseDocumentMembershipRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document-membership.repository.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 test(
-  'membership full writes preserve false and zero while a stale detach preserves later configuration writes',
+  'knowledgeBaseDocument full writes preserve false and zero while a stale detach preserves later configuration writes',
   { skip: !process.env.RAG_DATABASE_URL },
   async () => {
     const { dataSource, cleanup } = await createPersistenceTestDatabase()
     const transaction = new PersistenceTransaction(dataSource)
-    const repository = new KnowledgeBaseDocumentMembershipRepository(transaction)
+    const repository = new KnowledgeBaseDocumentRepository(transaction)
 
     try {
       const key = randomUUID()
@@ -56,7 +56,7 @@ test(
         unreferencedSince: null,
       })
       const source = { knowledgeBaseId: knowledgeBase.id, documentId: document.id }
-      await dataSource.getRepository(KnowledgeBaseDocumentMembershipModel).save({
+      await dataSource.getRepository(KnowledgeBaseDocumentModel).save({
         ...source,
         activeDocumentIndexId: index.id,
         requestedGeneration: '1',
@@ -74,12 +74,12 @@ test(
           updatedAt: new Date(),
         }),
       )
-      const resetMembership = await repository.findByKnowledgeBaseIdAndDocumentId(source)
-      assert.ok(resetMembership)
-      assert.equal(resetMembership.activeDocumentIndexId, null)
-      assert.equal(resetMembership.requestedGeneration, '0')
-      assert.equal(resetMembership.isEntry, false)
-      assert.equal(resetMembership.alwaysIncludeFullContent, false)
+      const resetKnowledgeBaseDocument = await repository.findByKnowledgeBaseIdAndDocumentId(source)
+      assert.ok(resetKnowledgeBaseDocument)
+      assert.equal(resetKnowledgeBaseDocument.activeDocumentIndexId, null)
+      assert.equal(resetKnowledgeBaseDocument.requestedGeneration, '0')
+      assert.equal(resetKnowledgeBaseDocument.isEntry, false)
+      assert.equal(resetKnowledgeBaseDocument.alwaysIncludeFullContent, false)
 
       await transaction.run(() =>
         repository.updateActiveDocumentIndexByKnowledgeBaseIdAndDocumentId({
@@ -91,7 +91,9 @@ test(
       const snapshot = await repository.findByKnowledgeBaseIdAndDocumentId(source)
       assert.ok(snapshot)
       const detachedAt = new Date()
-      const detachQO = PruningMembershipAssembler.toUpdateDetachedMembershipQO(snapshot.detachIndex(detachedAt))
+      const detachQO = PruningKnowledgeBaseDocumentAssembler.toUpdateDetachedKnowledgeBaseDocumentQO(
+        snapshot.detachIndex(detachedAt),
+      )
 
       // A separate write commits after the pruning snapshot was read.
       await transaction.run(() =>
@@ -137,32 +139,82 @@ test(
     const repeatedSource = { ...source, id: randomUUID(), createdAt: new Date('2026-10-16T00:00:00.000Z') }
 
     try {
-      const created = await transaction.run(() =>
-        repository.upsertTitleBySourceTypeAndSourceKeyAndSourcePath({ ...source, currentTitle: 'Original title' }),
-      )
+      const created = await transaction.run(async () => {
+        assert.equal(
+          await repository.upsertTitleBySourceTypeAndSourceKeyAndSourcePath({
+            ...source,
+            currentTitle: 'Original title',
+          }),
+          undefined,
+        )
+        const document = await repository.findBySourceTypeAndSourceKeyAndSourcePath({
+          sourceType: source.sourceType,
+          sourceKey: source.sourceKey,
+          sourcePath: source.sourcePath,
+        })
+        assert.ok(document)
+
+        return document
+      })
       assert.equal(created.id, source.id)
       assert.deepEqual(created.createdAt.nativeDate, source.createdAt)
-      const preserved = await transaction.run(() =>
-        repository.upsertBySourceTypeAndSourceKeyAndSourcePath(repeatedSource),
-      )
+      const preserved = await transaction.run(async () => {
+        assert.equal(await repository.upsertBySourceTypeAndSourceKeyAndSourcePath(repeatedSource), undefined)
+        const document = await repository.findBySourceTypeAndSourceKeyAndSourcePath({
+          sourceType: source.sourceType,
+          sourceKey: source.sourceKey,
+          sourcePath: source.sourcePath,
+        })
+        assert.ok(document)
+
+        return document
+      })
       assert.equal(preserved.id, created.id)
       assert.equal(preserved.createdAt.equals(created.createdAt), true)
       assert.equal(preserved.currentTitle, 'Original title')
 
-      const cleared = await transaction.run(() =>
-        repository.upsertTitleBySourceTypeAndSourceKeyAndSourcePath({ ...repeatedSource, currentTitle: null }),
-      )
+      const cleared = await transaction.run(async () => {
+        assert.equal(
+          await repository.upsertTitleBySourceTypeAndSourceKeyAndSourcePath({ ...repeatedSource, currentTitle: null }),
+          undefined,
+        )
+        const document = await repository.findBySourceTypeAndSourceKeyAndSourcePath({
+          sourceType: source.sourceType,
+          sourceKey: source.sourceKey,
+          sourcePath: source.sourcePath,
+        })
+        assert.ok(document)
+
+        return document
+      })
       assert.equal(cleared.id, created.id)
       assert.equal(cleared.createdAt.equals(created.createdAt), true)
       assert.equal(cleared.currentTitle, null)
 
-      const empty = await transaction.run(() =>
-        repository.upsertTitleBySourceTypeAndSourceKeyAndSourcePath({ ...repeatedSource, currentTitle: '' }),
-      )
+      const empty = await transaction.run(async () => {
+        assert.equal(
+          await repository.upsertTitleBySourceTypeAndSourceKeyAndSourcePath({ ...repeatedSource, currentTitle: '' }),
+          undefined,
+        )
+        const document = await repository.findBySourceTypeAndSourceKeyAndSourcePath({
+          sourceType: source.sourceType,
+          sourceKey: source.sourceKey,
+          sourcePath: source.sourcePath,
+        })
+        assert.ok(document)
+
+        return document
+      })
       assert.equal(empty.id, created.id)
       assert.equal(empty.createdAt.equals(created.createdAt), true)
       assert.equal(empty.currentTitle, '')
-      assert.equal((await repository.upsertBySourceTypeAndSourceKeyAndSourcePath(source)).currentTitle, '')
+      await repository.upsertBySourceTypeAndSourceKeyAndSourcePath(source)
+      const finalDocument = await repository.findBySourceTypeAndSourceKeyAndSourcePath({
+        sourceType: source.sourceType,
+        sourceKey: source.sourceKey,
+        sourcePath: source.sourcePath,
+      })
+      assert.equal(finalDocument?.currentTitle, '')
     } finally {
       await cleanup()
     }

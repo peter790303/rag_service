@@ -4,12 +4,12 @@ import test from 'node:test'
 import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
 import { InvalidChunkReplacementTimestampException } from '../../../src/Application/Chunks/Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
 import { ProcessDocumentIndexAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/process-document-index.assembler.ts'
-import type { DocumentIndexingDeliveryDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
 import { ChunkDocumentIndexRequiredException } from '../../../src/Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
 
 const emptyPlan: MarkdownChunkPlan = { chunks: [], relations: [] }
 const now = new Date('2026-10-16T00:00:00.000Z')
-const jobDelivery: DocumentIndexingDeliveryDto = {
+const jobDelivery: DocumentIndexingDeliveryDTO = {
   id: 'job',
   knowledgeBaseId: 'knowledge-base',
   documentId: 'document',
@@ -23,7 +23,7 @@ const jobDelivery: DocumentIndexingDeliveryDto = {
 test('replacement DTO conversion rejects missing or malformed index IDs even for an empty plan', () => {
   const invalidIndexIds = [undefined, null, 42, '', ' ']
   invalidIndexIds.forEach((documentIndexId) => {
-    const job = { ...jobDelivery, documentIndexId } as unknown as DocumentIndexingDeliveryDto
+    const job = { ...jobDelivery, documentIndexId } as unknown as DocumentIndexingDeliveryDTO
     assert.throws(
       () => ProcessDocumentIndexAssembler.toReplaceIndexChunkInputDTO(job, emptyPlan, [], now),
       ChunkDocumentIndexRequiredException,
@@ -34,7 +34,7 @@ test('replacement DTO conversion rejects missing or malformed index IDs even for
     assert.throws(
       () =>
         ProcessDocumentIndexAssembler.toReplaceIndexChunkInputDTO(
-          job as unknown as DocumentIndexingDeliveryDto,
+          job as unknown as DocumentIndexingDeliveryDTO,
           emptyPlan,
           [],
           now,

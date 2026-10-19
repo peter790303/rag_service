@@ -1,9 +1,23 @@
-import type { DocumentIndexFailureRecordDto } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-failure-record.dto.ts'
+import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js'
+
+import type { DocumentIndexFailureRecordDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-failure-record.dto.ts'
+import type { ArchiveDocumentIndexFailureQueryObject } from '../../../Application/DocumentIndexes/QueryObjects/document-index-failure.query-object.ts'
 import type { FailedJobModel } from '../Models/failed-job.model.ts'
 
 /** Copies only persisted technical-record fields; never exposes ORM models or mutable references. */
 export class FailedJobRecordAdapter {
-  static toRecord(model: Pick<FailedJobModel, keyof DocumentIndexFailureRecordDto>): DocumentIndexFailureRecordDto {
+  static toPersistence(failure: ArchiveDocumentIndexFailureQueryObject): QueryDeepPartialEntity<FailedJobModel> {
+    // JSON retry payload and reasons are validated opaque values.
+    return structuredClone(failure) as QueryDeepPartialEntity<FailedJobModel>
+  }
+
+  static toPersistenceRecords(
+    failures: readonly ArchiveDocumentIndexFailureQueryObject[],
+  ): QueryDeepPartialEntity<FailedJobModel>[] {
+    return failures.map(FailedJobRecordAdapter.toPersistence)
+  }
+
+  static toRecord(model: Pick<FailedJobModel, keyof DocumentIndexFailureRecordDTO>): DocumentIndexFailureRecordDTO {
     return {
       id: model.id,
       jobId: model.jobId,
@@ -23,11 +37,11 @@ export class FailedJobRecordAdapter {
     }
   }
 
-  static toNullableRecord(model: FailedJobModel | null): DocumentIndexFailureRecordDto | null {
+  static toNullableRecord(model: FailedJobModel | null): DocumentIndexFailureRecordDTO | null {
     return model === null ? null : this.toRecord(model)
   }
 
-  static toRecords(models: readonly FailedJobModel[]): DocumentIndexFailureRecordDto[] {
+  static toRecords(models: readonly FailedJobModel[]): DocumentIndexFailureRecordDTO[] {
     return models.map((model) => this.toRecord(model))
   }
 }

@@ -1,8 +1,8 @@
-import type { DocumentIndexExecutionVerificationDto } from './document-index-execution-verification.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from './document-index-execution-verification.dto.ts'
 import type { DocumentIndexStatus } from '../../../Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { DocumentIndexingTargetStateEnum } from '../Enums/document-indexing-target-state.enum.ts'
 
-export type DocumentIndexingStatusDto = {
+export type DocumentIndexingStatusDTO = {
   activeIndex: {
     id: string
     status: DocumentIndexStatus
@@ -17,6 +17,6 @@ export type DocumentIndexingStatusDto = {
     attempts: number | null
     errorCode: string | null
     errorMessage: string | null
-    executionVerification: DocumentIndexExecutionVerificationDto | null
+    executionVerification: DocumentIndexExecutionVerificationDTO | null
   } | null
 }

@@ -42,9 +42,10 @@ test('document index execution lifecycle distinguishes invalid attempts, timesta
 
 test('document index execution lifecycle distinguishes invalid lease configuration from invalid state', () => {
   const lifecycle = new DocumentIndexExecutionLifecycle(queuedState)
-  for (const duration of [0, -1, NaN, Infinity]) {
+  const testCases = [0, -1, NaN, Infinity]
+  testCases.forEach((duration) => {
     assert.throws(() => lifecycle.leaseExpiryFrom(now, duration), InvalidDocumentIndexExecutionLeaseDurationException)
-  }
+  })
   assert.throws(() => lifecycle.leaseExpiryFrom(new Date(NaN), 60), InvalidDocumentIndexExecutionTimestampException)
   assert.equal(lifecycle.leaseExpiryFrom(now, 60).getTime(), now.getTime() + 60_000)
 })

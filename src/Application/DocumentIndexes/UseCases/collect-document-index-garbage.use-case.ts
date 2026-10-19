@@ -1,104 +1,56 @@
+import { concatMap, filter, firstValueFrom, from, toArray } from 'rxjs'
+
+import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
 import type { CollectIndexChunkGarbageUseCaseContract } from '../../Chunks/Contracts/collect-index-chunk-garbage.use-case.contract.ts'
 import type { CollectDocumentRelationGarbageUseCaseContract } from '../../DocumentRelations/Contracts/collect-document-relation-garbage.use-case.contract.ts'
-import type {
-  DocumentGarbageCollectionScopeDto,
-  DocumentGarbageCollectionResultDto,
-} from '../../Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
-import type { InspectMembershipRetentionUseCaseContract } from '../../Memberships/Contracts/inspect-membership-retention.use-case.contract.ts'
+import type { DocumentGarbageCollectionScopeDTO } from '../../Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
+import type { InspectKnowledgeBaseDocumentRetentionUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/inspect-knowledge-base-document-retention.use-case.contract.ts'
 import { DocumentIndexGarbageAssembler } from '../Assemblers/document-index-garbage.assembler.ts'
 import { ReadDocumentIndexAssembler } from '../Assemblers/read-document-index.assembler.ts'
 import type { CollectDocumentIndexGarbageUseCaseContract } from '../Contracts/collect-document-index-garbage.use-case.contract.ts'
 import type { DocumentIndexExecutionQueue } from '../Contracts/document-index-execution.queue.ts'
 import type { DocumentIndexFailureArchive } from '../Contracts/document-index-failure.archive.ts'
 import type { DocumentIndexRepository } from '../Contracts/document-index.repository.ts'
-import type { CollectDocumentIndexGarbageDto } from '../DataTransferObjects/document-index-garbage.dto.ts'
-import type { DocumentIndexRecordDto } from '../DataTransferObjects/document-index-record.dto.ts'
-import type { ExpiredDocumentIndexFailureDto } from '../DataTransferObjects/expired-document-index-failure.dto.ts'
+import type { CollectDocumentIndexGarbageDTO } from '../DataTransferObjects/document-index-garbage.dto.ts'
 
 export class CollectDocumentIndexGarbageUseCase implements CollectDocumentIndexGarbageUseCaseContract {
   constructor(
     private readonly documentIndexRepository: DocumentIndexRepository,
     private readonly documentIndexExecutionQueue: DocumentIndexExecutionQueue,
     private readonly documentIndexFailureArchive: DocumentIndexFailureArchive,
-    private readonly membershipRetention: InspectMembershipRetentionUseCaseContract,
+    private readonly knowledgeBaseDocumentRetention: InspectKnowledgeBaseDocumentRetentionUseCaseContract,
     private readonly relationGarbage: CollectDocumentRelationGarbageUseCaseContract,
     private readonly chunkGarbage: CollectIndexChunkGarbageUseCaseContract,
   ) {}
 
-  async execute({ scope, plan }: CollectDocumentIndexGarbageDto): Promise<DocumentGarbageCollectionResultDto> {
-    const changedDocumentIds = new Set<string>()
-    const failedJobsDeleted = await plan.failedJobs.reduce(async (previous, candidate) => {
-      const count = await previous
+  async execute({ scope, candidates }: CollectDocumentIndexGarbageDTO): Promise<DocumentIndex[]> {
+    const orderedCandidates = [...candidates].sort((left, right) => left.id.localeCompare(right.id))
 
-      return count + (await this.collectExpiredFailedJob(scope, candidate, changedDocumentIds))
-    }, Promise.resolve(0))
-    const indexesDeleted = await plan.indexes.reduce(async (previous, candidate) => {
-      const count = await previous
+    const collectCandidate = (candidate: DocumentIndex) => this.collectUnreferencedIndex(scope, candidate)
+    const wasCollected = (index: DocumentIndex | null): index is DocumentIndex => index !== null
 
-      return count + (await this.collectUnreferencedIndex(scope, candidate, changedDocumentIds))
-    }, Promise.resolve(0))
-
-    return DocumentIndexGarbageAssembler.toDocumentGarbageCollectionResultDTO(
-      failedJobsDeleted + indexesDeleted,
-      changedDocumentIds,
-    )
-  }
-
-  private async collectExpiredFailedJob(
-    scope: DocumentGarbageCollectionScopeDto,
-    candidate: ExpiredDocumentIndexFailureDto,
-    changedDocumentIds: Set<string>,
-  ): Promise<number> {
-    if (!scope.lockedDocumentIds.includes(candidate.documentId)) return 0
-
-    const failedJob = await this.documentIndexFailureArchive.lockExpiredFailure(
-      DocumentIndexGarbageAssembler.toDocumentIndexFailureIdQueryObject(candidate.failedJobId),
-    )
-
-    if (!failedJob || failedJob.failedAt.getTime() > scope.retentionCutoff.getTime()) return 0
-
-    if (failedJob.failedJobId !== candidate.failedJobId || failedJob.documentId !== candidate.documentId) return 0
-
-    if (
-      await this.documentIndexExecutionQueue.countFailureRetries(
-        DocumentIndexGarbageAssembler.toDocumentIndexFailureIdQueryObject(failedJob.failedJobId),
-      )
-    )
-      return 0
-
-    await this.documentIndexFailureArchive.removeExpiredFailure(
-      DocumentIndexGarbageAssembler.toDocumentIndexFailureIdQueryObject(failedJob.failedJobId),
-    )
-    changedDocumentIds.add(failedJob.documentId)
-
-    return 1
+    return firstValueFrom(from(orderedCandidates).pipe(concatMap(collectCandidate), filter(wasCollected), toArray()))
   }
 
   private async collectUnreferencedIndex(
-    scope: DocumentGarbageCollectionScopeDto,
-    candidate: DocumentIndexRecordDto,
-    changedDocumentIds: Set<string>,
-  ): Promise<number> {
-    if (!scope.lockedDocumentIds.includes(candidate.documentId)) return 0
+    scope: DocumentGarbageCollectionScopeDTO,
+    candidate: DocumentIndex,
+  ): Promise<DocumentIndex | null> {
+    if (!scope.lockedDocumentIds.includes(candidate.documentId)) return null
 
-    const restoredDocumentIndexDTO = await this.documentIndexRepository.lockByDocumentIndexId(
+    const index = await this.documentIndexRepository.lockByDocumentIndexId(
       DocumentIndexGarbageAssembler.toDocumentIndexIdQueryObject(candidate.id),
     )
 
-    if (restoredDocumentIndexDTO === null) return 0
+    if (index === null) return null
 
-    if (
-      !restoredDocumentIndexDTO.unreferencedSince ||
-      restoredDocumentIndexDTO.unreferencedSince.epochMilliseconds > scope.retentionCutoff.getTime()
-    )
-      return 0
+    if (!index.unreferencedSince || index.unreferencedSince.epochMilliseconds > scope.retentionCutoff.getTime())
+      return null
 
-    const index = ReadDocumentIndexAssembler.toDocumentIndexRecordDTO(restoredDocumentIndexDTO)
+    if (index.id !== candidate.id || index.documentId !== candidate.documentId) return null
 
-    if (index.id !== candidate.id || index.documentId !== candidate.documentId) return 0
-
-    const membershipProtectsIndex = await this.membershipRetention.execute(
-      DocumentIndexGarbageAssembler.toInspectMembershipRetentionDTO(index.id),
+    const knowledgeBaseDocumentProtectsIndex = await this.knowledgeBaseDocumentRetention.execute(
+      DocumentIndexGarbageAssembler.toInspectKnowledgeBaseDocumentRetentionDTO(index.id),
     )
     const jobCount = await this.documentIndexExecutionQueue.countIndexExecutions(
       DocumentIndexGarbageAssembler.toDocumentIndexIdQueryObject(index.id),
@@ -107,23 +59,24 @@ export class CollectDocumentIndexGarbageUseCase implements CollectDocumentIndexG
       DocumentIndexGarbageAssembler.toDocumentIndexIdQueryObject(index.id),
     )
 
-    if (membershipProtectsIndex || jobCount > 0 || failedJobCount > 0) return 0
+    if (knowledgeBaseDocumentProtectsIndex || jobCount > 0 || failedJobCount > 0) return null
 
     const collectedRelations = await this.relationGarbage.execute(
       DocumentIndexGarbageAssembler.toCollectDocumentRelationGarbageDTO(index, scope),
     )
 
-    if (collectedRelations === null) return 0
+    if (collectedRelations === null) return null
 
-    await this.chunkGarbage.execute(DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(index, scope))
+    await this.chunkGarbage.execute(
+      DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(
+        ReadDocumentIndexAssembler.toDocumentIndexRecordDTO(index),
+        scope,
+      ),
+    )
     await this.documentIndexRepository.deleteByDocumentIndexId(
       DocumentIndexGarbageAssembler.toDocumentIndexIdQueryObject(index.id),
     )
-    changedDocumentIds.add(index.documentId)
-    collectedRelations
-      .flatMap((relation) => (relation.targetDocumentId === null ? [] : [relation.targetDocumentId]))
-      .forEach((documentId) => changedDocumentIds.add(documentId))
 
-    return 1
+    return index
   }
 }

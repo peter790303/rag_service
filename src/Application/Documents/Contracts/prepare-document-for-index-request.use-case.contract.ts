@@ -1,6 +1,6 @@
 import type { Document } from '../../../Domain/Document/document.ts'
-import type { SourceDocumentDto } from '../DataTransferObjects/source-document.dto.ts'
+import type { SourceDocumentDTO } from '../DataTransferObjects/source-document.dto.ts'
 
 export abstract class PrepareDocumentForIndexRequestUseCaseContract {
-  abstract execute(sourceDocument: SourceDocumentDto): Promise<Document>
+  abstract execute(sourceDocument: SourceDocumentDTO): Promise<Document>
 }

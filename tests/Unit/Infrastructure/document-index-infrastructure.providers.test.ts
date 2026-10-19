@@ -17,11 +17,11 @@ import { ProcessDocumentIndexListener } from '../../../src/Application/DocumentI
 import { ReadDocumentIndexingStatusListener } from '../../../src/Application/DocumentIndexes/Listeners/read-document-indexing-status.listener.ts'
 import { RetryDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
 import { DocumentGarbageCollectionRequestedListener } from '../../../src/Application/Documents/Listeners/document-garbage-collection-requested.listener.ts'
+import { PruneKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prune-knowledge-base-documents.use-case.ts'
 import { EmbeddingProvider } from '../../../src/Application/KnowledgeBases/Contracts/embedding-provider.ts'
 import { PersistenceTransaction as PersistenceTransactionContract } from '../../../src/Application/KnowledgeBases/Contracts/persistence-transaction.ts'
 import { ServiceAuthenticator } from '../../../src/Application/KnowledgeBases/Contracts/service-authenticator.ts'
 import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { PruneKnowledgeBaseMembershipsUseCase } from '../../../src/Application/Memberships/UseCases/prune-knowledge-base-memberships.use-case.ts'
 import { HmacProjectServiceAuthenticator } from '../../../src/Infrastructure/Auth/hmac-project-service.authenticator.ts'
 import { HttpChunkPlanningClient } from '../../../src/Infrastructure/External/ChunkPlanning/http-chunk-planning.client.ts'
 import { HttpEmbeddingClient } from '../../../src/Infrastructure/External/Embedding/http-embedding.client.ts'
@@ -33,7 +33,7 @@ import { KnowledgeServiceInfrastructureModule } from '../../../src/Infrastructur
 import { RETRIEVAL_READONLY_DATA_SOURCE } from '../../../src/Infrastructure/Providers/retrieval-readonly-data-source.options.ts'
 import { KnowledgeMaintenanceWorker } from '../../../src/Interfaces/Console/Workers/knowledge-maintenance-worker.ts'
 import { DocumentIndexesController } from '../../../src/Interfaces/Http/Controllers/document-indexes.controller.ts'
-import { KnowledgeBaseMembershipsController } from '../../../src/Interfaces/Http/Controllers/knowledge-base-memberships.controller.ts'
+import { KnowledgeBaseDocumentsController } from '../../../src/Interfaces/Http/Controllers/knowledge-base-documents.controller.ts'
 import { KnowledgeBaseRetrievalController } from '../../../src/Interfaces/Http/Controllers/knowledge-base-retrieval.controller.ts'
 import { ProjectServiceAuthGuard } from '../../../src/Interfaces/Http/Middleware/project-service-auth.guard.ts'
 import { createKnowledgeServiceConfigFixture } from '../../Support/knowledge-service-config.fixture.ts'
@@ -75,7 +75,7 @@ test('HTTP and worker modules resolve their real feature graph with one writable
         RetrieveKnowledgeBaseContentUseCase,
         ReadDocumentIndexingStatusListener,
         RetryDocumentIndexingListener,
-        PruneKnowledgeBaseMembershipsUseCase,
+        PruneKnowledgeBaseDocumentsUseCase,
         ServiceAuthenticator,
       ]
       const workerTokens = [
@@ -87,7 +87,7 @@ test('HTTP and worker modules resolve their real feature graph with one writable
       const interfaceTokens = [
         DocumentIndexesController,
         KnowledgeBaseRetrievalController,
-        KnowledgeBaseMembershipsController,
+        KnowledgeBaseDocumentsController,
         ProjectServiceAuthGuard,
       ]
       ;[...httpTokens, ...workerTokens, ...interfaceTokens].forEach((token) => assert.ok(application.get(token)))

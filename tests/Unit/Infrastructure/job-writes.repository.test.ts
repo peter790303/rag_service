@@ -3,12 +3,12 @@ import test from 'node:test'
 
 import { DataSource, EntityManager } from 'typeorm'
 
-import type { DocumentIndexExecutionVerificationDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-verification.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
 import type {
   DocumentIndexExecutionStatusFields,
-  SaveDocumentIndexExecutionQueryObject,
+  UpdateDocumentIndexExecutionQueryObject,
 } from '../../../src/Application/DocumentIndexes/QueryObjects/document-index-execution.query-object.ts'
 import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
 import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
@@ -16,7 +16,7 @@ import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositor
 
 const createRepositoryManagerStub = (): EntityManager => new EntityManager(new DataSource({ type: 'postgres' }))
 
-const verification: DocumentIndexExecutionVerificationDto = {
+const verification: DocumentIndexExecutionVerificationDTO = {
   stage: DocumentIndexExecutionStageEnum.CLAIMED,
   completedUnits: 0,
   totalUnits: null,
@@ -154,11 +154,15 @@ test('retry status CAS clears lease values exactly as supplied by the caller', a
 test('saving a job persists the caller lease value without changing its query object', async (context) => {
   const manager = createRepositoryManagerStub()
   const jobModelRepository = manager.getRepository(JobModel)
-  const save = context.mock.method(jobModelRepository, 'save', async (job: JobModel) => job)
+  const update = context.mock.method(jobModelRepository, 'update', async () => ({
+    affected: 1,
+    generatedMaps: [],
+    raw: [],
+  }))
   const jobRepository = new JobRepository(new PersistenceTransaction({ manager } as DataSource))
   const now = new Date('2026-10-14T00:00:00.000Z')
   const leaseExpiresAt = new Date(verification.leaseExpiresAt!)
-  const saveJobQO: SaveDocumentIndexExecutionQueryObject = {
+  const saveJobQO: UpdateDocumentIndexExecutionQueryObject = {
     id: 'job-1',
     createdAt: now,
     updatedAt: now,
@@ -179,18 +183,15 @@ test('saving a job persists the caller lease value without changing its query ob
     executionVerification: persistedVerification,
   }
 
-  const savedRecord = await jobRepository.save(saveJobQO)
-  assert.equal(Object.getPrototypeOf(savedRecord), Object.prototype)
-  assert.notEqual(savedRecord.executionVerification, saveJobQO.executionVerification)
-  assert.notEqual(savedRecord.availableAt, saveJobQO.availableAt)
-  assert.notEqual(savedRecord.leaseExpiresAt, leaseExpiresAt)
+  const savedRecord = await jobRepository.update(saveJobQO)
+  assert.equal(savedRecord, undefined)
   assert.equal(saveJobQO.leaseExpiresAt, leaseExpiresAt)
-  assert.deepEqual(save.mock.calls[0]?.arguments[0]?.leaseExpiresAt, leaseExpiresAt)
-  assert.notEqual(save.mock.calls[0]?.arguments[0]?.leaseExpiresAt, leaseExpiresAt)
-  assert.notEqual(save.mock.calls[0]?.arguments[0]?.executionVerification, saveJobQO.executionVerification)
-  assert.notEqual(save.mock.calls[0]?.arguments[0], saveJobQO)
+  assert.deepEqual(update.mock.calls[0]?.arguments[1]?.leaseExpiresAt, leaseExpiresAt)
+  assert.notEqual(update.mock.calls[0]?.arguments[1]?.leaseExpiresAt, leaseExpiresAt)
+  assert.notEqual(update.mock.calls[0]?.arguments[1]?.executionVerification, saveJobQO.executionVerification)
+  assert.notEqual(update.mock.calls[0]?.arguments[1], saveJobQO)
 
-  const saveQueuedJobQO: SaveDocumentIndexExecutionQueryObject = {
+  const saveQueuedJobQO: UpdateDocumentIndexExecutionQueryObject = {
     ...saveJobQO,
     status: DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED,
     reservedAt: null,
@@ -198,20 +199,27 @@ test('saving a job persists the caller lease value without changing its query ob
     executionVerification: null,
     leaseExpiresAt: null,
   }
-  await jobRepository.save(saveQueuedJobQO)
-  assert.equal(save.mock.calls[1]?.arguments[0]?.leaseExpiresAt, null)
+  await jobRepository.update(saveQueuedJobQO)
+  assert.equal(update.mock.calls[1]?.arguments[1]?.leaseExpiresAt, null)
   assert.deepEqual(
-    save.mock.calls.map((call) => call.arguments),
-    [[saveJobQO], [saveQueuedJobQO]],
+    update.mock.calls.map((call) => call.arguments),
+    [
+      [{ id: saveJobQO.id }, saveJobQO],
+      [{ id: saveQueuedJobQO.id }, saveQueuedJobQO],
+    ],
   )
 })
 
 test('saving a job does not derive lease expiry from malformed JSON', async (context) => {
   const manager = createRepositoryManagerStub()
   const jobModelRepository = manager.getRepository(JobModel)
-  const save = context.mock.method(jobModelRepository, 'save', async (job: JobModel) => job)
+  const update = context.mock.method(jobModelRepository, 'update', async () => ({
+    affected: 1,
+    generatedMaps: [],
+    raw: [],
+  }))
   const now = new Date('2026-10-14T00:00:00.000Z')
-  const saveJobQO: SaveDocumentIndexExecutionQueryObject = {
+  const saveJobQO: UpdateDocumentIndexExecutionQueryObject = {
     id: 'job-1',
     createdAt: now,
     updatedAt: now,
@@ -232,22 +240,22 @@ test('saving a job does not derive lease expiry from malformed JSON', async (con
     executionVerification: { lease_expires_at: 'invalid' },
   }
 
-  await new JobRepository(new PersistenceTransaction({ manager } as DataSource)).save(saveJobQO)
-  assert.equal(save.mock.calls[0]?.arguments[0]?.leaseExpiresAt, null)
+  await new JobRepository(new PersistenceTransaction({ manager } as DataSource)).update(saveJobQO)
+  assert.equal(update.mock.calls[0]?.arguments[1]?.leaseExpiresAt, null)
   assert.deepEqual(saveJobQO.executionVerification, { lease_expires_at: 'invalid' })
 })
 
 test('new queued and retry jobs explicitly persist a null normalized expiry', async (context) => {
   const manager = createRepositoryManagerStub()
   const jobModelRepository = manager.getRepository(JobModel)
-  const save = context.mock.method(jobModelRepository, 'save', async (job: JobModel) => ({
-    ...job,
-    id: 'generated-job',
-    createdAt: new Date('2026-10-14T00:00:00.000Z'),
-    updatedAt: new Date('2026-10-14T00:00:00.000Z'),
+  const insert = context.mock.method(jobModelRepository, 'insert', async () => ({
+    identifiers: [],
+    generatedMaps: [],
+    raw: [],
   }))
   const jobRepository = new JobRepository(new PersistenceTransaction({ manager } as DataSource))
   const input = {
+    id: 'new-job',
     knowledgeBaseId: 'base-1',
     documentId: 'document-1',
     documentIndexId: 'index-1',
@@ -268,7 +276,7 @@ test('new queued and retry jobs explicitly persist a null normalized expiry', as
   await jobRepository.enqueue(input)
   await jobRepository.enqueueRetry(input)
   assert.deepEqual(
-    save.mock.calls.map((call) => call.arguments),
+    insert.mock.calls.map((call) => call.arguments),
     [[{ ...input, leaseExpiresAt: null }], [{ ...input, leaseExpiresAt: null }]],
   )
 })

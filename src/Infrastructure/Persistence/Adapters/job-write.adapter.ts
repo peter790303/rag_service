@@ -1,12 +1,27 @@
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.d.ts'
 
 import { JobExecutionVerificationAdapter } from './job-execution-verification.adapter.ts'
-import type { DocumentIndexExecutionVerificationDto } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-verification.dto.ts'
+import type {
+  EnqueueDocumentIndexExecutionQueryObject,
+  EnqueueDocumentIndexingRetryQueryObject,
+  UpdateDocumentIndexExecutionQueryObject,
+} from '../../../Application/DocumentIndexes/QueryObjects/document-index-execution.query-object.ts'
 import type { DocumentIndexExecutionStatusFields } from '../../../Application/DocumentIndexes/QueryObjects/document-index-execution.query-object.ts'
 import type { JobModel } from '../Models/job.model.ts'
 
 /** Converts an explicit status write to the job Model's stored column values. */
 export class JobWriteAdapter {
+  static toJobPersistence(
+    execution:
+      | EnqueueDocumentIndexExecutionQueryObject
+      | EnqueueDocumentIndexingRetryQueryObject
+      | UpdateDocumentIndexExecutionQueryObject,
+  ): QueryDeepPartialEntity<JobModel> {
+    // JSON evidence is a validated opaque value, replaced as a whole by TypeORM.
+    return structuredClone(execution) as QueryDeepPartialEntity<JobModel>
+  }
+
   static toJobStatusPersistence(jobStatusWrite: DocumentIndexExecutionStatusFields): QueryDeepPartialEntity<JobModel> {
     const jobStatusPersistenceAttributes = {
       ...jobStatusWrite,
@@ -23,7 +38,7 @@ export class JobWriteAdapter {
   static toJobHeartbeatPersistence(
     reservedAt: Date,
     leaseExpiresAt: Date,
-    jobExecutionVerification: DocumentIndexExecutionVerificationDto,
+    jobExecutionVerification: DocumentIndexExecutionVerificationDTO,
   ): QueryDeepPartialEntity<JobModel> {
     const storedExecutionVerification =
       JobExecutionVerificationAdapter.toJobExecutionVerificationPersistence(jobExecutionVerification)

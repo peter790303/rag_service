@@ -7,7 +7,7 @@ import type {
   DocumentRelationSourceIndexQueryObject,
   DocumentRelationSourceIndexesQueryObject,
   DocumentRelationTargetDocumentQueryObject,
-  SavePlannedDocumentRelationsQueryObject,
+  InsertPlannedDocumentRelationsQueryObject,
 } from '../../../Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
 import type { DocumentRelation } from '../../../Domain/DocumentRelation/document-relation.ts'
 import { DocumentRelationFactory } from '../Factories/document-relation.factory.ts'
@@ -25,10 +25,10 @@ export class DocumentRelationRepository extends DocumentRelationRepositoryContra
     return this.persistenceTransaction.manager.getRepository(DocumentRelationModel)
   }
 
-  async savePlanned(savePlannedDocumentRelationsQO: SavePlannedDocumentRelationsQueryObject): Promise<void> {
-    if (!savePlannedDocumentRelationsQO.relations.length) return
+  async insertPlanned(insertPlannedDocumentRelationsQO: InsertPlannedDocumentRelationsQueryObject): Promise<void> {
+    if (!insertPlannedDocumentRelationsQO.relations.length) return
 
-    await this.documentRelationModelRepository.save([...savePlannedDocumentRelationsQO.relations])
+    await this.documentRelationModelRepository.insert([...insertPlannedDocumentRelationsQO.relations])
   }
 
   async findBySourceIndexId(

@@ -4,11 +4,11 @@ import test from 'node:test'
 import { createDocumentIndexRecordFixture } from './document-index-lifecycle.fixture.ts'
 import { InvalidIndexChunkGarbageInputException } from '../../../src/Application/Chunks/Exceptions/invalid-index-chunk-garbage-input.exception.ts'
 import { DocumentIndexGarbageAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/document-index-garbage.assembler.ts'
-import type { DocumentIndexRecordDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-record.dto.ts'
-import type { DocumentGarbageCollectionScopeDto } from '../../../src/Application/Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
+import type { DocumentIndexRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-record.dto.ts'
+import type { DocumentGarbageCollectionScopeDTO } from '../../../src/Application/Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
 import { ChunkDocumentIndexRequiredException } from '../../../src/Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
 
-const documentGarbageCollectionScopeDTO: DocumentGarbageCollectionScopeDto = {
+const documentGarbageCollectionScopeDTO: DocumentGarbageCollectionScopeDTO = {
   retentionCutoff: new Date('2026-02-01T00:00:00.000Z'),
   lockedDocumentIds: ['document'],
 }
@@ -20,7 +20,7 @@ test('chunk garbage DTO conversion rejects invalid required index IDs at the cre
     assert.throws(
       () =>
         DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(
-          { ...createDocumentIndexRecordFixture(), id } as DocumentIndexRecordDto,
+          { ...createDocumentIndexRecordFixture(), id } as DocumentIndexRecordDTO,
           documentGarbageCollectionScopeDTO,
         ),
       ChunkDocumentIndexRequiredException,
@@ -30,7 +30,7 @@ test('chunk garbage DTO conversion rejects invalid required index IDs at the cre
   assert.throws(
     () =>
       DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(
-        undefined as unknown as DocumentIndexRecordDto,
+        undefined as unknown as DocumentIndexRecordDTO,
         documentGarbageCollectionScopeDTO,
       ),
     ChunkDocumentIndexRequiredException,
@@ -80,7 +80,7 @@ test('chunk garbage DTO conversion rejects malformed scope and invalid dates', (
     () =>
       DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(
         createDocumentIndexRecordFixture(),
-        undefined as unknown as DocumentGarbageCollectionScopeDto,
+        undefined as unknown as DocumentGarbageCollectionScopeDTO,
       ),
     InvalidIndexChunkGarbageInputException,
   )

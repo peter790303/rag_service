@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { ReadDocumentIndexAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/read-document-index.assembler.ts'
-import { DocumentIndexingStatusDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-status.dto.ts'
+import { DocumentIndexingStatusDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-status.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
 import { DocumentIndexingTargetStateEnum } from '../../../src/Application/DocumentIndexes/Enums/document-indexing-target-state.enum.ts'
 import { RetrievalKnowledgeBaseContentAssembler } from '../../../src/Application/KnowledgeBases/Assemblers/retrieval-knowledge-base-content.assembler.ts'
@@ -15,9 +15,9 @@ import { DocumentRelationTypeEnum } from '../../../src/Domain/DocumentRelation/E
 import { DocumentIndexRequestResource } from '../../../src/Interfaces/Http/Resources/document-index-request.resource.ts'
 import { DocumentIndexingStatusResource } from '../../../src/Interfaces/Http/Resources/document-indexing-status.resource.ts'
 import { HybridKnowledgeRetrievalResource } from '../../../src/Interfaces/Http/Resources/hybrid-knowledge-retrieval.resource.ts'
-import { PruneKnowledgeBaseMembershipsResource } from '../../../src/Interfaces/Http/Resources/prune-knowledge-base-memberships.resource.ts'
+import { PruneKnowledgeBaseDocumentsResource } from '../../../src/Interfaces/Http/Resources/prune-knowledge-base-documents.resource.ts'
 import { RetryDocumentIndexingResource } from '../../../src/Interfaces/Http/Resources/retry-document-indexing.resource.ts'
-import { createRestoredMembershipFixture } from '../Application/document-index-lifecycle.fixture.ts'
+import { createRestoredKnowledgeBaseDocumentFixture } from '../Application/document-index-lifecycle.fixture.ts'
 import { createRetrievalKnowledgeBaseContentInputFixture } from '../Application/retrieval-knowledge-base-content.fixture.ts'
 import { createRetrievalChunkFixture } from '../Application/retrieve-knowledge-base-content.use-case.fixtures.ts'
 
@@ -47,7 +47,7 @@ test('job status resource preserves declared fields and omits undeclared data', 
     activeIndex: null,
     requestedTarget,
     internalStatusData: 'hidden',
-  } satisfies DocumentIndexingStatusDto & { internalStatusData: string }
+  } satisfies DocumentIndexingStatusDTO & { internalStatusData: string }
 
   assert.deepEqual(DocumentIndexingStatusResource.toDocumentIndexingStatusResource(jobStatusDTO), {
     activeIndex: null,
@@ -73,7 +73,7 @@ test('job status resource preserves declared fields and omits undeclared data', 
 })
 
 test('job status resource preserves nulls and omits undefined optional fields', () => {
-  const jobStatusDTO: DocumentIndexingStatusDto = {
+  const jobStatusDTO: DocumentIndexingStatusDTO = {
     activeIndex: null,
     requestedTarget: {
       indexId: 'index-2',
@@ -126,7 +126,7 @@ test('job status resource preserves nulls and omits undefined optional fields', 
 })
 
 test('job status resource preserves a null execution verification', () => {
-  const jobStatusDTO: DocumentIndexingStatusDto = {
+  const jobStatusDTO: DocumentIndexingStatusDTO = {
     activeIndex: null,
     requestedTarget: {
       indexId: 'index-3',
@@ -148,7 +148,7 @@ test('job status resource preserves a null execution verification', () => {
 })
 
 test('job status resource serializes an active index date and a null requested target', () => {
-  const jobStatusDTO: DocumentIndexingStatusDto = {
+  const jobStatusDTO: DocumentIndexingStatusDTO = {
     activeIndex: {
       id: 'index-1',
       status: DocumentIndexStatusEnum.READY,
@@ -350,11 +350,11 @@ test('index, retry, and prune resources preserve status results and omit undecla
     retryOfFailedJobId: 'failed-1',
   })
   const pruneResult = [
-    createRestoredMembershipFixture({ documentId: 'document-1' }),
-    createRestoredMembershipFixture({ documentId: 'document-2' }),
+    createRestoredKnowledgeBaseDocumentFixture({ documentId: 'document-1' }),
+    createRestoredKnowledgeBaseDocumentFixture({ documentId: 'document-2' }),
   ]
 
-  assert.deepEqual(PruneKnowledgeBaseMembershipsResource.toPruneKnowledgeBaseMembershipsResource(pruneResult), {
+  assert.deepEqual(PruneKnowledgeBaseDocumentsResource.toPruneKnowledgeBaseDocumentsResource(pruneResult), {
     pruned: 2,
   })
 })

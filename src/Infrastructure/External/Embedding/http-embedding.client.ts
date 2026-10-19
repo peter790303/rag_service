@@ -6,15 +6,13 @@ import { KNOWLEDGE_SERVICE_CONFIG, type KnowledgeServiceConfig } from '../../../
 import { EmbeddingProvider } from '../../../Application/KnowledgeBases/Contracts/embedding-provider.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
 
-const EXTERNAL_REQUEST_TIMEOUT_MS = 30_000
-
 @Injectable()
 export class HttpEmbeddingClient extends EmbeddingProvider {
   constructor(
     @Inject(KNOWLEDGE_SERVICE_CONFIG)
     private readonly embeddingConfig: Pick<
       KnowledgeServiceConfig,
-      'embeddingModel' | 'embeddingDimensions' | 'embeddingApiUrl' | 'embeddingApiKey'
+      'embeddingModel' | 'embeddingDimensions' | 'embeddingApiUrl' | 'embeddingApiKey' | 'externalRequestTimeoutMs'
     >,
   ) {
     super()
@@ -24,17 +22,17 @@ export class HttpEmbeddingClient extends EmbeddingProvider {
     return this.embeddingConfig.embeddingModel
   }
 
-  async embed(texts: string[]): Promise<number[][]> {
+  async embed(texts: string[], signal?: AbortSignal): Promise<number[][]> {
     if (!texts.length) return []
 
     const requestBody = createEmbeddingRequestBody(this.modelId, texts)
-    const response = await this.postEmbeddingRequest(requestBody)
+    const response = await this.postEmbeddingRequest(requestBody, signal)
     const responseBody = await this.readResponseBody(response)
 
     return mapEmbeddingResponse(responseBody, texts.length, this.embeddingConfig.embeddingDimensions)
   }
 
-  private async postEmbeddingRequest(body: string): Promise<Response> {
+  private async postEmbeddingRequest(body: string, signal?: AbortSignal): Promise<Response> {
     let response: Response
     try {
       response = await fetch(this.embeddingConfig.embeddingApiUrl, {
@@ -46,7 +44,9 @@ export class HttpEmbeddingClient extends EmbeddingProvider {
             : {}),
         },
         body,
-        signal: AbortSignal.timeout(EXTERNAL_REQUEST_TIMEOUT_MS),
+        signal: signal
+          ? AbortSignal.any([AbortSignal.timeout(this.embeddingConfig.externalRequestTimeoutMs), signal])
+          : AbortSignal.timeout(this.embeddingConfig.externalRequestTimeoutMs),
       })
     } catch (cause) {
       throw new KnowledgeEmbeddingUnavailableException({ cause })

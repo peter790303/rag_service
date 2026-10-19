@@ -4,6 +4,7 @@ import { CollectIndexChunkGarbageUseCase } from '../../../src/Application/Chunks
 import type { DocumentIndexExecutionQueue } from '../../../src/Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
 import type { DocumentIndexFailureArchive } from '../../../src/Application/DocumentIndexes/Contracts/document-index-failure.archive.ts'
 import type { DocumentIndexRepository } from '../../../src/Application/DocumentIndexes/Contracts/document-index.repository.ts'
+import { CancelKnowledgeBaseDocumentDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/cancel-knowledge-base-document-document-indexing.listener.ts'
 import { CollectDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/collect-document-index-garbage.use-case.ts'
 import { InspectDocumentIndexRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/inspect-document-index-retention.use-case.ts'
 import { PlanDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/plan-document-index-garbage.use-case.ts'
@@ -21,18 +22,17 @@ import { DocumentGarbageCollectionRequestedListener } from '../../../src/Applica
 import { InspectDocumentRetentionUseCase } from '../../../src/Application/Documents/UseCases/inspect-document-retention.use-case.ts'
 import { LockDocumentRetentionParentsUseCase } from '../../../src/Application/Documents/UseCases/lock-document-retention-parents.use-case.ts'
 import { StartDocumentPruningRetentionUseCase } from '../../../src/Application/Documents/UseCases/start-document-pruning-retention.use-case.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
+import { InspectKnowledgeBaseDocumentRetentionUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/inspect-knowledge-base-document-retention.use-case.ts'
+import { PruneKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prune-knowledge-base-documents.use-case.ts'
 import type { KnowledgeBaseRepository } from '../../../src/Application/KnowledgeBases/Contracts/knowledge-base.repository.ts'
 import type { PersistenceTransaction } from '../../../src/Application/KnowledgeBases/Contracts/persistence-transaction.ts'
 import { ValidateKnowledgeBasePruningUseCase } from '../../../src/Application/KnowledgeBases/UseCases/validate-knowledge-base-pruning.use-case.ts'
-import type { MembershipRepository } from '../../../src/Application/Memberships/Contracts/membership.repository.ts'
-import { CancelMembershipIndexingListener } from '../../../src/Application/Memberships/Listeners/cancel-membership-indexing.listener.ts'
-import { InspectMembershipRetentionUseCase } from '../../../src/Application/Memberships/UseCases/inspect-membership-retention.use-case.ts'
-import { PruneKnowledgeBaseMembershipsUseCase } from '../../../src/Application/Memberships/UseCases/prune-knowledge-base-memberships.use-case.ts'
 
 export type GarbageCollectionTestDependencies = [
   PersistenceTransaction,
   DocumentRepository,
-  MembershipRepository,
+  KnowledgeBaseDocumentRepository,
   DocumentIndexExecutionQueue,
   DocumentIndexRepository,
   DocumentRevisionRepository,
@@ -42,11 +42,11 @@ export type GarbageCollectionTestDependencies = [
   Pick<KnowledgeServiceConfig, 'gcRetentionMs'>,
 ]
 
-export type MembershipPruningTestDependencies = [
+export type KnowledgeBaseDocumentPruningTestDependencies = [
   PersistenceTransaction,
   KnowledgeBaseRepository,
   DocumentRepository,
-  MembershipRepository,
+  KnowledgeBaseDocumentRepository,
   DocumentIndexExecutionQueue,
   DocumentIndexRepository,
   DocumentRevisionRepository,
@@ -55,7 +55,7 @@ export type MembershipPruningTestDependencies = [
 ]
 
 const createDocumentRetention = (
-  membershipRepository: MembershipRepository,
+  knowledgeBaseDocumentRepository: KnowledgeBaseDocumentRepository,
   documentRevisionRepository: DocumentRevisionRepository,
   documentIndexRepository: DocumentIndexRepository,
   jobRepository: DocumentIndexExecutionQueue,
@@ -64,18 +64,20 @@ const createDocumentRetention = (
   documentRepository: DocumentRepository,
 ): InspectDocumentRetentionUseCase =>
   new InspectDocumentRetentionUseCase(
-    new InspectMembershipRetentionUseCase(membershipRepository),
+    new InspectKnowledgeBaseDocumentRetentionUseCase(knowledgeBaseDocumentRepository),
     new InspectDocumentRevisionRetentionUseCase(documentRevisionRepository),
-    new InspectDocumentIndexRetentionUseCase(documentIndexRepository, jobRepository, failedJobRepository),
+    new InspectDocumentIndexRetentionUseCase(documentIndexRepository),
     new InspectDocumentRelationRetentionUseCase(documentRelationRepository),
     documentRepository,
+    jobRepository,
+    failedJobRepository,
   )
 
 export const createGarbageCollectionListener = (
   ...[
     persistenceTransaction,
     documentRepository,
-    membershipRepository,
+    knowledgeBaseDocumentRepository,
     jobRepository,
     documentIndexRepository,
     documentRevisionRepository,
@@ -85,22 +87,20 @@ export const createGarbageCollectionListener = (
     config,
   ]: GarbageCollectionTestDependencies
 ): DocumentGarbageCollectionRequestedListener => {
-  const membershipRetention = new InspectMembershipRetentionUseCase(membershipRepository)
-  const indexRetention = new InspectDocumentIndexRetentionUseCase(
-    documentIndexRepository,
-    jobRepository,
-    failedJobRepository,
+  const knowledgeBaseDocumentRetention = new InspectKnowledgeBaseDocumentRetentionUseCase(
+    knowledgeBaseDocumentRepository,
   )
+  const indexRetention = new InspectDocumentIndexRetentionUseCase(documentIndexRepository)
 
   return new DocumentGarbageCollectionRequestedListener(
     persistenceTransaction,
     documentRepository,
-    new PlanDocumentIndexGarbageUseCase(documentIndexRepository, failedJobRepository),
+    new PlanDocumentIndexGarbageUseCase(documentIndexRepository),
     new CollectDocumentIndexGarbageUseCase(
       documentIndexRepository,
       jobRepository,
       failedJobRepository,
-      membershipRetention,
+      knowledgeBaseDocumentRetention,
       new CollectDocumentRelationGarbageUseCase(documentRelationRepository),
       new CollectIndexChunkGarbageUseCase(chunkRepository),
     ),
@@ -109,7 +109,7 @@ export const createGarbageCollectionListener = (
     new PlanDocumentRelationGarbageUseCase(documentRelationRepository),
     new LockDocumentRetentionParentsUseCase(documentRepository),
     createDocumentRetention(
-      membershipRepository,
+      knowledgeBaseDocumentRepository,
       documentRevisionRepository,
       documentIndexRepository,
       jobRepository,
@@ -118,35 +118,43 @@ export const createGarbageCollectionListener = (
       documentRepository,
     ),
     config,
+    jobRepository,
+    failedJobRepository,
   )
 }
 
-export const createMembershipPruningUseCase = (
+export const createKnowledgeBaseDocumentPruningUseCase = (
   ...[
     persistenceTransaction,
     knowledgeBaseRepository,
     documentRepository,
-    membershipRepository,
+    knowledgeBaseDocumentRepository,
     jobRepository,
     documentIndexRepository,
     documentRevisionRepository,
     failedJobRepository,
     documentRelationRepository,
-  ]: MembershipPruningTestDependencies
-): PruneKnowledgeBaseMembershipsUseCase => {
-  const membershipRetention = new InspectMembershipRetentionUseCase(membershipRepository)
+  ]: KnowledgeBaseDocumentPruningTestDependencies
+): PruneKnowledgeBaseDocumentsUseCase => {
+  const knowledgeBaseDocumentRetention = new InspectKnowledgeBaseDocumentRetentionUseCase(
+    knowledgeBaseDocumentRepository,
+  )
 
-  return new PruneKnowledgeBaseMembershipsUseCase(
+  return new PruneKnowledgeBaseDocumentsUseCase(
     persistenceTransaction,
     new ValidateKnowledgeBasePruningUseCase(knowledgeBaseRepository),
     new LockDocumentRetentionParentsUseCase(documentRepository),
-    membershipRepository,
-    new CancelMembershipIndexingListener(jobRepository),
-    new StartDocumentIndexPruningRetentionUseCase(documentIndexRepository, jobRepository, membershipRetention),
+    knowledgeBaseDocumentRepository,
+    { deliver: (event) => new CancelKnowledgeBaseDocumentDocumentIndexingListener(jobRepository).handle(event) },
+    new StartDocumentIndexPruningRetentionUseCase(
+      documentIndexRepository,
+      jobRepository,
+      knowledgeBaseDocumentRetention,
+    ),
     new StartDocumentPruningRetentionUseCase(
       documentRepository,
       createDocumentRetention(
-        membershipRepository,
+        knowledgeBaseDocumentRepository,
         documentRevisionRepository,
         documentIndexRepository,
         jobRepository,

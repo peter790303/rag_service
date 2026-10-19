@@ -14,7 +14,7 @@ export type UnretriedDocumentIndexFailureTargetQueryObject = {
   readonly generation: string
 }
 
-export type DocumentIndexFailureMembershipQueryObject = {
+export type DocumentIndexFailureKnowledgeBaseDocumentQueryObject = {
   readonly knowledgeBaseId: string
   readonly documentId: string
 }

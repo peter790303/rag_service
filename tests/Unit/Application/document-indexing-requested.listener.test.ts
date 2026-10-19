@@ -4,7 +4,7 @@ import test from 'node:test'
 import {
   createDocumentFixture,
   createRestoredDocumentIndexFixture,
-  createRestoredMembershipFixture,
+  createRestoredKnowledgeBaseDocumentFixture,
 } from './document-index-lifecycle.fixture.ts'
 import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
 import { DOCUMENT_INDEX_REQUEST_OUTCOME_KINDS } from '../../../src/Application/DocumentIndexes/Enums/document-index-request-outcome-kind.ts'
@@ -21,22 +21,21 @@ import { PrepareDocumentRevisionForIndexRequestUseCase } from '../../../src/Appl
 import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
 import { IndexRequestDocumentUnavailableException } from '../../../src/Application/Documents/Exceptions/index-request-document-unavailable.exception.ts'
 import { PrepareDocumentForIndexRequestUseCase } from '../../../src/Application/Documents/UseCases/prepare-document-for-index-request.use-case.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
+import { IndexRequestKnowledgeBaseDocumentUnavailableException } from '../../../src/Application/KnowledgeBaseDocuments/Exceptions/index-request-knowledge-base-document-unavailable.exception.ts'
+import type {
+  InsertKnowledgeBaseDocumentQueryObject,
+  UpdateKnowledgeBaseDocumentQueryObject,
+} from '../../../src/Application/KnowledgeBaseDocuments/QueryObjects/knowledge-base-document.query-object.ts'
+import { PrepareKnowledgeBaseDocumentForIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prepare-knowledge-base-document-for-index-request.use-case.ts'
+import { SaveKnowledgeBaseDocumentIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/save-knowledge-base-document-index-request.use-case.ts'
 import type { KnowledgeBaseRepository } from '../../../src/Application/KnowledgeBases/Contracts/knowledge-base.repository.ts'
 import { EnsureIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/ensure-indexing-knowledge-base.use-case.ts'
-import type { MembershipRepository } from '../../../src/Application/Memberships/Contracts/membership.repository.ts'
-import { IndexRequestMembershipUnavailableException } from '../../../src/Application/Memberships/Exceptions/index-request-membership-unavailable.exception.ts'
-import type {
-  InsertMembershipQueryObject,
-  UpdateMembershipQueryObject,
-} from '../../../src/Application/Memberships/QueryObjects/membership.query-object.ts'
-import { PrepareMembershipForIndexRequestUseCase } from '../../../src/Application/Memberships/UseCases/prepare-membership-for-index-request.use-case.ts'
-import { SaveMembershipIndexRequestUseCase } from '../../../src/Application/Memberships/UseCases/save-membership-index-request.use-case.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import {
   DocumentIndexStatusEnum,
   type DocumentIndexStatus,
 } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
 import { KnowledgeBaseProjectMismatchException } from '../../../src/Domain/KnowledgeBase/Exceptions/knowledge-base-project-mismatch.exception.ts'
 import { KnowledgeBase } from '../../../src/Domain/KnowledgeBase/knowledge-base.ts'
 
@@ -83,6 +82,7 @@ test('indexing request normalizes omitted payload and rejects malformed provided
 
 const createRequestDocumentIndexScenario = (
   options: {
+    missingTargetIndex?: boolean
     indexStatus?: DocumentIndexStatus
     knowledgeBaseProjectId?: string
     knowledgeBaseProjectName?: string
@@ -91,20 +91,24 @@ const createRequestDocumentIndexScenario = (
     currentJob?: { id: string; documentIndexId: string; generation: number; status: string } | null
     failedGenerations?: number[]
     missingTargetLockAttempts?: number
-    missingMembership?: boolean
+    beforeTargetLockAttempt?: (attempt: number) => Promise<void>
+    missingKnowledgeBaseDocument?: boolean
     isEntry?: boolean
-    unavailableMembershipAfterCreate?: boolean
+    unavailableKnowledgeBaseDocumentAfterCreate?: boolean
     unavailableDocumentAfterUpsert?: boolean
   } = {},
 ) => {
   const events: string[] = []
   const failedGenerations = new Set(options.failedGenerations ?? [])
-  const targetIndexId = 'index-1'
+  let targetIndexId = 'index-1'
+  let createdIndexId: string | null = null
+  let queuedJobId: string | null = null
   const knowledgeBaseEvents: string[] = []
   let transactionCount = 0
   let transactionActive = false
   let targetLockAttempts = 0
-  let membershipExists = !options.missingMembership
+  const documentIndexLockQueries: { documentIndexId: string }[] = []
+  let knowledgeBaseDocumentExists = !options.missingKnowledgeBaseDocument
   let requestedGeneration = options.requestedGeneration ?? 4
   type Dependencies = ConstructorParameters<typeof DocumentIndexingRequestedListener>
   const persistenceTransaction = {
@@ -138,22 +142,19 @@ const createRequestDocumentIndexScenario = (
     create: async () => {
       events.push('create-knowledge-base')
     },
-    save: async (saveKnowledgeBaseQO: { projectName: string }) => {
-      knowledgeBaseEvents.push(saveKnowledgeBaseQO.projectName)
+    update: async (updateKnowledgeBaseQO: { projectName: string }) => {
+      knowledgeBaseEvents.push(updateKnowledgeBaseQO.projectName)
       events.push('save-knowledge-base')
     },
   } as unknown as KnowledgeBaseRepository
   const documentRepository = {
     upsertTitleBySourceTypeAndSourceKeyAndSourcePath: async () => {
       events.push('upsert-source')
-
-      return createDocumentFixture({ id: 'document-1' })
     },
     upsertBySourceTypeAndSourceKeyAndSourcePath: async () => {
       events.push('upsert-source')
-
-      return createDocumentFixture({ id: 'document-1' })
     },
+    findBySourceTypeAndSourceKeyAndSourcePath: async () => createDocumentFixture({ id: 'document-1' }),
     lockByDocumentId: async () => {
       events.push('lock-document')
 
@@ -162,33 +163,35 @@ const createRequestDocumentIndexScenario = (
       return createDocumentFixture({ id: 'document-1' })
     },
   } as unknown as DocumentRepository
-  const membershipRepository = {
-    insert: async (insertMembershipQO: InsertMembershipQueryObject) => {
+  const knowledgeBaseDocumentRepository = {
+    insert: async (insertKnowledgeBaseDocumentQO: InsertKnowledgeBaseDocumentQueryObject) => {
       events.push(
-        `create-membership:${insertMembershipQO.requestedGeneration}:${insertMembershipQO.activeDocumentIndexId}:${insertMembershipQO.isEntry}:${insertMembershipQO.alwaysIncludeFullContent}`,
+        `create-knowledgeBaseDocument:${insertKnowledgeBaseDocumentQO.requestedGeneration}:${insertKnowledgeBaseDocumentQO.activeDocumentIndexId}:${insertKnowledgeBaseDocumentQO.isEntry}:${insertKnowledgeBaseDocumentQO.alwaysIncludeFullContent}`,
       )
-      membershipExists = !options.unavailableMembershipAfterCreate
-      requestedGeneration = Number(insertMembershipQO.requestedGeneration)
+      knowledgeBaseDocumentExists = !options.unavailableKnowledgeBaseDocumentAfterCreate
+      requestedGeneration = Number(insertKnowledgeBaseDocumentQO.requestedGeneration)
     },
     lockByKnowledgeBaseIdAndDocumentId: async () => {
-      events.push('lock-membership')
+      events.push('lock-knowledgeBaseDocument')
 
-      if (!membershipExists) return null
+      if (!knowledgeBaseDocumentExists) return null
 
-      return createRestoredMembershipFixture({
+      return createRestoredKnowledgeBaseDocumentFixture({
         knowledgeBaseId: documentSourceFixture.knowledgeBaseId,
         documentId: 'document-1',
         requestedGeneration: String(requestedGeneration),
         activeDocumentIndexId: options.activeDocumentIndexId ?? null,
       })
     },
-    updateByKnowledgeBaseIdAndDocumentId: async (updateMembershipQO: UpdateMembershipQueryObject) => {
-      if (updateMembershipQO.requestedGeneration === String(requestedGeneration)) {
-        assert.equal(updateMembershipQO.isEntry, options.isEntry)
-        events.push('update-membership-options')
-      } else events.push(`update-membership:${updateMembershipQO.requestedGeneration}`)
+    updateByKnowledgeBaseIdAndDocumentId: async (
+      updateKnowledgeBaseDocumentQO: UpdateKnowledgeBaseDocumentQueryObject,
+    ) => {
+      if (updateKnowledgeBaseDocumentQO.requestedGeneration === String(requestedGeneration)) {
+        assert.equal(updateKnowledgeBaseDocumentQO.isEntry, options.isEntry)
+        events.push('update-knowledge-base-document-options')
+      } else events.push(`update-knowledgeBaseDocument:${updateKnowledgeBaseDocumentQO.requestedGeneration}`)
     },
-  } as unknown as MembershipRepository
+  } as unknown as KnowledgeBaseDocumentRepository
   const documentRevisionRepository = {
     findByDocumentIdAndContentSha256: async () => {
       events.push('find-revision')
@@ -198,37 +201,36 @@ const createRequestDocumentIndexScenario = (
     create: async (createDocumentRevisionQO: CreateDocumentRevisionQueryObject) => {
       events.push('create-revision')
 
-      return new DocumentRevision({
-        ...createDocumentRevisionQO,
-        id: 'revision-1',
-        capturedAt: new Date(),
-        createdAt: new Date(),
-      })
+      assert.ok(createDocumentRevisionQO.id)
     },
   } as unknown as DocumentRevisionRepository
   const documentIndexRepository = {
     findByDocumentRevisionIdAndPipelineHash: async () => {
       events.push('find-index')
 
-      return null
+      return options.missingTargetIndex
+        ? null
+        : createRestoredDocumentIndexFixture({
+            id: targetIndexId,
+            documentId: 'document-1',
+            revisionId: 'revision-1',
+            status: options.indexStatus ?? DocumentIndexStatusEnum.BUILDING,
+          })
     },
-    createBuildingIndex: async () => {
+    createBuildingIndex: async (attributes: { id: string }) => {
       events.push('create-index')
-
-      return createRestoredDocumentIndexFixture({
-        id: targetIndexId,
-        documentId: 'document-1',
-        revisionId: 'revision-1',
-        status: options.indexStatus ?? DocumentIndexStatusEnum.BUILDING,
-      })
+      createdIndexId = attributes.id
+      targetIndexId = attributes.id
     },
     lockByDocumentIndexId: async (documentIndexIdQO: { documentIndexId: string }) => {
       const { documentIndexId: id } = documentIndexIdQO
 
+      documentIndexLockQueries.push(documentIndexIdQO)
       events.push(`lock-index:${id}`)
 
       if (id === targetIndexId) {
         targetLockAttempts += 1
+        await options.beforeTargetLockAttempt?.(targetLockAttempts)
 
         if (targetLockAttempts <= (options.missingTargetLockAttempts ?? 0)) return null
       }
@@ -253,7 +255,7 @@ const createRequestDocumentIndexScenario = (
     },
   } as unknown as Dependencies[5]
   const jobRepository = {
-    lockMembershipExecution: async () => {
+    lockKnowledgeBaseDocumentExecution: async () => {
       events.push('lock-current-job')
 
       if (options.currentJob === null || options.currentJob === undefined) return null
@@ -275,7 +277,7 @@ const createRequestDocumentIndexScenario = (
         `enqueue-job:${saveQueuedJobQO.status}:${saveQueuedJobQO.attempts}:${Number.isFinite(saveQueuedJobQO.availableAt.getTime())}`,
       )
 
-      return { id: 'queued-job' }
+      queuedJobId = saveQueuedJobQO.id
     },
   } as unknown as Dependencies[6]
   const failedJobRepository = {
@@ -291,14 +293,21 @@ const createRequestDocumentIndexScenario = (
     persistenceTransaction,
     new EnsureIndexingKnowledgeBaseUseCase(knowledgeBaseRepository),
     new PrepareDocumentForIndexRequestUseCase(documentRepository),
-    new PrepareMembershipForIndexRequestUseCase(membershipRepository),
+    new PrepareKnowledgeBaseDocumentForIndexRequestUseCase(knowledgeBaseDocumentRepository),
     new PrepareDocumentRevisionForIndexRequestUseCase(documentRevisionRepository),
     documentIndexRepository,
     jobRepository,
     failedJobRepository,
     pipelineSettings,
     new WriteRequestDocumentIndexesAssembler(pipelineSettings),
-    new SaveMembershipIndexRequestUseCase(membershipRepository),
+    new SaveKnowledgeBaseDocumentIndexRequestUseCase(knowledgeBaseDocumentRepository),
+    {
+      execute: async ({ documentIndexIds }) => {
+        assert.equal(transactionActive, true)
+        assert.ok(events.includes('remove-job'))
+        events.push(`start-retention:${documentIndexIds.join(',')}`)
+      },
+    },
   )
 
   return {
@@ -311,7 +320,10 @@ const createRequestDocumentIndexScenario = (
       ),
     events,
     knowledgeBaseEvents,
+    documentIndexLockQueries,
     transactionCount: () => transactionCount,
+    createdIndexId: () => createdIndexId,
+    queuedJobId: () => queuedJobId,
   }
 }
 
@@ -328,25 +340,28 @@ test('request indexing updates generation and enqueues within one ordered transa
   const result = await request.execute()
 
   assert.equal(request.transactionCount(), 1)
-  assert.equal(result.jobId, 'queued-job')
+  assert.equal(result.jobId, request.queuedJobId())
   assert.equal(result.generation, '5')
   assert.equal(
-    request.events.some((event) => event.startsWith('create-membership:')),
+    request.events.some((event) => event.startsWith('create-knowledgeBaseDocument:')),
     false,
   )
-  assert.ok(request.events.indexOf('lock-document') < request.events.indexOf('lock-membership'))
-  assert.ok(request.events.indexOf('lock-membership') < request.events.indexOf('lock-current-job'))
+  assert.ok(request.events.indexOf('lock-document') < request.events.indexOf('lock-knowledgeBaseDocument'))
+  assert.ok(request.events.indexOf('lock-knowledgeBaseDocument') < request.events.indexOf('lock-current-job'))
   assert.ok(request.events.indexOf('lock-current-job') < request.events.indexOf('lock-index:index-1'))
   assert.deepEqual(
     request.events.filter((event) => event.startsWith('lock-index:')),
     ['lock-index:index-1', 'lock-index:old-index'],
   )
-  assert.ok(request.events.indexOf('update-membership:5') < request.events.indexOf('enqueue-job:queued:0:true'))
+  assert.ok(
+    request.events.indexOf('update-knowledgeBaseDocument:5') < request.events.indexOf('enqueue-job:queued:0:true'),
+  )
   assert.equal(request.events.filter((event) => event === 'enqueue-job:queued:0:true').length, 1)
+  assert.ok(request.events.indexOf('enqueue-job:queued:0:true') < request.events.indexOf('start-retention:old-index'))
 })
 
-test('request indexing creates a missing membership while holding the document lock and locks it again', async () => {
-  const request = createRequestDocumentIndexScenario({ missingMembership: true, isEntry: true })
+test('request indexing creates a missing knowledgeBaseDocument while holding the document lock and locks it again', async () => {
+  const request = createRequestDocumentIndexScenario({ missingKnowledgeBaseDocument: true, isEntry: true })
 
   const result = await request.execute()
 
@@ -354,11 +369,22 @@ test('request indexing creates a missing membership while holding the document l
   assert.equal(request.transactionCount(), 1)
   assert.deepEqual(
     request.events.filter(
-      (event) => event === 'lock-document' || event === 'lock-membership' || event.startsWith('create-membership:'),
+      (event) =>
+        event === 'lock-document' ||
+        event === 'lock-knowledgeBaseDocument' ||
+        event.startsWith('create-knowledgeBaseDocument:'),
     ),
-    ['lock-document', 'lock-membership', 'create-membership:0:null:false:false', 'lock-membership'],
+    [
+      'lock-document',
+      'lock-knowledgeBaseDocument',
+      'create-knowledgeBaseDocument:0:null:false:false',
+      'lock-knowledgeBaseDocument',
+    ],
   )
-  assert.ok(request.events.lastIndexOf('lock-membership') < request.events.indexOf('update-membership-options'))
+  assert.ok(
+    request.events.lastIndexOf('lock-knowledgeBaseDocument') <
+      request.events.indexOf('update-knowledge-base-document-options'),
+  )
 })
 
 test('request indexing stops when the upserted document cannot be locked', async () => {
@@ -373,7 +399,7 @@ test('request indexing stops when the upserted document cannot be locked', async
 
   assert.ok(request.events.includes('upsert-source'))
   assert.ok(request.events.includes('lock-document'))
-  assert.equal(request.events.includes('lock-membership'), false)
+  assert.equal(request.events.includes('lock-knowledgeBaseDocument'), false)
   assert.equal(request.events.includes('find-revision'), false)
   assert.equal(
     request.events.some((event) => event.startsWith('enqueue-job:')),
@@ -381,20 +407,20 @@ test('request indexing stops when the upserted document cannot be locked', async
   )
 })
 
-test('request indexing stops when the newly created membership cannot be locked', async () => {
+test('request indexing stops when the newly created knowledgeBaseDocument cannot be locked', async () => {
   const request = createRequestDocumentIndexScenario({
-    missingMembership: true,
-    unavailableMembershipAfterCreate: true,
+    missingKnowledgeBaseDocument: true,
+    unavailableKnowledgeBaseDocumentAfterCreate: true,
   })
 
   await assert.rejects(request.execute(), (error: unknown) => {
-    assert.ok(error instanceof IndexRequestMembershipUnavailableException)
+    assert.ok(error instanceof IndexRequestKnowledgeBaseDocumentUnavailableException)
     assert.equal(error.code, 'INDEX_REQUEST_MEMBERSHIP_UNAVAILABLE')
 
     return true
   })
 
-  assert.equal(request.events.includes('update-membership-options'), false)
+  assert.equal(request.events.includes('update-knowledge-base-document-options'), false)
   assert.equal(request.events.includes('find-revision'), false)
   assert.equal(
     request.events.some((event) => event.startsWith('enqueue-job:')),
@@ -451,7 +477,7 @@ test('request indexing blocks a generation with an unretried failure', async () 
   assert.equal(request.events.includes('enqueue-job'), false)
 })
 
-test('request indexing activates a ready index and retires the prior membership target', async () => {
+test('request indexing activates a ready index and retires the prior knowledgeBaseDocument target', async () => {
   const request = createRequestDocumentIndexScenario({
     indexStatus: DocumentIndexTargetStateEnum.READY,
     activeDocumentIndexId: 'old-index',
@@ -471,7 +497,30 @@ test('request indexing activates a ready index and retires the prior membership 
   assert.ok(request.events.includes('remove-job'))
   assert.ok(request.events.includes('unreferenced:index-1:clear'))
   assert.ok(request.events.some((event) => event.startsWith('unreferenced:old-index:set')))
+  assert.ok(request.events.includes('start-retention:old-index'))
   assert.equal(request.events.includes('enqueue-job'), false)
+})
+
+test('requesting a ready index starts retention for a cancelled building target with no prior active index', async () => {
+  const request = createRequestDocumentIndexScenario({
+    indexStatus: DocumentIndexStatusEnum.READY,
+    activeDocumentIndexId: null,
+    currentJob: {
+      id: 'building-job',
+      documentIndexId: 'building-index',
+      generation: 4,
+      status: DOCUMENT_INDEX_EXECUTION_STATUS.RUNNING,
+    },
+  })
+
+  const result = await request.execute()
+
+  assert.equal(result.reusedReadyIndex, true)
+  assert.ok(request.events.includes('start-retention:building-index'))
+  assert.equal(
+    request.events.some((event) => event.startsWith('enqueue-job:')),
+    false,
+  )
 })
 
 test('request indexing re-prepares after the target index disappears before its lock', async () => {
@@ -480,9 +529,89 @@ test('request indexing re-prepares after the target index disappears before its 
   const result = await request.execute()
 
   assert.equal(request.transactionCount(), 2)
-  assert.equal(result.jobId, 'queued-job')
+  assert.equal(result.jobId, request.queuedJobId())
   assert.equal(request.events.filter((event) => event === 'lock-index:index-1').length, 2)
   assert.equal(request.events.filter((event) => event.startsWith('enqueue-job:')).length, 1)
+})
+
+test('request indexing does not open a retry transaction until the gated target lock attempt finishes', async () => {
+  let releaseFirstTargetLockAttempt: () => void = () => {}
+  let signalFirstTargetLockAttempt: () => void = () => {}
+  const firstTargetLockStarted = new Promise<void>((resolve) => {
+    signalFirstTargetLockAttempt = resolve
+  })
+  const firstTargetLockGate = new Promise<void>((resolve) => {
+    releaseFirstTargetLockAttempt = resolve
+  })
+  const request = createRequestDocumentIndexScenario({
+    missingTargetLockAttempts: 1,
+    beforeTargetLockAttempt: async (attempt) => {
+      if (attempt !== 1) return
+
+      signalFirstTargetLockAttempt()
+      await firstTargetLockGate
+    },
+  })
+  const pendingRequest = request.execute()
+
+  await firstTargetLockStarted
+
+  try {
+    assert.equal(request.transactionCount(), 1)
+    assert.deepEqual(
+      request.events.filter((event) => event.startsWith('lock-index:')),
+      ['lock-index:index-1'],
+    )
+  } finally {
+    releaseFirstTargetLockAttempt()
+  }
+
+  const result = await pendingRequest
+
+  assert.equal(result.jobId, request.queuedJobId())
+  assert.equal(request.transactionCount(), 2)
+  assert.equal(request.events.filter((event) => event === 'lock-index:index-1').length, 2)
+})
+
+test('request indexing stops re-preparation immediately when an attempt fails', async () => {
+  const expectedError = new Error('target index lock failed')
+  const request = createRequestDocumentIndexScenario({
+    beforeTargetLockAttempt: async () => {
+      throw expectedError
+    },
+  })
+
+  await assert.rejects(request.execute(), (error: unknown) => error === expectedError)
+
+  assert.equal(request.transactionCount(), 1)
+  assert.deepEqual(
+    request.events.filter((event) => event.startsWith('lock-index:')),
+    ['lock-index:index-1'],
+  )
+  assert.equal(
+    request.events.some((event) => event.startsWith('enqueue-job:')),
+    false,
+  )
+})
+
+test('request indexing locks duplicate target references once using their document-index ID', async () => {
+  const request = createRequestDocumentIndexScenario({
+    activeDocumentIndexId: 'index-1',
+    currentJob: {
+      id: 'same-target-job',
+      documentIndexId: 'index-1',
+      generation: 4,
+      status: DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED,
+    },
+  })
+
+  await request.execute()
+
+  assert.deepEqual(
+    request.events.filter((event) => event.startsWith('lock-index:')),
+    ['lock-index:index-1'],
+  )
+  assert.deepEqual(request.documentIndexLockQueries, [{ documentIndexId: 'index-1' }])
 })
 
 test('request indexing stops after the bounded target re-preparation attempts', async () => {
@@ -506,4 +635,15 @@ test('request indexing stops after the bounded target re-preparation attempts', 
 test('request outcome and target state values retain their discriminated domain meanings', () => {
   assert.equal(DOCUMENT_INDEX_REQUEST_OUTCOME_KINDS.enqueue, 'enqueue')
   assert.equal(DocumentIndexTargetStateEnum.FAILED_BLOCKED, 'failed-blocked')
+})
+
+test('new target and queue inserts return the identities allocated by the request', async () => {
+  const request = createRequestDocumentIndexScenario({ missingTargetIndex: true })
+  const result = await request.execute()
+
+  assert.ok(request.createdIndexId())
+  assert.ok(request.queuedJobId())
+  assert.equal(result.documentIndexId, request.createdIndexId())
+  assert.equal(result.jobId, request.queuedJobId())
+  assert.ok(request.events.includes(`lock-index:${request.createdIndexId()}`))
 })

@@ -39,18 +39,8 @@ export class DocumentRevisionRepository extends DocumentRevisionRepositoryContra
     return persistedRevision === null ? null : DocumentRevisionFactory.toDocumentRevision(persistedRevision)
   }
 
-  async create(createDocumentRevisionQO: CreateDocumentRevisionQueryObject): Promise<DocumentRevision> {
-    const persistedRevision = await this.documentRevisionModelRepository.save({
-      id: createDocumentRevisionQO.id,
-      documentId: createDocumentRevisionQO.documentId,
-      contentSha256: createDocumentRevisionQO.contentSha256,
-      title: createDocumentRevisionQO.title,
-      content: createDocumentRevisionQO.content,
-      capturedAt: createDocumentRevisionQO.capturedAt,
-      createdAt: createDocumentRevisionQO.createdAt,
-    })
-
-    return DocumentRevisionFactory.toDocumentRevision(persistedRevision)
+  async create(createDocumentRevisionQO: CreateDocumentRevisionQueryObject): Promise<void> {
+    await this.documentRevisionModelRepository.insert(createDocumentRevisionQO)
   }
 
   async findByDocumentIdOrderByCreatedAtDesc(

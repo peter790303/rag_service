@@ -3,6 +3,7 @@ import type { DocumentGarbageCandidatesQueryObject } from '../QueryObjects/docum
 import type { DocumentIdQueryObject } from '../QueryObjects/document.query-object.ts'
 import type { DocumentIdsQueryObject } from '../QueryObjects/document.query-object.ts'
 import type {
+  DocumentSourceQueryObject,
   MarkDocumentUnreferencedQueryObject,
   UpsertDocumentSourceQueryObject,
   UpsertDocumentSourceTitleQueryObject,
@@ -11,11 +12,15 @@ import type {
 export abstract class DocumentRepository {
   abstract upsertBySourceTypeAndSourceKeyAndSourcePath(
     upsertDocumentSourceQO: UpsertDocumentSourceQueryObject,
-  ): Promise<Document>
+  ): Promise<void>
 
   abstract upsertTitleBySourceTypeAndSourceKeyAndSourcePath(
     upsertDocumentSourceTitleQO: UpsertDocumentSourceTitleQueryObject,
-  ): Promise<Document>
+  ): Promise<void>
+
+  abstract findBySourceTypeAndSourceKeyAndSourcePath(
+    documentSourceQO: DocumentSourceQueryObject,
+  ): Promise<Document | null>
 
   abstract lockByDocumentId(documentIdQO: DocumentIdQueryObject): Promise<Document | null>
 

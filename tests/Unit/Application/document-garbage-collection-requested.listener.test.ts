@@ -4,7 +4,7 @@ import { setImmediate } from 'node:timers/promises'
 
 import {
   createDocumentFixture,
-  createRestoredMembershipFixture,
+  createRestoredKnowledgeBaseDocumentFixture,
   createRestoredDocumentIndexFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
@@ -12,14 +12,14 @@ import {
   createGarbageCollectionListener,
   type GarbageCollectionTestDependencies,
 } from './document-retention-use-cases.fixture.ts'
-import type { ExpiredDocumentIndexFailureDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/expired-document-index-failure.dto.ts'
+import type { ExpiredDocumentIndexFailureDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/expired-document-index-failure.dto.ts'
 import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Application/Documents/Events/document-garbage-collection-requested.event.ts'
 import type { DocumentIndexStatus } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { DocumentRelation } from '../../../src/Domain/DocumentRelation/document-relation.ts'
 import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
 
-type GarbageDocumentIndexCandidateDto = {
+type GarbageDocumentIndexCandidateDTO = {
   documentIndexId: string
   documentId: string
   status: DocumentIndexStatus
@@ -27,13 +27,13 @@ type GarbageDocumentIndexCandidateDto = {
   readyAt: Date | null
 }
 
-type GarbageDocumentRevisionCandidateDto = {
+type GarbageDocumentRevisionCandidateDTO = {
   documentRevisionId: string
   documentId: string
   createdAt: Date
 }
 
-type GarbageDocumentCandidateDto = {
+type GarbageDocumentCandidateDTO = {
   documentId: string
   unreferencedSince: Date | null
 }
@@ -41,8 +41,8 @@ type GarbageDocumentCandidateDto = {
 const oldDate = new Date('2020-01-01T00:00:00.000Z')
 
 const createGarbageDocumentIndexCandidateFixture = (
-  overrides: Partial<GarbageDocumentIndexCandidateDto> = {},
-): GarbageDocumentIndexCandidateDto => ({
+  overrides: Partial<GarbageDocumentIndexCandidateDTO> = {},
+): GarbageDocumentIndexCandidateDTO => ({
   documentIndexId: 'index',
   documentId: 'document',
   status: DocumentIndexStatusEnum.READY,
@@ -52,8 +52,8 @@ const createGarbageDocumentIndexCandidateFixture = (
 })
 
 const createGarbageDocumentRevisionCandidateFixture = (
-  overrides: Partial<GarbageDocumentRevisionCandidateDto> = {},
-): GarbageDocumentRevisionCandidateDto => ({
+  overrides: Partial<GarbageDocumentRevisionCandidateDTO> = {},
+): GarbageDocumentRevisionCandidateDTO => ({
   documentRevisionId: 'revision',
   documentId: 'document',
   createdAt: oldDate,
@@ -61,8 +61,8 @@ const createGarbageDocumentRevisionCandidateFixture = (
 })
 
 const createGarbageDocumentCandidateFixture = (
-  overrides: Partial<GarbageDocumentCandidateDto> = {},
-): GarbageDocumentCandidateDto => ({
+  overrides: Partial<GarbageDocumentCandidateDTO> = {},
+): GarbageDocumentCandidateDTO => ({
   documentId: 'document',
   unreferencedSince: oldDate,
   ...overrides,
@@ -70,7 +70,7 @@ const createGarbageDocumentCandidateFixture = (
 
 test('garbage collection locks candidates, rechecks references, and removes eligible rows in dependency order', async () => {
   const recent = new Date()
-  const failedJobs: ExpiredDocumentIndexFailureDto[] = [
+  const failedJobs: ExpiredDocumentIndexFailureDTO[] = [
     { failedJobId: 'eligible-failure', documentId: 'document', failedAt: oldDate },
     { failedJobId: 'retried-failure', documentId: 'document', failedAt: oldDate },
     { failedJobId: 'recent-failure', documentId: 'document', failedAt: recent },
@@ -114,7 +114,7 @@ test('garbage collection locks candidates, rechecks references, and removes elig
     await setImmediate()
     pendingOperation = null
   }
-  const toIndexRecord = (candidate: GarbageDocumentIndexCandidateDto) =>
+  const toIndexRecord = (candidate: GarbageDocumentIndexCandidateDTO) =>
     createRestoredDocumentIndexFixture({
       id: candidate.documentIndexId,
       documentId: candidate.documentId,
@@ -122,7 +122,7 @@ test('garbage collection locks candidates, rechecks references, and removes elig
       readyAt: candidate.readyAt,
       unreferencedSince: candidate.unreferencedSince,
     })
-  const toRevisionRecord = (candidate: GarbageDocumentRevisionCandidateDto) =>
+  const toRevisionRecord = (candidate: GarbageDocumentRevisionCandidateDTO) =>
     new DocumentRevision({
       id: candidate.documentRevisionId,
       documentId: candidate.documentId,
@@ -132,7 +132,7 @@ test('garbage collection locks candidates, rechecks references, and removes elig
       capturedAt: oldDate,
       createdAt: candidate.createdAt,
     })
-  const toDocumentRecord = (candidate: GarbageDocumentCandidateDto) =>
+  const toDocumentRecord = (candidate: GarbageDocumentCandidateDTO) =>
     createDocumentFixture({
       id: candidate.documentId,
       unreferencedSince: candidate.unreferencedSince,
@@ -180,11 +180,11 @@ test('garbage collection locks candidates, rechecks references, and removes elig
       },
     }),
     createRepositoryStub<GarbageCollectionTestDependencies[2]>({
-      findByActiveDocumentIndexId: async (membershipActiveIndexQO) => {
-        const { documentIndexId } = membershipActiveIndexQO
+      findByActiveDocumentIndexId: async (knowledgeBaseDocumentActiveIndexQO) => {
+        const { documentIndexId } = knowledgeBaseDocumentActiveIndexQO
 
         return documentIndexId === 'shared-index'
-          ? createRestoredMembershipFixture({ activeDocumentIndexId: documentIndexId })
+          ? createRestoredKnowledgeBaseDocumentFixture({ activeDocumentIndexId: documentIndexId })
           : null
       },
       findByDocumentId: async () => null,

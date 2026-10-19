@@ -1,5 +1,5 @@
-import type { DocumentIndexFailureRecordDto } from '../DataTransferObjects/document-index-failure-record.dto.ts'
-import type { ExpiredDocumentIndexFailureDto } from '../DataTransferObjects/expired-document-index-failure.dto.ts'
+import type { DocumentIndexFailureRecordDTO } from '../DataTransferObjects/document-index-failure-record.dto.ts'
+import type { ExpiredDocumentIndexFailureDTO } from '../DataTransferObjects/expired-document-index-failure.dto.ts'
 import type {
   DocumentIndexFailureDocumentQueryObject,
   ExpiredDocumentIndexFailuresQueryObject,
@@ -14,19 +14,19 @@ import type {
 
 /** Execution failure history owned by document-index listeners. */
 export abstract class DocumentIndexFailureArchive {
-  abstract archive(failure: ArchiveDocumentIndexFailureQueryObject): Promise<DocumentIndexFailureRecordDto>
+  abstract archive(failure: ArchiveDocumentIndexFailureQueryObject): Promise<void>
 
-  abstract lockFailure(failure: DocumentIndexFailureIdQueryObject): Promise<DocumentIndexFailureRecordDto | null>
+  abstract lockFailure(failure: DocumentIndexFailureIdQueryObject): Promise<DocumentIndexFailureRecordDTO | null>
 
-  abstract findFailure(failure: DocumentIndexFailureLookupQueryObject): Promise<DocumentIndexFailureRecordDto | null>
+  abstract findFailure(failure: DocumentIndexFailureLookupQueryObject): Promise<DocumentIndexFailureRecordDTO | null>
 
   abstract findFailureInProject(
     failure: DocumentIndexFailureInProjectQueryObject,
-  ): Promise<DocumentIndexFailureRecordDto | null>
+  ): Promise<DocumentIndexFailureRecordDTO | null>
 
   abstract findUnretriedTargetFailure(
     target: UnretriedDocumentIndexFailureTargetQueryObject,
-  ): Promise<DocumentIndexFailureRecordDto | null>
+  ): Promise<DocumentIndexFailureRecordDTO | null>
 
   abstract markRetried(failure: MarkDocumentIndexFailureRetriedQueryObject): Promise<void>
 
@@ -36,11 +36,11 @@ export abstract class DocumentIndexFailureArchive {
 
   abstract findExpiredFailures(
     expiration: ExpiredDocumentIndexFailuresQueryObject,
-  ): Promise<ExpiredDocumentIndexFailureDto[]>
+  ): Promise<ExpiredDocumentIndexFailureDTO[]>
 
   abstract lockExpiredFailure(
     failure: DocumentIndexFailureIdQueryObject,
-  ): Promise<ExpiredDocumentIndexFailureDto | null>
+  ): Promise<ExpiredDocumentIndexFailureDTO | null>
 
   abstract removeExpiredFailure(failure: DocumentIndexFailureIdQueryObject): Promise<void>
 }

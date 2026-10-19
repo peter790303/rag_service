@@ -24,6 +24,6 @@ export interface PlannedDocumentRelationWrite {
   readonly evidenceText: string
 }
 
-export interface SavePlannedDocumentRelationsQueryObject {
+export interface InsertPlannedDocumentRelationsQueryObject {
   readonly relations: readonly PlannedDocumentRelationWrite[]
 }

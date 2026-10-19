@@ -10,14 +10,14 @@ import {
 
 import { FailedJobModel } from './failed-job.model.ts'
 import { JobModel } from './job.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from './knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from './knowledge-base-document.model.ts'
 
 @Entity('knowledge_bases')
 export class KnowledgeBaseModel {
-  @OneToMany(() => KnowledgeBaseDocumentMembershipModel, (membership) => membership.knowledgeBase, {
+  @OneToMany(() => KnowledgeBaseDocumentModel, (knowledgeBaseDocument) => knowledgeBaseDocument.knowledgeBase, {
     createForeignKeyConstraints: false,
   })
-  declare memberships: Relation<KnowledgeBaseDocumentMembershipModel[]>
+  declare knowledgeBaseDocuments: Relation<KnowledgeBaseDocumentModel[]>
 
   @OneToMany(() => JobModel, (job) => job.knowledgeBase, { createForeignKeyConstraints: false })
   declare jobs: Relation<JobModel[]>

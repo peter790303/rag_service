@@ -24,7 +24,11 @@ const plannedRelation: PlannedDocumentRelation = {
 test('relation inserts whitelist planned fields and preserve the source index identity', async (context) => {
   const manager = createRepositoryManagerStub()
   const documentRelationModelRepository = manager.getRepository(DocumentRelationModel)
-  const save = context.mock.method(documentRelationModelRepository, 'save', async () => [])
+  const save = context.mock.method(documentRelationModelRepository, 'insert', async () => ({
+    identifiers: [],
+    generatedMaps: [],
+    raw: [],
+  }))
   const untrustedExtraFields = {
     ...plannedRelation,
     id: 'upstream-id',
@@ -46,6 +50,8 @@ test('relation inserts whitelist planned fields and preserve the source index id
   assert.equal(savedRelations.length, 1)
   const savedRelation = savedRelations[0]
   assert.ok(savedRelation)
+  assert.equal(typeof savedRelation.id, 'string')
+  assert.ok(typeof savedRelation.id === 'string')
   assert.match(savedRelation.id, /^[0-9a-f-]{36}$/)
   assert.notEqual(savedRelation.id, 'upstream-id')
 
@@ -70,7 +76,7 @@ test('empty relation writes and source-index lookups skip persistence', async (c
   })
   const documentRelationRepository = new DocumentRelationRepository(new PersistenceTransaction(manager.connection))
 
-  await documentRelationRepository.savePlanned({ relations: [] })
+  await documentRelationRepository.insertPlanned({ relations: [] })
   assert.deepEqual(await documentRelationRepository.findBySourceIndexIdsOrderByIdAsc({ sourceIndexIds: [] }), [])
   assert.equal(getRepository.mock.callCount(), 0)
 })
@@ -104,7 +110,8 @@ test('relation lookups and target-reference reads query only the relation model'
   const targetRelation = await documentRelationRepository.findByTargetDocumentId({ documentId: 'document-1' })
   assert.equal(relations.length, 1)
   assert.equal(orderedRelations.length, 1)
-  for (const relation of [...relations, ...orderedRelations, targetRelation]) {
+  const testCases = [...relations, ...orderedRelations, targetRelation]
+  testCases.forEach((relation) => {
     assert.ok(relation instanceof DocumentRelation)
     assert.equal(relation.id, 'relation-1')
     assert.equal(relation.sourceIndexId, 'index-1')
@@ -115,7 +122,7 @@ test('relation lookups and target-reference reads query only the relation model'
     assert.equal(relation.evidenceBlockStart, plannedRelation.evidenceBlockStart)
     assert.equal(relation.evidenceBlockEnd, plannedRelation.evidenceBlockEnd)
     assert.equal(relation.evidenceText, plannedRelation.evidenceText)
-  }
+  })
   assert.deepEqual(findBy.mock.calls[0]?.arguments, [{ sourceIndexId: 'index-1' }])
   assert.deepEqual(find.mock.calls[0]?.arguments, [
     { where: { sourceIndexId: In(['index-1', 'index-2']) }, order: { id: 'ASC' } },

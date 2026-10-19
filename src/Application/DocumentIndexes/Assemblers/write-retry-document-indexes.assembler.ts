@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto'
+
 import type { DocumentIndexingRetryContext } from '../DataTransferObjects/document-indexing-retry-context.dto.ts'
 import type { DocumentIndexingRetryTarget } from '../DataTransferObjects/document-indexing-retry-target.dto.ts'
-import type { RetryDocumentIndexingResultDto } from '../DataTransferObjects/retry-document-indexing-result.dto.ts'
+import type { RetryDocumentIndexingResultDTO } from '../DataTransferObjects/retry-document-indexing-result.dto.ts'
 import { DocumentIndexingTargetStateEnum } from '../Enums/document-indexing-target-state.enum.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../Helpers/document-index-execution-lifecycle.helper.ts'
 import type { EnqueueDocumentIndexingRetryQueryObject } from '../QueryObjects/document-index-execution.query-object.ts'
@@ -11,12 +13,12 @@ export class WriteRetryDocumentIndexesAssembler {
     failedJob: DocumentIndexingRetryContext['failedJob'],
     sourceType: string,
     revisionId: string,
-    retryMembership: NonNullable<DocumentIndexingRetryContext['membership']>,
+    retryKnowledgeBaseDocument: NonNullable<DocumentIndexingRetryContext['knowledgeBaseDocument']>,
     pipelineHash: string,
   ): DocumentIndexingRetryTarget {
-    const expectedMembershipIdentity = {
-      requestedGeneration: retryMembership.requestedGeneration,
-      activeDocumentIndexId: retryMembership.activeDocumentIndexId,
+    const expectedKnowledgeBaseDocumentIdentity = {
+      requestedGeneration: retryKnowledgeBaseDocument.requestedGeneration,
+      activeDocumentIndexId: retryKnowledgeBaseDocument.activeDocumentIndexId,
     }
 
     return {
@@ -29,7 +31,7 @@ export class WriteRetryDocumentIndexesAssembler {
       sourceType,
       revisionId,
       pipelineHash,
-      membership: expectedMembershipIdentity,
+      knowledgeBaseDocument: expectedKnowledgeBaseDocumentIdentity,
       activeJobId: null,
     }
   }
@@ -41,6 +43,7 @@ export class WriteRetryDocumentIndexesAssembler {
     reusableExecutionState: Record<string, unknown> | null,
   ): EnqueueDocumentIndexingRetryQueryObject {
     return {
+      id: randomUUID(),
       knowledgeBaseId: retryContext.failedJob.knowledgeBaseId,
       documentId: retryContext.failedJob.documentId,
       documentIndexId: retryContext.failedJob.documentIndexId,
@@ -59,7 +62,7 @@ export class WriteRetryDocumentIndexesAssembler {
     }
   }
 
-  static toRetryDocumentIndexingResult(jobId: string, failedJobId: string): RetryDocumentIndexingResultDto {
+  static toRetryDocumentIndexingResult(jobId: string, failedJobId: string): RetryDocumentIndexingResultDTO {
     return { jobId, failedJobId, status: DocumentIndexingTargetStateEnum.QUEUED, retryOfFailedJobId: failedJobId }
   }
 }

@@ -16,7 +16,7 @@ test('retrieval assembler preserves exact counts, nullable token counts and the 
   assert.equal(evidence.matches[0]?.document, facts.snapshot.documents[0])
   assert.equal(evidence.matches[0]?.revision, facts.snapshot.revisions[0])
   assert.equal(evidence.matches[0]?.index, facts.snapshot.indexes[0])
-  assert.equal(evidence.matches[0]?.membership, facts.snapshot.memberships[0])
+  assert.equal(evidence.matches[0]?.knowledgeBaseDocument, facts.snapshot.knowledgeBaseDocuments[0])
   assert.equal(evidence.matches[0]?.totalChunks, 8)
   assert.equal(evidence.matches[0]?.chunk.tokenCount, null)
   assert.equal(evidence.requiredDocuments[0]?.revision.content, 'Guide content')
@@ -28,20 +28,22 @@ test('retrieval assembler preserves selected match order and required-document o
   const facts = createRetrievalKnowledgeBaseContentInputFixture()
   const second = createRetrievalSnapshotFixture({
     knowledgeBaseId: 'kb-1',
-    memberships: [{ documentId: 'document-2', activeDocumentIndexId: 'index-2', alwaysIncludeFullContent: true }],
+    knowledgeBaseDocuments: [
+      { documentId: 'document-2', activeDocumentIndexId: 'index-2', alwaysIncludeFullContent: true },
+    ],
     documents: [{ id: 'document-2', sourcePath: 'reference.md' }],
     chunks: [{ id: 'chunk-2', documentIndexId: 'index-2', content: 'Configure the package.' }],
     indexes: [{ id: 'index-2', documentId: 'document-2', revisionId: 'revision-2' }],
     revisions: [{ id: 'revision-2', title: 'Reference', content: 'Reference content' }],
     relations: [],
   })
-  facts.snapshot.memberships.push(...second.memberships)
+  facts.snapshot.knowledgeBaseDocuments.push(...second.knowledgeBaseDocuments)
   facts.snapshot.documents.push(...second.documents)
   facts.snapshot.chunks.push(...second.chunks)
   facts.snapshot.indexes.push(...second.indexes)
   facts.snapshot.revisions.push(...second.revisions)
   facts.chunkCountsByDocumentIndexId['index-2'] = 1
-  facts.requiredMembers.unshift(second.memberships[0]!)
+  facts.requiredMembers.unshift(second.knowledgeBaseDocuments[0]!)
   facts.rankedChunks[0]!.rank = 2
   facts.rankedChunks.unshift({
     candidate: second.chunks[0]!,

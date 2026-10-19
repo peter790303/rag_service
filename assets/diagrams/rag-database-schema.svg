@@ -1,746 +1,200 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="4000" height="1854" viewBox="0 0 4000 1854" role="img" aria-labelledby="svg-title svg-desc">
-<title id="svg-title">Agent Teams / RAG Database Graph — 設計草案</title>
-<desc id="svg-desc">獨立 agent_teams_rag 資料庫草案，9 張資料表、88 個欄位。專案與文件透過 knowledge_base_documents 多對多共用，尚未套用 migration。箭頭由參照表指向被參照表。</desc>
-<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="context-stroke"/></marker></defs>
-<style>text{font-family:Arial,"Noto Sans TC",sans-serif}.mono{font-family:Menlo,Consolas,monospace}.edge{fill:none;stroke:#8a99b1;stroke-width:1.4;opacity:.32}.edge.physical{stroke:#087f8c;stroke-width:2.4;opacity:.85}.table{cursor:pointer}.dim{opacity:.12}.table.selected>rect:first-of-type{stroke:#142944;stroke-width:4}.edge.selected{opacity:1;stroke:#c15d13;stroke-width:3}.col{font-size:15px;fill:#243247}.type{font-size:14px;fill:#586c83}.note{font-size:14px;fill:#375466}.key{font-size:12px;font-weight:bold;fill:#6b55b4}
-.table:focus-visible>rect:first-of-type{stroke:#142944;stroke-width:4}.edge.physical{opacity:.4}.edge.selected{opacity:1}.edge.dim{opacity:.08}</style>
-<rect width="4000" height="1854" fill="#f5f7fb"/>
-<text x="70" y="75" font-size="40" font-weight="700" fill="#162d46">Agent Teams / RAG Database Graph</text>
-<text x="70" y="115" font-size="20" fill="#52677f">agent_teams_rag · 9 tables · 88 columns · Draft v4 · 設計草案，尚未 migrate</text>
-<text x="70" y="152" font-size="17" fill="#52677f">PK 主鍵 · FK 外鍵 · UQ 唯一約束 · NN 必填 · NULL 可空 · 複合約束請點選資料表查看</text>
-<text x="70" y="181" font-size="17" fill="#52677f">實線：草案中的資料庫 FK，箭頭由參照端 → 被參照端。project_name 僅邏輯對應業務系統，無跨庫 FK。</text>
-<text x="70" y="210" font-size="17" fill="#52677f">knowledge_bases 1:N knowledge_base_documents N:1 documents · 共用原文與相容索引，每份文件完成後獨立啟用</text>
-<text x="70" y="242" font-size="18" font-weight="700" fill="#087f8c">專案成員與共用文件</text>
-<text x="1390" y="242" font-size="18" font-weight="700" fill="#6b55b4">文件版本與語意索引</text>
-<text x="2710" y="242" font-size="18" font-weight="700" fill="#b16b23">文件關係與背景工作</text>
-<path class="edge physical" data-source="knowledge_base_documents" data-target="knowledge_bases" d="M1190 747 H1212 V337 H1190" marker-end="url(#arrow)"><title>knowledge_base_documents.(knowledge_base_id) → knowledge_bases.(id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="jobs" data-target="knowledge_bases" d="M2710 775 H2678 V255 H38 V337 H70" marker-end="url(#arrow)"><title>jobs.(knowledge_base_id) → knowledge_bases.(id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="failed_jobs" data-target="knowledge_bases" d="M2710 1409 H2670 V248 H30 V337 H70" marker-end="url(#arrow)"><title>failed_jobs.(knowledge_base_id) → knowledge_bases.(id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="knowledge_base_documents" data-target="documents" d="M1190 775 H1251 V1353 H1190" marker-end="url(#arrow)"><title>knowledge_base_documents.(document_id) → documents.(id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="knowledge_base_documents" data-target="document_indexes" d="M1190 803 H1264 V747 H1390" marker-end="url(#arrow)"><title>knowledge_base_documents.(document_id, active_document_index_id) → document_indexes.(document_id, id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="document_revisions" data-target="documents" d="M1390 365 H1277 V1353 H1190" marker-end="url(#arrow)"><title>document_revisions.(document_id) → documents.(id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="document_indexes" data-target="document_revisions" d="M2510 803 H2610 V337 H2510" marker-end="url(#arrow)"><title>document_indexes.(document_id, revision_id) → document_revisions.(document_id, id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="chunks" data-target="document_indexes" d="M2510 1381 H2623 V747 H2510" marker-end="url(#arrow)"><title>chunks.(document_index_id) → document_indexes.(id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="document_relations" data-target="document_indexes" d="M2710 365 H2532 V747 H2510" marker-end="url(#arrow)"><title>document_relations.(source_index_id) → document_indexes.(id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="document_relations" data-target="documents" d="M2710 393 H2686 V262 H46 V1353 H70" marker-end="url(#arrow)"><title>document_relations.(target_document_id) → documents.(id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="jobs" data-target="knowledge_base_documents" d="M2710 803 H2678 V665 H38 V775 H70" marker-end="url(#arrow)"><title>jobs.(knowledge_base_id, document_id) → knowledge_base_documents.(knowledge_base_id, document_id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="jobs" data-target="document_indexes" d="M2710 831 H2571 V747 H2510" marker-end="url(#arrow)"><title>jobs.(document_id, document_index_id) → document_indexes.(document_id, id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="jobs" data-target="failed_jobs" d="M3830 1027 H3904 V1353 H3830" marker-end="url(#arrow)"><title>jobs.(knowledge_base_id, document_id, document_index_id, retry_of_failed_job_id) → failed_jobs.(knowledge_base_id, document_id, document_index_id, id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<path class="edge physical" data-source="failed_jobs" data-target="document_indexes" d="M2710 1465 H2597 V747 H2510" marker-end="url(#arrow)"><title>failed_jobs.(document_id, document_index_id) → document_indexes.(document_id, id) [草案 FK, ON DELETE RESTRICT]</title></path>
-<g class="table" id="table-knowledge_bases" data-name="knowledge_bases" tabindex="0" role="button" aria-label="knowledge_bases">
-<rect x="70" y="280" width="1120" height="180" rx="10" fill="white" stroke="#cdd6e3"/>
-<path d="M80 280 H1180 Q1190 280 1190 290 V320 H70 V290 Q70 280 80 280" fill="#087f8c"/>
-<text x="86" y="307" font-size="19" font-weight="700" fill="white">knowledge_bases</text>
-<text x="1174" y="307" text-anchor="end" font-size="14" fill="white">4 欄位</text>
-<rect x="71" y="324" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-knowledge_bases-id"><rect x="680" y="323" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_bases.id"><title>RAG 自有識別碼 — id uuid; PK</title>
-<text class="mono col" x="84" y="342">id</text>
-<text class="mono type" x="380" y="342">uuid</text>
-<text class="key" x="527" y="342">PK</text>
-<text class="type" x="650" y="342" text-anchor="end">NN</text>
-<text class="note" x="680" y="342" clip-path="url(#clip-knowledge_bases-id)">RAG 自有識別碼</text></g>
-<defs><clipPath id="clip-knowledge_bases-project_name"><rect x="680" y="351" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_bases.project_name"><title>業務系統的專案名稱；僅邏輯對應，沒有跨資料庫 FK — project_name text; UNIQUE / NOT NULL</title>
-<text class="mono col" x="84" y="370">project_name</text>
-<text class="mono type" x="380" y="370">text</text>
-<text class="key" x="527" y="370">UQ</text>
-<text class="type" x="650" y="370" text-anchor="end">NN</text>
-<text class="note" x="680" y="370" clip-path="url(#clip-knowledge_bases-project_name)">業務系統的專案名稱；僅邏輯對應，沒有跨資料庫 FK</text></g>
-<rect x="71" y="380" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-knowledge_bases-created_at"><rect x="680" y="379" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_bases.created_at"><title>建立時間 — created_at timestamptz; NOT NULL</title>
-<text class="mono col" x="84" y="398">created_at</text>
-<text class="mono type" x="380" y="398">timestamptz</text>
-<text class="key" x="527" y="398"></text>
-<text class="type" x="650" y="398" text-anchor="end">NN</text>
-<text class="note" x="680" y="398" clip-path="url(#clip-knowledge_bases-created_at)">建立時間</text></g>
-<defs><clipPath id="clip-knowledge_bases-updated_at"><rect x="680" y="407" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_bases.updated_at"><title>更新時間 — updated_at timestamptz; NOT NULL</title>
-<text class="mono col" x="84" y="426">updated_at</text>
-<text class="mono type" x="380" y="426">timestamptz</text>
-<text class="key" x="527" y="426"></text>
-<text class="type" x="650" y="426" text-anchor="end">NN</text>
-<text class="note" x="680" y="426" clip-path="url(#clip-knowledge_bases-updated_at)">更新時間</text></g>
+<svg xmlns="http://www.w3.org/2000/svg" width="4000" height="2400" viewBox="0 0 4000 2400" role="img" aria-labelledby="svg-title svg-desc">
+<title id="svg-title">RAG Database Schema — 10 表、104 欄、14 組實體 FK</title>
+<desc id="svg-desc">2026-10-19 依十一個初始 migrations（0000–0009、0014）核對。箭頭由參照表指向被參照表，刪除行為皆為 RESTRICT。此圖不代表已套用 migration 或全文查詢已完成。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="context-stroke"/></marker></defs>
+<style>text{font-family:Arial,"Noto Sans TC",sans-serif}.mono{font-family:Menlo,Consolas,monospace}.edge{fill:none;stroke:#087f8c;stroke-width:2.4;opacity:.35}.table{cursor:pointer}.dim{opacity:.12}.table.selected>rect:first-of-type{stroke:#142944;stroke-width:4}.edge.selected{opacity:1;stroke:#c15d13;stroke-width:4}.edge.dim{opacity:.07}.col{font-size:15px;fill:#243247}.type{font-size:14px;fill:#586c83}.note{font-size:14px;fill:#375466}.key{font-size:12px;fill:#6b55b4}.table:focus-visible>rect:first-of-type{stroke:#142944;stroke-width:4}</style>
+<rect width="4000" height="2400" fill="#f5f7fb"/>
+<text x="70" y="72" font-size="38" font-weight="700" fill="#162d46">RAG Database Schema</text>
+<text x="70" y="118" font-size="21" fill="#375466">10 張表 · 104 欄位 · 14 組實體 FK · PostgreSQL / pgvector · 2026-10-18</text>
+<text x="70" y="157" font-size="19" fill="#375466">project_id → knowledge_bases → membership.active_document_index_id → chunks / document_relations</text>
+<text x="70" y="194" font-size="17" fill="#5e7085">定義基準：十一個初始 migrations：0000–0009、0014（未提交修改）；箭頭指向被參照表，全部 ON DELETE RESTRICT。Hybrid 全文 SQL 已限定授權；未驗證環境 migration 套用。</text>
+<path class="edge physical" data-source="knowledge_base_documents" data-target="knowledge_bases" d="M 70 731 H 35 V 341 H 70" marker-end="url(#arrow)"><title>knowledge_base_documents(knowledge_base_id) → knowledge_bases(id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="jobs" data-target="knowledge_bases" d="M 3830 761 H 3920 V 230 H 1240 V 341 H 1190" marker-end="url(#arrow)"><title>jobs(knowledge_base_id) → knowledge_bases(id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="failed_jobs" data-target="knowledge_bases" d="M 3830 1461 H 3930 V 230 H 1250 V 341 H 1190" marker-end="url(#arrow)"><title>failed_jobs(knowledge_base_id) → knowledge_bases(id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="knowledge_base_documents" data-target="documents" d="M 70 761 H 5 V 1401 H 70" marker-end="url(#arrow)"><title>knowledge_base_documents(document_id) → documents(id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="knowledge_base_documents" data-target="document_indexes" d="M 1190 791 H 1298.0 V 731 H 1390" marker-end="url(#arrow)"><title>knowledge_base_documents(document_id, active_document_index_id) → document_indexes(document_id, id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="document_revisions" data-target="documents" d="M 2510 371 H 2560 V 230 H 1250 V 1401 H 1190" marker-end="url(#arrow)"><title>document_revisions(document_id) → documents(id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="document_indexes" data-target="document_revisions" d="M 1390 791 H 1335 V 341 H 1390" marker-end="url(#arrow)"><title>document_indexes(document_id, revision_id) → document_revisions(document_id, id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="chunks" data-target="document_indexes" d="M 1390 1431 H 1325 V 731 H 1390" marker-end="url(#arrow)"><title>chunks(document_index_id) → document_indexes(id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="document_relations" data-target="document_indexes" d="M 3830 371 H 3880 V 230 H 2570 V 731 H 2510" marker-end="url(#arrow)"><title>document_relations(source_index_id) → document_indexes(id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="document_relations" data-target="documents" d="M 3830 401 H 3910 V 230 H 1230 V 1401 H 1190" marker-end="url(#arrow)"><title>document_relations(target_document_id) → documents(id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="jobs" data-target="knowledge_base_documents" d="M 3830 791 H 3920 V 1300 H 1240 V 761 H 1190" marker-end="url(#arrow)"><title>jobs(knowledge_base_id, document_id) → knowledge_base_documents(knowledge_base_id, document_id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="jobs" data-target="document_indexes" d="M 2710 821 H 2626.0 V 731 H 2510" marker-end="url(#arrow)"><title>jobs(document_id, document_index_id) → document_indexes(document_id, id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="jobs" data-target="failed_jobs" d="M 2710 1091 H 2675 V 1401 H 2710" marker-end="url(#arrow)"><title>jobs(knowledge_base_id, document_id, document_index_id, retry_of_failed_job_id) → failed_jobs(knowledge_base_id, document_id, document_index_id, id) · ON DELETE RESTRICT</title></path>
+<path class="edge physical" data-source="failed_jobs" data-target="document_indexes" d="M 3830 1521 H 3870 V 1300 H 2560 V 731 H 2510" marker-end="url(#arrow)"><title>failed_jobs(document_id, document_index_id) → document_indexes(document_id, id) · ON DELETE RESTRICT</title></path>
+<g class="table" id="table-knowledge_bases" data-name="knowledge_bases" tabindex="0" role="button" aria-label="knowledge_bases 專案知識庫">
+<rect x="70" y="260" width="1120" height="256" rx="12" fill="white" stroke="#c6d1df"/>
+<path d="M 82 260 H 1178 Q 1190 260 1190 272 V 313 H 70 V 272 Q 70 260 82 260" fill="#087f8c"/>
+<text x="88" y="293" class="mono" font-size="24" fill="white" font-weight="700">knowledge_bases</text>
+<text x="1172" y="293" text-anchor="end" font-size="17" fill="white">專案知識庫 · 5 欄</text>
+<g data-column="knowledge_bases.id"><title>id | uuid | PK · DEFAULT gen_random_uuid() | 資料列識別碼</title><rect x="71" y="320" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="341">id</text><text class="type mono" x="415" y="341">uuid</text><text class="key" x="585" y="341">PK · DEFAULT gen_random_uu…</text><text class="note" x="850" y="341">資料列識別碼</text></g>
+<g data-column="knowledge_bases.project_id"><title>project_id | text | UNIQUE · NOT NULL | 外部專案穩定識別；沒有跨資料庫 FK</title><rect x="71" y="350" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="371">project_id</text><text class="type mono" x="415" y="371">text</text><text class="key" x="585" y="371">UNIQUE · NOT NULL</text><text class="note" x="850" y="371">外部專案穩定識別；沒有跨資料庫 FK</text></g>
+<g data-column="knowledge_bases.project_name"><title>project_name | text | NOT NULL | 顯示名稱；不是唯一鍵</title><rect x="71" y="380" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="401">project_name</text><text class="type mono" x="415" y="401">text</text><text class="key" x="585" y="401">NOT NULL</text><text class="note" x="850" y="401">顯示名稱；不是唯一鍵</text></g>
+<g data-column="knowledge_bases.created_at"><title>created_at | timestamptz | NOT NULL · DEFAULT now() | 建立時間</title><rect x="71" y="410" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="431">created_at</text><text class="type mono" x="415" y="431">timestamptz</text><text class="key" x="585" y="431">NOT NULL · DEFAULT now()</text><text class="note" x="850" y="431">建立時間</text></g>
+<g data-column="knowledge_bases.updated_at"><title>updated_at | timestamptz | NOT NULL · DEFAULT now() | 更新時間；後續更新由寫入端維護</title><rect x="71" y="440" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="461">updated_at</text><text class="type mono" x="415" y="461">timestamptz</text><text class="key" x="585" y="461">NOT NULL · DEFAULT now()</text><text class="note" x="850" y="461">更新時間；後續更新由寫入端維護</text></g>
+<text x="88" y="501" font-size="14" fill="#5e7085">UNIQUE(project_id)；專案改名不改變 identity。</text>
 </g>
-<g class="table" id="table-knowledge_base_documents" data-name="knowledge_base_documents" tabindex="0" role="button" aria-label="knowledge_base_documents">
-<rect x="70" y="690" width="1120" height="292" rx="10" fill="white" stroke="#cdd6e3"/>
-<path d="M80 690 H1180 Q1190 690 1190 700 V730 H70 V700 Q70 690 80 690" fill="#087f8c"/>
-<text x="86" y="717" font-size="19" font-weight="700" fill="white">knowledge_base_documents</text>
-<text x="1174" y="717" text-anchor="end" font-size="14" fill="white">8 欄位</text>
-<rect x="71" y="734" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-knowledge_base_documents-knowledge_base_id"><rect x="680" y="733" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_base_documents.knowledge_base_id"><title>使用此文件的知識庫 — knowledge_base_id uuid; PK part / FK</title>
-<text class="mono col" x="84" y="752">knowledge_base_id</text>
-<text class="mono type" x="380" y="752">uuid</text>
-<text class="key" x="527" y="752">PK FK</text>
-<text class="type" x="650" y="752" text-anchor="end">NN</text>
-<text class="note" x="680" y="752" clip-path="url(#clip-knowledge_base_documents-knowledge_base_id)">使用此文件的知識庫</text></g>
-<defs><clipPath id="clip-knowledge_base_documents-document_id"><rect x="680" y="761" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_base_documents.document_id"><title>被此知識庫使用的共用文件 — document_id uuid; PK part / FK</title>
-<text class="mono col" x="84" y="780">document_id</text>
-<text class="mono type" x="380" y="780">uuid</text>
-<text class="key" x="527" y="780">PK FK</text>
-<text class="type" x="650" y="780" text-anchor="end">NN</text>
-<text class="note" x="680" y="780" clip-path="url(#clip-knowledge_base_documents-document_id)">被此知識庫使用的共用文件</text></g>
-<rect x="71" y="790" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-knowledge_base_documents-active_document_index_id"><rect x="680" y="789" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_base_documents.active_document_index_id"><title>本專案目前使用的完整文件索引；首次建置前為空 — active_document_index_id uuid; NULL, FK</title>
-<text class="mono col" x="84" y="808">active_document_index_id</text>
-<text class="mono type" x="380" y="808">uuid</text>
-<text class="key" x="527" y="808">FK</text>
-<text class="type" x="650" y="808" text-anchor="end">NULL</text>
-<text class="note" x="680" y="808" clip-path="url(#clip-knowledge_base_documents-active_document_index_id)">本專案目前使用的完整文件索引；首次建置前為空</text></g>
-<defs><clipPath id="clip-knowledge_base_documents-requested_generation"><rect x="680" y="817" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_base_documents.requested_generation"><title>此成員的最新更新序號，防止舊工作覆蓋新要求 — requested_generation bigint; NOT NULL, DEFAULT 0</title>
-<text class="mono col" x="84" y="836">requested_generation</text>
-<text class="mono type" x="380" y="836">bigint</text>
-<text class="key" x="527" y="836"></text>
-<text class="type" x="650" y="836" text-anchor="end">NN</text>
-<text class="note" x="680" y="836" clip-path="url(#clip-knowledge_base_documents-requested_generation)">此成員的最新更新序號，防止舊工作覆蓋新要求</text></g>
-<rect x="71" y="846" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-knowledge_base_documents-is_entry"><rect x="680" y="845" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_base_documents.is_entry"><title>此文件在本專案是否為 CONTEXT 等知識入口 — is_entry boolean; NOT NULL / DEFAULT false</title>
-<text class="mono col" x="84" y="864">is_entry</text>
-<text class="mono type" x="380" y="864">boolean</text>
-<text class="key" x="527" y="864"></text>
-<text class="type" x="650" y="864" text-anchor="end">NN</text>
-<text class="note" x="680" y="864" clip-path="url(#clip-knowledge_base_documents-is_entry)">此文件在本專案是否為 CONTEXT 等知識入口</text></g>
-<defs><clipPath id="clip-knowledge_base_documents-always_include_full_content"><rect x="680" y="873" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_base_documents.always_include_full_content"><title>此文件在本專案是否須以全文供給必要上下文 — always_include_full_content boolean; NOT NULL / DEFAULT false</title>
-<text class="mono col" x="84" y="892">always_include_full_content</text>
-<text class="mono type" x="380" y="892">boolean</text>
-<text class="key" x="527" y="892"></text>
-<text class="type" x="650" y="892" text-anchor="end">NN</text>
-<text class="note" x="680" y="892" clip-path="url(#clip-knowledge_base_documents-always_include_full_content)">此文件在本專案是否須以全文供給必要上下文</text></g>
-<rect x="71" y="902" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-knowledge_base_documents-created_at"><rect x="680" y="901" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_base_documents.created_at"><title>文件加入此知識庫的時間 — created_at timestamptz; NOT NULL</title>
-<text class="mono col" x="84" y="920">created_at</text>
-<text class="mono type" x="380" y="920">timestamptz</text>
-<text class="key" x="527" y="920"></text>
-<text class="type" x="650" y="920" text-anchor="end">NN</text>
-<text class="note" x="680" y="920" clip-path="url(#clip-knowledge_base_documents-created_at)">文件加入此知識庫的時間</text></g>
-<defs><clipPath id="clip-knowledge_base_documents-updated_at"><rect x="680" y="929" width="496" height="28"/></clipPath></defs>
-<g data-column="knowledge_base_documents.updated_at"><title>成員角色、更新要求或有效索引最後異動時間 — updated_at timestamptz; NOT NULL</title>
-<text class="mono col" x="84" y="948">updated_at</text>
-<text class="mono type" x="380" y="948">timestamptz</text>
-<text class="key" x="527" y="948"></text>
-<text class="type" x="650" y="948" text-anchor="end">NN</text>
-<text class="note" x="680" y="948" clip-path="url(#clip-knowledge_base_documents-updated_at)">成員角色、更新要求或有效索引最後異動時間</text></g>
+<g class="table" id="table-documents" data-name="documents" tabindex="0" role="button" aria-label="documents 共用文件身分">
+<rect x="70" y="1320" width="1120" height="316" rx="12" fill="white" stroke="#c6d1df"/>
+<path d="M 82 1320 H 1178 Q 1190 1320 1190 1332 V 1373 H 70 V 1332 Q 70 1320 82 1320" fill="#3558a6"/>
+<text x="88" y="1353" class="mono" font-size="24" fill="white" font-weight="700">documents</text>
+<text x="1172" y="1353" text-anchor="end" font-size="17" fill="white">共用文件身分 · 7 欄</text>
+<g data-column="documents.id"><title>id | uuid | PK · DEFAULT gen_random_uuid() | 資料列識別碼</title><rect x="71" y="1380" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="1401">id</text><text class="type mono" x="415" y="1401">uuid</text><text class="key" x="585" y="1401">PK · DEFAULT gen_random_uu…</text><text class="note" x="850" y="1401">資料列識別碼</text></g>
+<g data-column="documents.source_type"><title>source_type | text | NOT NULL · CHECK | repository / obsidian</title><rect x="71" y="1410" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="1431">source_type</text><text class="type mono" x="415" y="1431">text</text><text class="key" x="585" y="1431">NOT NULL · CHECK</text><text class="note" x="850" y="1431">repository / obsidian</text></g>
+<g data-column="documents.source_key"><title>source_key | text | NOT NULL · CHECK length &gt; 0 | 來源命名空間</title><rect x="71" y="1440" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="1461">source_key</text><text class="type mono" x="415" y="1461">text</text><text class="key" x="585" y="1461">NOT NULL · CHECK length &gt; 0</text><text class="note" x="850" y="1461">來源命名空間</text></g>
+<g data-column="documents.source_path"><title>source_path | text | NOT NULL · CHECK length &gt; 0 | 來源內相對路徑</title><rect x="71" y="1470" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="1491">source_path</text><text class="type mono" x="415" y="1491">text</text><text class="key" x="585" y="1491">NOT NULL · CHECK length &gt; 0</text><text class="note" x="850" y="1491">來源內相對路徑</text></g>
+<g data-column="documents.current_title"><title>current_title | text | NULL | 目前文件標題</title><rect x="71" y="1500" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="1521">current_title</text><text class="type mono" x="415" y="1521">text</text><text class="key" x="585" y="1521">NULL</text><text class="note" x="850" y="1521">目前文件標題</text></g>
+<g data-column="documents.unreferenced_since"><title>unreferenced_since | timestamptz | NULL | 進入無引用狀態的時間；供清理流程使用</title><rect x="71" y="1530" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="1551">unreferenced_since</text><text class="type mono" x="415" y="1551">timestamptz</text><text class="key" x="585" y="1551">NULL</text><text class="note" x="850" y="1551">進入無引用狀態的時間；供清理流程使用</text></g>
+<g data-column="documents.created_at"><title>created_at | timestamptz | NOT NULL · DEFAULT now() | 建立時間</title><rect x="71" y="1560" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="1581">created_at</text><text class="type mono" x="415" y="1581">timestamptz</text><text class="key" x="585" y="1581">NOT NULL · DEFAULT now()</text><text class="note" x="850" y="1581">建立時間</text></g>
+<text x="88" y="1621" font-size="14" fill="#5e7085">UNIQUE(source_type, source_key, source_path)；migration 另有 UNIQUE(id)，與主鍵重疊。</text>
 </g>
-<g class="table" id="table-documents" data-name="documents" tabindex="0" role="button" aria-label="documents">
-<rect x="70" y="1296" width="1120" height="208" rx="10" fill="white" stroke="#cdd6e3"/>
-<path d="M80 1296 H1180 Q1190 1296 1190 1306 V1336 H70 V1306 Q70 1296 80 1296" fill="#087f8c"/>
-<text x="86" y="1323" font-size="19" font-weight="700" fill="white">documents</text>
-<text x="1174" y="1323" text-anchor="end" font-size="14" fill="white">5 欄位</text>
-<rect x="71" y="1340" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-documents-id"><rect x="680" y="1339" width="496" height="28"/></clipPath></defs>
-<g data-column="documents.id"><title>文件識別碼 — id uuid; PK</title>
-<text class="mono col" x="84" y="1358">id</text>
-<text class="mono type" x="380" y="1358">uuid</text>
-<text class="key" x="527" y="1358">PK</text>
-<text class="type" x="650" y="1358" text-anchor="end">NN</text>
-<text class="note" x="680" y="1358" clip-path="url(#clip-documents-id)">文件識別碼</text></g>
-<defs><clipPath id="clip-documents-source_type"><rect x="680" y="1367" width="496" height="28"/></clipPath></defs>
-<g data-column="documents.source_type"><title>repository | obsidian — source_type text; NOT NULL</title>
-<text class="mono col" x="84" y="1386">source_type</text>
-<text class="mono type" x="380" y="1386">text</text>
-<text class="key" x="527" y="1386"></text>
-<text class="type" x="650" y="1386" text-anchor="end">NN</text>
-<text class="note" x="680" y="1386" clip-path="url(#clip-documents-source_type)">repository | obsidian</text></g>
-<rect x="71" y="1396" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-documents-source_key"><rect x="680" y="1395" width="496" height="28"/></clipPath></defs>
-<g data-column="documents.source_key"><title>全域穩定的 repo／vault 識別碼；同一來源在不同專案使用相同值 — source_key text; NOT NULL</title>
-<text class="mono col" x="84" y="1414">source_key</text>
-<text class="mono type" x="380" y="1414">text</text>
-<text class="key" x="527" y="1414"></text>
-<text class="type" x="650" y="1414" text-anchor="end">NN</text>
-<text class="note" x="680" y="1414" clip-path="url(#clip-documents-source_key)">全域穩定的 repo／vault 識別碼；同一來源在不同專案使用相同值</text></g>
-<defs><clipPath id="clip-documents-source_path"><rect x="680" y="1423" width="496" height="28"/></clipPath></defs>
-<g data-column="documents.source_path"><title>相對於來源根目錄的正規化路徑 — source_path text; NOT NULL</title>
-<text class="mono col" x="84" y="1442">source_path</text>
-<text class="mono type" x="380" y="1442">text</text>
-<text class="key" x="527" y="1442"></text>
-<text class="type" x="650" y="1442" text-anchor="end">NN</text>
-<text class="note" x="680" y="1442" clip-path="url(#clip-documents-source_path)">相對於來源根目錄的正規化路徑</text></g>
-<rect x="71" y="1452" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-documents-created_at"><rect x="680" y="1451" width="496" height="28"/></clipPath></defs>
-<g data-column="documents.created_at"><title>首次發現時間 — created_at timestamptz; NOT NULL</title>
-<text class="mono col" x="84" y="1470">created_at</text>
-<text class="mono type" x="380" y="1470">timestamptz</text>
-<text class="key" x="527" y="1470"></text>
-<text class="type" x="650" y="1470" text-anchor="end">NN</text>
-<text class="note" x="680" y="1470" clip-path="url(#clip-documents-created_at)">首次發現時間</text></g>
+<g class="table" id="table-document_revisions" data-name="document_revisions" tabindex="0" role="button" aria-label="document_revisions 不可變內容版本">
+<rect x="1390" y="260" width="1120" height="316" rx="12" fill="white" stroke="#c6d1df"/>
+<path d="M 1402 260 H 2498 Q 2510 260 2510 272 V 313 H 1390 V 272 Q 1390 260 1402 260" fill="#3558a6"/>
+<text x="1408" y="293" class="mono" font-size="24" fill="white" font-weight="700">document_revisions</text>
+<text x="2492" y="293" text-anchor="end" font-size="17" fill="white">不可變內容版本 · 7 欄</text>
+<g data-column="document_revisions.id"><title>id | uuid | PK · DEFAULT gen_random_uuid() | 資料列識別碼</title><rect x="1391" y="320" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="341">id</text><text class="type mono" x="1735" y="341">uuid</text><text class="key" x="1905" y="341">PK · DEFAULT gen_random_uu…</text><text class="note" x="2170" y="341">資料列識別碼</text></g>
+<g data-column="document_revisions.document_id"><title>document_id | uuid | NOT NULL · FK | 所屬 documents.id</title><rect x="1391" y="350" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="371">document_id</text><text class="type mono" x="1735" y="371">uuid</text><text class="key" x="1905" y="371">NOT NULL · FK</text><text class="note" x="2170" y="371">所屬 documents.id</text></g>
+<g data-column="document_revisions.content_sha256"><title>content_sha256 | char(64) | NOT NULL · CHECK | 64 位小寫十六進位內容雜湊</title><rect x="1391" y="380" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="401">content_sha256</text><text class="type mono" x="1735" y="401">char(64)</text><text class="key" x="1905" y="401">NOT NULL · CHECK</text><text class="note" x="2170" y="401">64 位小寫十六進位內容雜湊</text></g>
+<g data-column="document_revisions.title"><title>title | text | NULL | 此內容版本的標題</title><rect x="1391" y="410" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="431">title</text><text class="type mono" x="1735" y="431">text</text><text class="key" x="1905" y="431">NULL</text><text class="note" x="2170" y="431">此內容版本的標題</text></g>
+<g data-column="document_revisions.content"><title>content | text | NOT NULL | 完整來源文字</title><rect x="1391" y="440" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="461">content</text><text class="type mono" x="1735" y="461">text</text><text class="key" x="1905" y="461">NOT NULL</text><text class="note" x="2170" y="461">完整來源文字</text></g>
+<g data-column="document_revisions.captured_at"><title>captured_at | timestamptz | NOT NULL · DEFAULT now() | 來源快照取得時間</title><rect x="1391" y="470" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="491">captured_at</text><text class="type mono" x="1735" y="491">timestamptz</text><text class="key" x="1905" y="491">NOT NULL · DEFAULT now()</text><text class="note" x="2170" y="491">來源快照取得時間</text></g>
+<g data-column="document_revisions.created_at"><title>created_at | timestamptz | NOT NULL · DEFAULT now() | 建立時間</title><rect x="1391" y="500" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="521">created_at</text><text class="type mono" x="1735" y="521">timestamptz</text><text class="key" x="1905" y="521">NOT NULL · DEFAULT now()</text><text class="note" x="2170" y="521">建立時間</text></g>
+<text x="1408" y="561" font-size="14" fill="#5e7085">UNIQUE(document_id, content_sha256)；UNIQUE(document_id, id) 支援索引的複合 FK。</text>
 </g>
-<g class="table" id="table-document_revisions" data-name="document_revisions" tabindex="0" role="button" aria-label="document_revisions">
-<rect x="1390" y="280" width="1120" height="236" rx="10" fill="white" stroke="#cdd6e3"/>
-<path d="M1400 280 H2500 Q2510 280 2510 290 V320 H1390 V290 Q1390 280 1400 280" fill="#6b55b4"/>
-<text x="1406" y="307" font-size="19" font-weight="700" fill="white">document_revisions</text>
-<text x="2494" y="307" text-anchor="end" font-size="14" fill="white">6 欄位</text>
-<rect x="1391" y="324" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_revisions-id"><rect x="2000" y="323" width="496" height="28"/></clipPath></defs>
-<g data-column="document_revisions.id"><title>文件版本識別碼 — id uuid; PK</title>
-<text class="mono col" x="1404" y="342">id</text>
-<text class="mono type" x="1700" y="342">uuid</text>
-<text class="key" x="1847" y="342">PK</text>
-<text class="type" x="1970" y="342" text-anchor="end">NN</text>
-<text class="note" x="2000" y="342" clip-path="url(#clip-document_revisions-id)">文件版本識別碼</text></g>
-<defs><clipPath id="clip-document_revisions-document_id"><rect x="2000" y="351" width="496" height="28"/></clipPath></defs>
-<g data-column="document_revisions.document_id"><title>所屬文件 — document_id uuid; FK / NOT NULL</title>
-<text class="mono col" x="1404" y="370">document_id</text>
-<text class="mono type" x="1700" y="370">uuid</text>
-<text class="key" x="1847" y="370">FK</text>
-<text class="type" x="1970" y="370" text-anchor="end">NN</text>
-<text class="note" x="2000" y="370" clip-path="url(#clip-document_revisions-document_id)">所屬文件</text></g>
-<rect x="1391" y="380" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_revisions-content_sha256"><rect x="2000" y="379" width="496" height="28"/></clipPath></defs>
-<g data-column="document_revisions.content_sha256"><title>content 原始 UTF-8 全文的 SHA-256 — content_sha256 char(64); NOT NULL</title>
-<text class="mono col" x="1404" y="398">content_sha256</text>
-<text class="mono type" x="1700" y="398">char(64)</text>
-<text class="key" x="1847" y="398"></text>
-<text class="type" x="1970" y="398" text-anchor="end">NN</text>
-<text class="note" x="2000" y="398" clip-path="url(#clip-document_revisions-content_sha256)">content 原始 UTF-8 全文的 SHA-256</text></g>
-<defs><clipPath id="clip-document_revisions-title"><rect x="2000" y="407" width="496" height="28"/></clipPath></defs>
-<g data-column="document_revisions.title"><title>此版本的文件標題 — title text; NULL</title>
-<text class="mono col" x="1404" y="426">title</text>
-<text class="mono type" x="1700" y="426">text</text>
-<text class="key" x="1847" y="426"></text>
-<text class="type" x="1970" y="426" text-anchor="end">NULL</text>
-<text class="note" x="2000" y="426" clip-path="url(#clip-document_revisions-title)">此版本的文件標題</text></g>
-<rect x="1391" y="436" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_revisions-content"><rect x="2000" y="435" width="496" height="28"/></clipPath></defs>
-<g data-column="document_revisions.content"><title>原始完整 Markdown；保留換行與標記 — content text; NOT NULL</title>
-<text class="mono col" x="1404" y="454">content</text>
-<text class="mono type" x="1700" y="454">text</text>
-<text class="key" x="1847" y="454"></text>
-<text class="type" x="1970" y="454" text-anchor="end">NN</text>
-<text class="note" x="2000" y="454" clip-path="url(#clip-document_revisions-content)">原始完整 Markdown；保留換行與標記</text></g>
-<defs><clipPath id="clip-document_revisions-captured_at"><rect x="2000" y="463" width="496" height="28"/></clipPath></defs>
-<g data-column="document_revisions.captured_at"><title>擷取時間 — captured_at timestamptz; NOT NULL</title>
-<text class="mono col" x="1404" y="482">captured_at</text>
-<text class="mono type" x="1700" y="482">timestamptz</text>
-<text class="key" x="1847" y="482"></text>
-<text class="type" x="1970" y="482" text-anchor="end">NN</text>
-<text class="note" x="2000" y="482" clip-path="url(#clip-document_revisions-captured_at)">擷取時間</text></g>
+<g class="table" id="table-document_indexes" data-name="document_indexes" tabindex="0" role="button" aria-label="document_indexes 內容索引版本">
+<rect x="1390" y="650" width="1120" height="556" rx="12" fill="white" stroke="#c6d1df"/>
+<path d="M 1402 650 H 2498 Q 2510 650 2510 662 V 703 H 1390 V 662 Q 1390 650 1402 650" fill="#6854a6"/>
+<text x="1408" y="683" class="mono" font-size="24" fill="white" font-weight="700">document_indexes</text>
+<text x="2492" y="683" text-anchor="end" font-size="17" fill="white">內容索引版本 · 15 欄</text>
+<g data-column="document_indexes.id"><title>id | uuid | PK · DEFAULT gen_random_uuid() | 資料列識別碼</title><rect x="1391" y="710" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="731">id</text><text class="type mono" x="1735" y="731">uuid</text><text class="key" x="1905" y="731">PK · DEFAULT gen_random_uu…</text><text class="note" x="2170" y="731">資料列識別碼</text></g>
+<g data-column="document_indexes.document_id"><title>document_id | uuid | NOT NULL · 複合 FK | 與 revision_id 一起限制相同文件</title><rect x="1391" y="740" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="761">document_id</text><text class="type mono" x="1735" y="761">uuid</text><text class="key" x="1905" y="761">NOT NULL · 複合 FK</text><text class="note" x="2170" y="761">與 revision_id 一起限制相同文件</text></g>
+<g data-column="document_indexes.revision_id"><title>revision_id | uuid | NOT NULL · 複合 FK | 來源內容版本</title><rect x="1391" y="770" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="791">revision_id</text><text class="type mono" x="1735" y="791">uuid</text><text class="key" x="1905" y="791">NOT NULL · 複合 FK</text><text class="note" x="2170" y="791">來源內容版本</text></g>
+<g data-column="document_indexes.pipeline_hash"><title>pipeline_hash | char(64) | NOT NULL · CHECK | 64 位小寫十六進位 pipeline 雜湊</title><rect x="1391" y="800" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="821">pipeline_hash</text><text class="type mono" x="1735" y="821">char(64)</text><text class="key" x="1905" y="821">NOT NULL · CHECK</text><text class="note" x="2170" y="821">64 位小寫十六進位 pipeline 雜湊</text></g>
+<g data-column="document_indexes.chunking_model"><title>chunking_model | text | NOT NULL | 切塊模型版本</title><rect x="1391" y="830" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="851">chunking_model</text><text class="type mono" x="1735" y="851">text</text><text class="key" x="1905" y="851">NOT NULL</text><text class="note" x="2170" y="851">切塊模型版本</text></g>
+<g data-column="document_indexes.chunking_profile"><title>chunking_profile | text | NOT NULL | 切塊設定版本</title><rect x="1391" y="860" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="881">chunking_profile</text><text class="type mono" x="1735" y="881">text</text><text class="key" x="1905" y="881">NOT NULL</text><text class="note" x="2170" y="881">切塊設定版本</text></g>
+<g data-column="document_indexes.embedding_model"><title>embedding_model | text | NOT NULL | 向量模型版本</title><rect x="1391" y="890" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="911">embedding_model</text><text class="type mono" x="1735" y="911">text</text><text class="key" x="1905" y="911">NOT NULL</text><text class="note" x="2170" y="911">向量模型版本</text></g>
+<g data-column="document_indexes.embedding_dimensions"><title>embedding_dimensions | integer | NOT NULL · CHECK = 384 | 目前 schema 固定 384 維</title><rect x="1391" y="920" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="941">embedding_dimensions</text><text class="type mono" x="1735" y="941">integer</text><text class="key" x="1905" y="941">NOT NULL · CHECK = 384</text><text class="note" x="2170" y="941">目前 schema 固定 384 維</text></g>
+<g data-column="document_indexes.embedding_profile"><title>embedding_profile | text | NOT NULL | 向量設定版本</title><rect x="1391" y="950" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="971">embedding_profile</text><text class="type mono" x="1735" y="971">text</text><text class="key" x="1905" y="971">NOT NULL</text><text class="note" x="2170" y="971">向量設定版本</text></g>
+<g data-column="document_indexes.lexical_profile"><title>lexical_profile | text | NOT NULL | 全文檢索設定版本</title><rect x="1391" y="980" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="1001">lexical_profile</text><text class="type mono" x="1735" y="1001">text</text><text class="key" x="1905" y="1001">NOT NULL</text><text class="note" x="2170" y="1001">全文檢索設定版本</text></g>
+<g data-column="document_indexes.relation_profile"><title>relation_profile | text | NOT NULL | 關聯抽取設定版本</title><rect x="1391" y="1010" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="1031">relation_profile</text><text class="type mono" x="1735" y="1031">text</text><text class="key" x="1905" y="1031">NOT NULL</text><text class="note" x="2170" y="1031">關聯抽取設定版本</text></g>
+<g data-column="document_indexes.status"><title>status | text | NOT NULL · CHECK | building / ready / failed / deleting</title><rect x="1391" y="1040" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="1061">status</text><text class="type mono" x="1735" y="1061">text</text><text class="key" x="1905" y="1061">NOT NULL · CHECK</text><text class="note" x="2170" y="1061">building / ready / fa…</text></g>
+<g data-column="document_indexes.created_at"><title>created_at | timestamptz | NOT NULL · DEFAULT now() | 建立時間</title><rect x="1391" y="1070" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="1091">created_at</text><text class="type mono" x="1735" y="1091">timestamptz</text><text class="key" x="1905" y="1091">NOT NULL · DEFAULT now()</text><text class="note" x="2170" y="1091">建立時間</text></g>
+<g data-column="document_indexes.ready_at"><title>ready_at | timestamptz | NULL · CHECK | ready 或 deleting 必須有值；其他狀態必須 NULL</title><rect x="1391" y="1100" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="1121">ready_at</text><text class="type mono" x="1735" y="1121">timestamptz</text><text class="key" x="1905" y="1121">NULL · CHECK</text><text class="note" x="2170" y="1121">ready 或 deleting 必須有值…</text></g>
+<g data-column="document_indexes.unreferenced_since"><title>unreferenced_since | timestamptz | NULL | 進入無引用狀態的時間；供清理流程使用</title><rect x="1391" y="1130" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="1151">unreferenced_since</text><text class="type mono" x="1735" y="1151">timestamptz</text><text class="key" x="1905" y="1151">NULL</text><text class="note" x="2170" y="1151">進入無引用狀態的時間；供清理流程使用</text></g>
+<text x="1408" y="1191" font-size="14" fill="#5e7085">UNIQUE(revision_id, pipeline_hash)；UNIQUE(document_id, id) 支援同文件 FK。</text>
 </g>
-<g class="table" id="table-document_indexes" data-name="document_indexes" tabindex="0" role="button" aria-label="document_indexes">
-<rect x="1390" y="690" width="1120" height="460" rx="10" fill="white" stroke="#cdd6e3"/>
-<path d="M1400 690 H2500 Q2510 690 2510 700 V730 H1390 V700 Q1390 690 1400 690" fill="#6b55b4"/>
-<text x="1406" y="717" font-size="19" font-weight="700" fill="white">document_indexes</text>
-<text x="2494" y="717" text-anchor="end" font-size="14" fill="white">14 欄位</text>
-<rect x="1391" y="734" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_indexes-id"><rect x="2000" y="733" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.id"><title>索引識別碼 — id uuid; PK</title>
-<text class="mono col" x="1404" y="752">id</text>
-<text class="mono type" x="1700" y="752">uuid</text>
-<text class="key" x="1847" y="752">PK</text>
-<text class="type" x="1970" y="752" text-anchor="end">NN</text>
-<text class="note" x="2000" y="752" clip-path="url(#clip-document_indexes-id)">索引識別碼</text></g>
-<defs><clipPath id="clip-document_indexes-document_id"><rect x="2000" y="761" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.document_id"><title>所屬文件，供複合約束驗證 — document_id uuid; FK / NOT NULL</title>
-<text class="mono col" x="1404" y="780">document_id</text>
-<text class="mono type" x="1700" y="780">uuid</text>
-<text class="key" x="1847" y="780">FK</text>
-<text class="type" x="1970" y="780" text-anchor="end">NN</text>
-<text class="note" x="2000" y="780" clip-path="url(#clip-document_indexes-document_id)">所屬文件，供複合約束驗證</text></g>
-<rect x="1391" y="790" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_indexes-revision_id"><rect x="2000" y="789" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.revision_id"><title>索引使用的文件版本 — revision_id uuid; FK / NOT NULL</title>
-<text class="mono col" x="1404" y="808">revision_id</text>
-<text class="mono type" x="1700" y="808">uuid</text>
-<text class="key" x="1847" y="808">FK</text>
-<text class="type" x="1970" y="808" text-anchor="end">NN</text>
-<text class="note" x="2000" y="808" clip-path="url(#clip-document_indexes-revision_id)">索引使用的文件版本</text></g>
-<defs><clipPath id="clip-document_indexes-pipeline_hash"><rect x="2000" y="817" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.pipeline_hash"><title>所有模型、策略、處理參數與影響輸出之上下文的規範化設定 SHA-256 — pipeline_hash char(64); NOT NULL</title>
-<text class="mono col" x="1404" y="836">pipeline_hash</text>
-<text class="mono type" x="1700" y="836">char(64)</text>
-<text class="key" x="1847" y="836"></text>
-<text class="type" x="1970" y="836" text-anchor="end">NN</text>
-<text class="note" x="2000" y="836" clip-path="url(#clip-document_indexes-pipeline_hash)">所有模型、策略、處理參數與影響輸出之上下文的規範化設定 SHA-256</text></g>
-<rect x="1391" y="846" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_indexes-chunking_model"><rect x="2000" y="845" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.chunking_model"><title>本次草案採 gpt-6.1-sol；只負責依全文判斷語意邊界 — chunking_model text; NOT NULL</title>
-<text class="mono col" x="1404" y="864">chunking_model</text>
-<text class="mono type" x="1700" y="864">text</text>
-<text class="key" x="1847" y="864"></text>
-<text class="type" x="1970" y="864" text-anchor="end">NN</text>
-<text class="note" x="2000" y="864" clip-path="url(#clip-document_indexes-chunking_model)">本次草案採 gpt-6.1-sol；只負責依全文判斷語意邊界</text></g>
-<defs><clipPath id="clip-document_indexes-chunking_profile"><rect x="2000" y="873" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.chunking_profile"><title>切割 prompt、block parser、輸出驗證規則版本 — chunking_profile text; NOT NULL</title>
-<text class="mono col" x="1404" y="892">chunking_profile</text>
-<text class="mono type" x="1700" y="892">text</text>
-<text class="key" x="1847" y="892"></text>
-<text class="type" x="1970" y="892" text-anchor="end">NN</text>
-<text class="note" x="2000" y="892" clip-path="url(#clip-document_indexes-chunking_profile)">切割 prompt、block parser、輸出驗證規則版本</text></g>
-<rect x="1391" y="902" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_indexes-embedding_model"><rect x="2000" y="901" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.embedding_model"><title>向量模型及可辨識版本；與 chunking_model 分開 — embedding_model text; NOT NULL</title>
-<text class="mono col" x="1404" y="920">embedding_model</text>
-<text class="mono type" x="1700" y="920">text</text>
-<text class="key" x="1847" y="920"></text>
-<text class="type" x="1970" y="920" text-anchor="end">NN</text>
-<text class="note" x="2000" y="920" clip-path="url(#clip-document_indexes-embedding_model)">向量模型及可辨識版本；與 chunking_model 分開</text></g>
-<defs><clipPath id="clip-document_indexes-embedding_dimensions"><rect x="2000" y="929" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.embedding_dimensions"><title>該模型的向量維度 — embedding_dimensions integer; NOT NULL / &gt; 0</title>
-<text class="mono col" x="1404" y="948">embedding_dimensions</text>
-<text class="mono type" x="1700" y="948">integer</text>
-<text class="key" x="1847" y="948"></text>
-<text class="type" x="1970" y="948" text-anchor="end">NN</text>
-<text class="note" x="2000" y="948" clip-path="url(#clip-document_indexes-embedding_dimensions)">該模型的向量維度</text></g>
-<rect x="1391" y="958" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_indexes-embedding_profile"><rect x="2000" y="957" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.embedding_profile"><title>前處理、池化／正規化及 adapter 版本 — embedding_profile text; NOT NULL</title>
-<text class="mono col" x="1404" y="976">embedding_profile</text>
-<text class="mono type" x="1700" y="976">text</text>
-<text class="key" x="1847" y="976"></text>
-<text class="type" x="1970" y="976" text-anchor="end">NN</text>
-<text class="note" x="2000" y="976" clip-path="url(#clip-document_indexes-embedding_profile)">前處理、池化／正規化及 adapter 版本</text></g>
-<defs><clipPath id="clip-document_indexes-lexical_profile"><rect x="2000" y="985" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.lexical_profile"><title>中文斷詞、識別字拆分與全文查詢規則版本 — lexical_profile text; NOT NULL</title>
-<text class="mono col" x="1404" y="1004">lexical_profile</text>
-<text class="mono type" x="1700" y="1004">text</text>
-<text class="key" x="1847" y="1004"></text>
-<text class="type" x="1970" y="1004" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1004" clip-path="url(#clip-document_indexes-lexical_profile)">中文斷詞、識別字拆分與全文查詢規則版本</text></g>
-<rect x="1391" y="1014" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_indexes-relation_profile"><rect x="2000" y="1013" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.relation_profile"><title>文件關係抽取與解析策略版本 — relation_profile text; NOT NULL</title>
-<text class="mono col" x="1404" y="1032">relation_profile</text>
-<text class="mono type" x="1700" y="1032">text</text>
-<text class="key" x="1847" y="1032"></text>
-<text class="type" x="1970" y="1032" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1032" clip-path="url(#clip-document_indexes-relation_profile)">文件關係抽取與解析策略版本</text></g>
-<defs><clipPath id="clip-document_indexes-status"><rect x="2000" y="1041" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.status"><title>building | ready | failed — status text; NOT NULL</title>
-<text class="mono col" x="1404" y="1060">status</text>
-<text class="mono type" x="1700" y="1060">text</text>
-<text class="key" x="1847" y="1060"></text>
-<text class="type" x="1970" y="1060" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1060" clip-path="url(#clip-document_indexes-status)">building | ready | failed</text></g>
-<rect x="1391" y="1070" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_indexes-created_at"><rect x="2000" y="1069" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.created_at"><title>開始建立時間 — created_at timestamptz; NOT NULL</title>
-<text class="mono col" x="1404" y="1088">created_at</text>
-<text class="mono type" x="1700" y="1088">timestamptz</text>
-<text class="key" x="1847" y="1088"></text>
-<text class="type" x="1970" y="1088" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1088" clip-path="url(#clip-document_indexes-created_at)">開始建立時間</text></g>
-<defs><clipPath id="clip-document_indexes-ready_at"><rect x="2000" y="1097" width="496" height="28"/></clipPath></defs>
-<g data-column="document_indexes.ready_at"><title>整份文件索引驗證完成時間 — ready_at timestamptz; NULL</title>
-<text class="mono col" x="1404" y="1116">ready_at</text>
-<text class="mono type" x="1700" y="1116">timestamptz</text>
-<text class="key" x="1847" y="1116"></text>
-<text class="type" x="1970" y="1116" text-anchor="end">NULL</text>
-<text class="note" x="2000" y="1116" clip-path="url(#clip-document_indexes-ready_at)">整份文件索引驗證完成時間</text></g>
+<g class="table" id="table-knowledge_base_documents" data-name="knowledge_base_documents" tabindex="0" role="button" aria-label="knowledge_base_documents 專案文件成員與讀取角色">
+<rect x="70" y="650" width="1120" height="346" rx="12" fill="white" stroke="#c6d1df"/>
+<path d="M 82 650 H 1178 Q 1190 650 1190 662 V 703 H 70 V 662 Q 70 650 82 650" fill="#087f8c"/>
+<text x="88" y="683" class="mono" font-size="24" fill="white" font-weight="700">knowledge_base_documents</text>
+<text x="1172" y="683" text-anchor="end" font-size="17" fill="white">專案文件成員與讀取角色 · 8 欄</text>
+<g data-column="knowledge_base_documents.knowledge_base_id"><title>knowledge_base_id | uuid | PK · NOT NULL · FK | 所屬 knowledge_bases.id</title><rect x="71" y="710" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="731">knowledge_base_id</text><text class="type mono" x="415" y="731">uuid</text><text class="key" x="585" y="731">PK · NOT NULL · FK</text><text class="note" x="850" y="731">所屬 knowledge_bases.id</text></g>
+<g data-column="knowledge_base_documents.document_id"><title>document_id | uuid | PK · NOT NULL · FK | 共用 documents.id</title><rect x="71" y="740" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="761">document_id</text><text class="type mono" x="415" y="761">uuid</text><text class="key" x="585" y="761">PK · NOT NULL · FK</text><text class="note" x="850" y="761">共用 documents.id</text></g>
+<g data-column="knowledge_base_documents.active_document_index_id"><title>active_document_index_id | uuid | NULL · 複合 FK | 同文件的有效索引；尚未啟用可為 NULL</title><rect x="71" y="770" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="791">active_document_index_id</text><text class="type mono" x="415" y="791">uuid</text><text class="key" x="585" y="791">NULL · 複合 FK</text><text class="note" x="850" y="791">同文件的有效索引；尚未啟用可為 NULL</text></g>
+<g data-column="knowledge_base_documents.requested_generation"><title>requested_generation | bigint | NOT NULL · DEFAULT 0 · CHECK ≥ 0 | 最新請求世代，用於拒絕過時結果</title><rect x="71" y="800" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="821">requested_generation</text><text class="type mono" x="415" y="821">bigint</text><text class="key" x="585" y="821">NOT NULL · DEFAULT 0 · CHE…</text><text class="note" x="850" y="821">最新請求世代，用於拒絕過時結果</text></g>
+<g data-column="knowledge_base_documents.is_entry"><title>is_entry | boolean | NOT NULL · DEFAULT false | 是否作為專案入口文件</title><rect x="71" y="830" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="851">is_entry</text><text class="type mono" x="415" y="851">boolean</text><text class="key" x="585" y="851">NOT NULL · DEFAULT false</text><text class="note" x="850" y="851">是否作為專案入口文件</text></g>
+<g data-column="knowledge_base_documents.always_include_full_content"><title>always_include_full_content | boolean | NOT NULL · DEFAULT false | 讀取時是否附加完整內容</title><rect x="71" y="860" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="881">always_include_full_content</text><text class="type mono" x="415" y="881">boolean</text><text class="key" x="585" y="881">NOT NULL · DEFAULT false</text><text class="note" x="850" y="881">讀取時是否附加完整內容</text></g>
+<g data-column="knowledge_base_documents.created_at"><title>created_at | timestamptz | NOT NULL · DEFAULT now() | 建立時間</title><rect x="71" y="890" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="911">created_at</text><text class="type mono" x="415" y="911">timestamptz</text><text class="key" x="585" y="911">NOT NULL · DEFAULT now()</text><text class="note" x="850" y="911">建立時間</text></g>
+<g data-column="knowledge_base_documents.updated_at"><title>updated_at | timestamptz | NOT NULL · DEFAULT now() | 更新時間；後續更新由寫入端維護</title><rect x="71" y="920" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="941">updated_at</text><text class="type mono" x="415" y="941">timestamptz</text><text class="key" x="585" y="941">NOT NULL · DEFAULT now()</text><text class="note" x="850" y="941">更新時間；後續更新由寫入端維護</text></g>
+<text x="88" y="981" font-size="14" fill="#5e7085">PRIMARY KEY(knowledge_base_id, document_id)。</text>
 </g>
-<g class="table" id="table-chunks" data-name="chunks" tabindex="0" role="button" aria-label="chunks">
-<rect x="1390" y="1296" width="1120" height="376" rx="10" fill="white" stroke="#cdd6e3"/>
-<path d="M1400 1296 H2500 Q2510 1296 2510 1306 V1336 H1390 V1306 Q1390 1296 1400 1296" fill="#6b55b4"/>
-<text x="1406" y="1323" font-size="19" font-weight="700" fill="white">chunks</text>
-<text x="2494" y="1323" text-anchor="end" font-size="14" fill="white">11 欄位</text>
-<rect x="1391" y="1340" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-chunks-id"><rect x="2000" y="1339" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.id"><title>Chunk 識別碼；新資料庫重新產生 — id uuid; PK</title>
-<text class="mono col" x="1404" y="1358">id</text>
-<text class="mono type" x="1700" y="1358">uuid</text>
-<text class="key" x="1847" y="1358">PK</text>
-<text class="type" x="1970" y="1358" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1358" clip-path="url(#clip-chunks-id)">Chunk 識別碼；新資料庫重新產生</text></g>
-<defs><clipPath id="clip-chunks-document_index_id"><rect x="2000" y="1367" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.document_index_id"><title>所屬索引版本 — document_index_id uuid; FK / NOT NULL</title>
-<text class="mono col" x="1404" y="1386">document_index_id</text>
-<text class="mono type" x="1700" y="1386">uuid</text>
-<text class="key" x="1847" y="1386">FK</text>
-<text class="type" x="1970" y="1386" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1386" clip-path="url(#clip-chunks-document_index_id)">所屬索引版本</text></g>
-<rect x="1391" y="1396" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-chunks-ordinal"><rect x="2000" y="1395" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.ordinal"><title>在此文件索引中的順序，由 0 起算 — ordinal integer; NOT NULL / &gt;= 0</title>
-<text class="mono col" x="1404" y="1414">ordinal</text>
-<text class="mono type" x="1700" y="1414">integer</text>
-<text class="key" x="1847" y="1414"></text>
-<text class="type" x="1970" y="1414" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1414" clip-path="url(#clip-chunks-ordinal)">在此文件索引中的順序，由 0 起算</text></g>
-<defs><clipPath id="clip-chunks-heading_path"><rect x="2000" y="1423" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.heading_path"><title>標題階層，例如架構／分層目錄 — heading_path text[]; NOT NULL / DEFAULT {}</title>
-<text class="mono col" x="1404" y="1442">heading_path</text>
-<text class="mono type" x="1700" y="1442">text[]</text>
-<text class="key" x="1847" y="1442"></text>
-<text class="type" x="1970" y="1442" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1442" clip-path="url(#clip-chunks-heading_path)">標題階層，例如架構／分層目錄</text></g>
-<rect x="1391" y="1452" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-chunks-content"><rect x="2000" y="1451" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.content"><title>由原文 block 邊界擷取的內容，不用模型改寫原文 — content text; NOT NULL</title>
-<text class="mono col" x="1404" y="1470">content</text>
-<text class="mono type" x="1700" y="1470">text</text>
-<text class="key" x="1847" y="1470"></text>
-<text class="type" x="1970" y="1470" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1470" clip-path="url(#clip-chunks-content)">由原文 block 邊界擷取的內容，不用模型改寫原文</text></g>
-<defs><clipPath id="clip-chunks-block_start"><rect x="2000" y="1479" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.block_start"><title>包含的第一個 block，從 0 起算 — block_start integer; NOT NULL / &gt;= 0</title>
-<text class="mono col" x="1404" y="1498">block_start</text>
-<text class="mono type" x="1700" y="1498">integer</text>
-<text class="key" x="1847" y="1498"></text>
-<text class="type" x="1970" y="1498" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1498" clip-path="url(#clip-chunks-block_start)">包含的第一個 block，從 0 起算</text></g>
-<rect x="1391" y="1508" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-chunks-block_end"><rect x="2000" y="1507" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.block_end"><title>不包含的結束 block；區間 [start, end) — block_end integer; NOT NULL / &gt; block_start</title>
-<text class="mono col" x="1404" y="1526">block_end</text>
-<text class="mono type" x="1700" y="1526">integer</text>
-<text class="key" x="1847" y="1526"></text>
-<text class="type" x="1970" y="1526" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1526" clip-path="url(#clip-chunks-block_end)">不包含的結束 block；區間 [start, end)</text></g>
-<defs><clipPath id="clip-chunks-token_count"><rect x="2000" y="1535" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.token_count"><title>僅供觀測與 context 預算；不作切割邊界 — token_count integer; NULL / &gt;= 0</title>
-<text class="mono col" x="1404" y="1554">token_count</text>
-<text class="mono type" x="1700" y="1554">integer</text>
-<text class="key" x="1847" y="1554"></text>
-<text class="type" x="1970" y="1554" text-anchor="end">NULL</text>
-<text class="note" x="2000" y="1554" clip-path="url(#clip-chunks-token_count)">僅供觀測與 context 預算；不作切割邊界</text></g>
-<rect x="1391" y="1564" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-chunks-embedding"><rect x="2000" y="1563" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.embedding"><title>pgvector 向量；d 是設計佔位，實際維度須由模型驗證後固定 — embedding vector(d); NOT NULL</title>
-<text class="mono col" x="1404" y="1582">embedding</text>
-<text class="mono type" x="1700" y="1582">vector(d)</text>
-<text class="key" x="1847" y="1582"></text>
-<text class="type" x="1970" y="1582" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1582" clip-path="url(#clip-chunks-embedding)">pgvector 向量；d 是設計佔位，實際維度須由模型驗證後固定</text></g>
-<defs><clipPath id="clip-chunks-search_vector"><rect x="2000" y="1591" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.search_vector"><title>依 lexical_profile 處理的全文索引值 — search_vector tsvector; NOT NULL</title>
-<text class="mono col" x="1404" y="1610">search_vector</text>
-<text class="mono type" x="1700" y="1610">tsvector</text>
-<text class="key" x="1847" y="1610"></text>
-<text class="type" x="1970" y="1610" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1610" clip-path="url(#clip-chunks-search_vector)">依 lexical_profile 處理的全文索引值</text></g>
-<rect x="1391" y="1620" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-chunks-created_at"><rect x="2000" y="1619" width="496" height="28"/></clipPath></defs>
-<g data-column="chunks.created_at"><title>寫入時間 — created_at timestamptz; NOT NULL</title>
-<text class="mono col" x="1404" y="1638">created_at</text>
-<text class="mono type" x="1700" y="1638">timestamptz</text>
-<text class="key" x="1847" y="1638"></text>
-<text class="type" x="1970" y="1638" text-anchor="end">NN</text>
-<text class="note" x="2000" y="1638" clip-path="url(#clip-chunks-created_at)">寫入時間</text></g>
+<g class="table" id="table-chunks" data-name="chunks" tabindex="0" role="button" aria-label="chunks 索引切塊與檢索資料">
+<rect x="1390" y="1320" width="1120" height="436" rx="12" fill="white" stroke="#c6d1df"/>
+<path d="M 1402 1320 H 2498 Q 2510 1320 2510 1332 V 1373 H 1390 V 1332 Q 1390 1320 1402 1320" fill="#6854a6"/>
+<text x="1408" y="1353" class="mono" font-size="24" fill="white" font-weight="700">chunks</text>
+<text x="2492" y="1353" text-anchor="end" font-size="17" fill="white">索引切塊與檢索資料 · 11 欄</text>
+<g data-column="chunks.id"><title>id | uuid | PK · DEFAULT gen_random_uuid() | 資料列識別碼</title><rect x="1391" y="1380" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="1401">id</text><text class="type mono" x="1735" y="1401">uuid</text><text class="key" x="1905" y="1401">PK · DEFAULT gen_random_uu…</text><text class="note" x="2170" y="1401">資料列識別碼</text></g>
+<g data-column="chunks.document_index_id"><title>document_index_id | uuid | NOT NULL · FK | 所屬 document_indexes.id</title><rect x="1391" y="1410" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="1431">document_index_id</text><text class="type mono" x="1735" y="1431">uuid</text><text class="key" x="1905" y="1431">NOT NULL · FK</text><text class="note" x="2170" y="1431">所屬 document_indexes.id</text></g>
+<g data-column="chunks.ordinal"><title>ordinal | integer | NOT NULL · CHECK ≥ 0 | 索引內的切塊順序</title><rect x="1391" y="1440" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="1461">ordinal</text><text class="type mono" x="1735" y="1461">integer</text><text class="key" x="1905" y="1461">NOT NULL · CHECK ≥ 0</text><text class="note" x="2170" y="1461">索引內的切塊順序</text></g>
+<g data-column="chunks.heading_path"><title>heading_path | text[] | NOT NULL · DEFAULT {} | 來源標題階層</title><rect x="1391" y="1470" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="1491">heading_path</text><text class="type mono" x="1735" y="1491">text[]</text><text class="key" x="1905" y="1491">NOT NULL · DEFAULT {}</text><text class="note" x="2170" y="1491">來源標題階層</text></g>
+<g data-column="chunks.content"><title>content | text | NOT NULL | 切塊文字</title><rect x="1391" y="1500" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="1521">content</text><text class="type mono" x="1735" y="1521">text</text><text class="key" x="1905" y="1521">NOT NULL</text><text class="note" x="2170" y="1521">切塊文字</text></g>
+<g data-column="chunks.block_start"><title>block_start | integer | NOT NULL · CHECK ≥ 0 | 來源範圍起點，歷史欄位名稱保留</title><rect x="1391" y="1530" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="1551">block_start</text><text class="type mono" x="1735" y="1551">integer</text><text class="key" x="1905" y="1551">NOT NULL · CHECK ≥ 0</text><text class="note" x="2170" y="1551">來源範圍起點，歷史欄位名稱保留</text></g>
+<g data-column="chunks.block_end"><title>block_end | integer | NOT NULL · CHECK &gt; block_start | 來源範圍終點，不包含終點</title><rect x="1391" y="1560" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="1581">block_end</text><text class="type mono" x="1735" y="1581">integer</text><text class="key" x="1905" y="1581">NOT NULL · CHECK &gt; block_s…</text><text class="note" x="2170" y="1581">來源範圍終點，不包含終點</text></g>
+<g data-column="chunks.token_count"><title>token_count | integer | NULL · CHECK ≥ 0 | 可選的 token 數量</title><rect x="1391" y="1590" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="1611">token_count</text><text class="type mono" x="1735" y="1611">integer</text><text class="key" x="1905" y="1611">NULL · CHECK ≥ 0</text><text class="note" x="2170" y="1611">可選的 token 數量</text></g>
+<g data-column="chunks.embedding"><title>embedding | vector(384) | NOT NULL | 固定 384 維向量</title><rect x="1391" y="1620" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="1641">embedding</text><text class="type mono" x="1735" y="1641">vector(384)</text><text class="key" x="1905" y="1641">NOT NULL</text><text class="note" x="2170" y="1641">固定 384 維向量</text></g>
+<g data-column="chunks.search_vector"><title>search_vector | tsvector | NOT NULL | 全文檢索詞彙及位置；供 Hybrid 相關度排名</title><rect x="1391" y="1650" width="1118" height="30" fill="white"/><text class="col mono" x="1408" y="1671">search_vector</text><text class="type mono" x="1735" y="1671">tsvector</text><text class="key" x="1905" y="1671">NOT NULL</text><text class="note" x="2170" y="1671">全文檢索詞彙及位置；供 Hybrid 相關度排名</text></g>
+<g data-column="chunks.created_at"><title>created_at | timestamptz | NOT NULL · DEFAULT now() | 建立時間</title><rect x="1391" y="1680" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="1408" y="1701">created_at</text><text class="type mono" x="1735" y="1701">timestamptz</text><text class="key" x="1905" y="1701">NOT NULL · DEFAULT now()</text><text class="note" x="2170" y="1701">建立時間</text></g>
+<text x="1408" y="1741" font-size="14" fill="#5e7085">UNIQUE(document_index_id, ordinal)。</text>
 </g>
-<g class="table" id="table-document_relations" data-name="document_relations" tabindex="0" role="button" aria-label="document_relations">
-<rect x="2710" y="280" width="1120" height="320" rx="10" fill="white" stroke="#cdd6e3"/>
-<path d="M2720 280 H3820 Q3830 280 3830 290 V320 H2710 V290 Q2710 280 2720 280" fill="#b16b23"/>
-<text x="2726" y="307" font-size="19" font-weight="700" fill="white">document_relations</text>
-<text x="3814" y="307" text-anchor="end" font-size="14" fill="white">9 欄位</text>
-<rect x="2711" y="324" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_relations-id"><rect x="3320" y="323" width="496" height="28"/></clipPath></defs>
-<g data-column="document_relations.id"><title>關係識別碼 — id uuid; PK</title>
-<text class="mono col" x="2724" y="342">id</text>
-<text class="mono type" x="3020" y="342">uuid</text>
-<text class="key" x="3167" y="342">PK</text>
-<text class="type" x="3290" y="342" text-anchor="end">NN</text>
-<text class="note" x="3320" y="342" clip-path="url(#clip-document_relations-id)">關係識別碼</text></g>
-<defs><clipPath id="clip-document_relations-source_index_id"><rect x="3320" y="351" width="496" height="28"/></clipPath></defs>
-<g data-column="document_relations.source_index_id"><title>指出此關係的文件索引版本 — source_index_id uuid; FK / NOT NULL</title>
-<text class="mono col" x="2724" y="370">source_index_id</text>
-<text class="mono type" x="3020" y="370">uuid</text>
-<text class="key" x="3167" y="370">FK</text>
-<text class="type" x="3290" y="370" text-anchor="end">NN</text>
-<text class="note" x="3320" y="370" clip-path="url(#clip-document_relations-source_index_id)">指出此關係的文件索引版本</text></g>
-<rect x="2711" y="380" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_relations-target_document_id"><rect x="3320" y="379" width="496" height="28"/></clipPath></defs>
-<g data-column="document_relations.target_document_id"><title>索引時已解析的目標身分提示；查詢時仍驗證專案範圍 — target_document_id uuid; NULL / FK</title>
-<text class="mono col" x="2724" y="398">target_document_id</text>
-<text class="mono type" x="3020" y="398">uuid</text>
-<text class="key" x="3167" y="398">FK</text>
-<text class="type" x="3290" y="398" text-anchor="end">NULL</text>
-<text class="note" x="3320" y="398" clip-path="url(#clip-document_relations-target_document_id)">索引時已解析的目標身分提示；查詢時仍驗證專案範圍</text></g>
-<defs><clipPath id="clip-document_relations-target_reference"><rect x="3320" y="407" width="496" height="28"/></clipPath></defs>
-<g data-column="document_relations.target_reference"><title>原始連結或路徑，保留未解析引用 — target_reference text; NOT NULL</title>
-<text class="mono col" x="2724" y="426">target_reference</text>
-<text class="mono type" x="3020" y="426">text</text>
-<text class="key" x="3167" y="426"></text>
-<text class="type" x="3290" y="426" text-anchor="end">NN</text>
-<text class="note" x="3320" y="426" clip-path="url(#clip-document_relations-target_reference)">原始連結或路徑，保留未解析引用</text></g>
-<rect x="2711" y="436" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_relations-target_anchor"><rect x="3320" y="435" width="496" height="28"/></clipPath></defs>
-<g data-column="document_relations.target_anchor"><title>目標標題／block anchor — target_anchor text; NULL</title>
-<text class="mono col" x="2724" y="454">target_anchor</text>
-<text class="mono type" x="3020" y="454">text</text>
-<text class="key" x="3167" y="454"></text>
-<text class="type" x="3290" y="454" text-anchor="end">NULL</text>
-<text class="note" x="3320" y="454" clip-path="url(#clip-document_relations-target_anchor)">目標標題／block anchor</text></g>
-<defs><clipPath id="clip-document_relations-relation_type"><rect x="3320" y="463" width="496" height="28"/></clipPath></defs>
-<g data-column="document_relations.relation_type"><title>references | requires | applies_to | overrides — relation_type text; NOT NULL</title>
-<text class="mono col" x="2724" y="482">relation_type</text>
-<text class="mono type" x="3020" y="482">text</text>
-<text class="key" x="3167" y="482"></text>
-<text class="type" x="3290" y="482" text-anchor="end">NN</text>
-<text class="note" x="3320" y="482" clip-path="url(#clip-document_relations-relation_type)">references | requires | applies_to | overrides</text></g>
-<rect x="2711" y="492" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_relations-evidence_block_start"><rect x="3320" y="491" width="496" height="28"/></clipPath></defs>
-<g data-column="document_relations.evidence_block_start"><title>來源證據起始 block — evidence_block_start integer; NOT NULL / &gt;= 0</title>
-<text class="mono col" x="2724" y="510">evidence_block_start</text>
-<text class="mono type" x="3020" y="510">integer</text>
-<text class="key" x="3167" y="510"></text>
-<text class="type" x="3290" y="510" text-anchor="end">NN</text>
-<text class="note" x="3320" y="510" clip-path="url(#clip-document_relations-evidence_block_start)">來源證據起始 block</text></g>
-<defs><clipPath id="clip-document_relations-evidence_block_end"><rect x="3320" y="519" width="496" height="28"/></clipPath></defs>
-<g data-column="document_relations.evidence_block_end"><title>來源證據結束 block，不含此 block — evidence_block_end integer; NOT NULL / &gt; start</title>
-<text class="mono col" x="2724" y="538">evidence_block_end</text>
-<text class="mono type" x="3020" y="538">integer</text>
-<text class="key" x="3167" y="538"></text>
-<text class="type" x="3290" y="538" text-anchor="end">NN</text>
-<text class="note" x="3320" y="538" clip-path="url(#clip-document_relations-evidence_block_end)">來源證據結束 block，不含此 block</text></g>
-<rect x="2711" y="548" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-document_relations-evidence_text"><rect x="3320" y="547" width="496" height="28"/></clipPath></defs>
-<g data-column="document_relations.evidence_text"><title>支持關係的原文片段，必須可對回來源 — evidence_text text; NOT NULL</title>
-<text class="mono col" x="2724" y="566">evidence_text</text>
-<text class="mono type" x="3020" y="566">text</text>
-<text class="key" x="3167" y="566"></text>
-<text class="type" x="3290" y="566" text-anchor="end">NN</text>
-<text class="note" x="3320" y="566" clip-path="url(#clip-document_relations-evidence_text)">支持關係的原文片段，必須可對回來源</text></g>
+<g class="table" id="table-document_relations" data-name="document_relations" tabindex="0" role="button" aria-label="document_relations 索引產生的文件關聯">
+<rect x="2710" y="260" width="1120" height="376" rx="12" fill="white" stroke="#c6d1df"/>
+<path d="M 2722 260 H 3818 Q 3830 260 3830 272 V 313 H 2710 V 272 Q 2710 260 2722 260" fill="#6854a6"/>
+<text x="2728" y="293" class="mono" font-size="24" fill="white" font-weight="700">document_relations</text>
+<text x="3812" y="293" text-anchor="end" font-size="17" fill="white">索引產生的文件關聯 · 9 欄</text>
+<g data-column="document_relations.id"><title>id | uuid | PK · DEFAULT gen_random_uuid() | 資料列識別碼</title><rect x="2711" y="320" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="341">id</text><text class="type mono" x="3055" y="341">uuid</text><text class="key" x="3225" y="341">PK · DEFAULT gen_random_uu…</text><text class="note" x="3490" y="341">資料列識別碼</text></g>
+<g data-column="document_relations.source_index_id"><title>source_index_id | uuid | NOT NULL · FK | 關聯來源 document_indexes.id</title><rect x="2711" y="350" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="371">source_index_id</text><text class="type mono" x="3055" y="371">uuid</text><text class="key" x="3225" y="371">NOT NULL · FK</text><text class="note" x="3490" y="371">關聯來源 document_indexes…</text></g>
+<g data-column="document_relations.target_document_id"><title>target_document_id | uuid | NULL · FK | 已解析的 documents.id；未解析可為 NULL</title><rect x="2711" y="380" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="401">target_document_id</text><text class="type mono" x="3055" y="401">uuid</text><text class="key" x="3225" y="401">NULL · FK</text><text class="note" x="3490" y="401">已解析的 documents.id；未解析…</text></g>
+<g data-column="document_relations.target_reference"><title>target_reference | text | NOT NULL | 原始目標文字引用</title><rect x="2711" y="410" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="431">target_reference</text><text class="type mono" x="3055" y="431">text</text><text class="key" x="3225" y="431">NOT NULL</text><text class="note" x="3490" y="431">原始目標文字引用</text></g>
+<g data-column="document_relations.target_anchor"><title>target_anchor | text | NULL | 目標內的錨點</title><rect x="2711" y="440" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="461">target_anchor</text><text class="type mono" x="3055" y="461">text</text><text class="key" x="3225" y="461">NULL</text><text class="note" x="3490" y="461">目標內的錨點</text></g>
+<g data-column="document_relations.relation_type"><title>relation_type | text | NOT NULL · CHECK | markdown_link / wiki_link / references / requires / applies_to / overrides</title><rect x="2711" y="470" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="491">relation_type</text><text class="type mono" x="3055" y="491">text</text><text class="key" x="3225" y="491">NOT NULL · CHECK</text><text class="note" x="3490" y="491">markdown_link / wiki_…</text></g>
+<g data-column="document_relations.evidence_block_start"><title>evidence_block_start | integer | NOT NULL · CHECK ≥ 0 | 來源證據範圍起點</title><rect x="2711" y="500" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="521">evidence_block_start</text><text class="type mono" x="3055" y="521">integer</text><text class="key" x="3225" y="521">NOT NULL · CHECK ≥ 0</text><text class="note" x="3490" y="521">來源證據範圍起點</text></g>
+<g data-column="document_relations.evidence_block_end"><title>evidence_block_end | integer | NOT NULL · CHECK &gt; start | 來源證據範圍終點，不包含終點</title><rect x="2711" y="530" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="551">evidence_block_end</text><text class="type mono" x="3055" y="551">integer</text><text class="key" x="3225" y="551">NOT NULL · CHECK &gt; start</text><text class="note" x="3490" y="551">來源證據範圍終點，不包含終點</text></g>
+<g data-column="document_relations.evidence_text"><title>evidence_text | text | NOT NULL | 支持關聯的來源文字</title><rect x="2711" y="560" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="581">evidence_text</text><text class="type mono" x="3055" y="581">text</text><text class="key" x="3225" y="581">NOT NULL</text><text class="note" x="3490" y="581">支持關聯的來源文字</text></g>
+<text x="2728" y="621" font-size="14" fill="#5e7085">idx_relations_source(source_index_id)。</text>
 </g>
-<g class="table" id="table-jobs" data-name="jobs" tabindex="0" role="button" aria-label="jobs">
-<rect x="2710" y="690" width="1120" height="516" rx="10" fill="white" stroke="#cdd6e3"/>
-<path d="M2720 690 H3820 Q3830 690 3830 700 V730 H2710 V700 Q2710 690 2720 690" fill="#b16b23"/>
-<text x="2726" y="717" font-size="19" font-weight="700" fill="white">jobs</text>
-<text x="3814" y="717" text-anchor="end" font-size="14" fill="white">16 欄位</text>
-<rect x="2711" y="734" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-jobs-id"><rect x="3320" y="733" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.id"><title>工作識別碼；自動重試沿用，人工重試建立新 ID — id uuid; PK</title>
-<text class="mono col" x="2724" y="752">id</text>
-<text class="mono type" x="3020" y="752">uuid</text>
-<text class="key" x="3167" y="752">PK</text>
-<text class="type" x="3290" y="752" text-anchor="end">NN</text>
-<text class="note" x="3320" y="752" clip-path="url(#clip-jobs-id)">工作識別碼；自動重試沿用，人工重試建立新 ID</text></g>
-<defs><clipPath id="clip-jobs-knowledge_base_id"><rect x="3320" y="761" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.knowledge_base_id"><title>要求更新的專案知識庫 — knowledge_base_id uuid; NOT NULL, FK</title>
-<text class="mono col" x="2724" y="780">knowledge_base_id</text>
-<text class="mono type" x="3020" y="780">uuid</text>
-<text class="key" x="3167" y="780">FK</text>
-<text class="type" x="3290" y="780" text-anchor="end">NN</text>
-<text class="note" x="3320" y="780" clip-path="url(#clip-jobs-knowledge_base_id)">要求更新的專案知識庫</text></g>
-<rect x="2711" y="790" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-jobs-document_id"><rect x="3320" y="789" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.document_id"><title>本工作要更新的共用文件 — document_id uuid; NOT NULL, FK</title>
-<text class="mono col" x="2724" y="808">document_id</text>
-<text class="mono type" x="3020" y="808">uuid</text>
-<text class="key" x="3167" y="808">FK</text>
-<text class="type" x="3290" y="808" text-anchor="end">NN</text>
-<text class="note" x="3320" y="808" clip-path="url(#clip-jobs-document_id)">本工作要更新的共用文件</text></g>
-<defs><clipPath id="clip-jobs-document_index_id"><rect x="3320" y="817" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.document_index_id"><title>本次要建置或啟用的文件索引 — document_index_id uuid; NOT NULL, FK</title>
-<text class="mono col" x="2724" y="836">document_index_id</text>
-<text class="mono type" x="3020" y="836">uuid</text>
-<text class="key" x="3167" y="836">FK</text>
-<text class="type" x="3290" y="836" text-anchor="end">NN</text>
-<text class="note" x="3320" y="836" clip-path="url(#clip-jobs-document_index_id)">本次要建置或啟用的文件索引</text></g>
-<rect x="2711" y="846" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-jobs-generation"><rect x="3320" y="845" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.generation"><title>排入時的 requested_generation，阻止舊工作覆蓋新要求 — generation bigint; NOT NULL</title>
-<text class="mono col" x="2724" y="864">generation</text>
-<text class="mono type" x="3020" y="864">bigint</text>
-<text class="key" x="3167" y="864"></text>
-<text class="type" x="3290" y="864" text-anchor="end">NN</text>
-<text class="note" x="3320" y="864" clip-path="url(#clip-jobs-generation)">排入時的 requested_generation，阻止舊工作覆蓋新要求</text></g>
-<defs><clipPath id="clip-jobs-status"><rect x="3320" y="873" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.status"><title>queued / running — status text; NOT NULL</title>
-<text class="mono col" x="2724" y="892">status</text>
-<text class="mono type" x="3020" y="892">text</text>
-<text class="key" x="3167" y="892"></text>
-<text class="type" x="3290" y="892" text-anchor="end">NN</text>
-<text class="note" x="3320" y="892" clip-path="url(#clip-jobs-status)">queued / running</text></g>
-<rect x="2711" y="902" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-jobs-attempts"><rect x="3320" y="901" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.attempts"><title>已開始的執行次數；領取時加 1，首次為 1，最多為 4（首次＋3 次自動重試） — attempts integer; NOT NULL, DEFAULT 0</title>
-<text class="mono col" x="2724" y="920">attempts</text>
-<text class="mono type" x="3020" y="920">integer</text>
-<text class="key" x="3167" y="920"></text>
-<text class="type" x="3290" y="920" text-anchor="end">NN</text>
-<text class="note" x="3320" y="920" clip-path="url(#clip-jobs-attempts)">已開始的執行次數；領取時加 1，首次為 1，最多為 4（首次＋3 次自動重試）</text></g>
-<defs><clipPath id="clip-jobs-available_at"><rect x="3320" y="929" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.available_at"><title>可被領取的時間；自動重試以退避延遲排程 — available_at timestamptz; NOT NULL</title>
-<text class="mono col" x="2724" y="948">available_at</text>
-<text class="mono type" x="3020" y="948">timestamptz</text>
-<text class="key" x="3167" y="948"></text>
-<text class="type" x="3290" y="948" text-anchor="end">NN</text>
-<text class="note" x="3320" y="948" clip-path="url(#clip-jobs-available_at)">可被領取的時間；自動重試以退避延遲排程</text></g>
-<rect x="2711" y="958" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-jobs-reserved_at"><rect x="3320" y="957" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.reserved_at"><title>本次被 worker 領取的時間；回到 queued 時清空 — reserved_at timestamptz; NULL</title>
-<text class="mono col" x="2724" y="976">reserved_at</text>
-<text class="mono type" x="3020" y="976">timestamptz</text>
-<text class="key" x="3167" y="976"></text>
-<text class="type" x="3290" y="976" text-anchor="end">NULL</text>
-<text class="note" x="3320" y="976" clip-path="url(#clip-jobs-reserved_at)">本次被 worker 領取的時間；回到 queued 時清空</text></g>
-<defs><clipPath id="clip-jobs-idempotency_key"><rect x="3320" y="985" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.idempotency_key"><title>同一排程請求的去重鍵，包含專案、文件、索引及 generation；人工重試使用新鍵 — idempotency_key text; NULL, UNIQUE</title>
-<text class="mono col" x="2724" y="1004">idempotency_key</text>
-<text class="mono type" x="3020" y="1004">text</text>
-<text class="key" x="3167" y="1004">UQ</text>
-<text class="type" x="3290" y="1004" text-anchor="end">NULL</text>
-<text class="note" x="3320" y="1004" clip-path="url(#clip-jobs-idempotency_key)">同一排程請求的去重鍵，包含專案、文件、索引及 generation；人工重試使用新鍵</text></g>
-<rect x="2711" y="1014" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-jobs-retry_of_failed_job_id"><rect x="3320" y="1013" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.retry_of_failed_job_id"><title>人工重試的原失敗紀錄；一般工作與自動重試不新增此關聯 — retry_of_failed_job_id uuid; NULL, FK</title>
-<text class="mono col" x="2724" y="1032">retry_of_failed_job_id</text>
-<text class="mono type" x="3020" y="1032">uuid</text>
-<text class="key" x="3167" y="1032">FK</text>
-<text class="type" x="3290" y="1032" text-anchor="end">NULL</text>
-<text class="note" x="3320" y="1032" clip-path="url(#clip-jobs-retry_of_failed_job_id)">人工重試的原失敗紀錄；一般工作與自動重試不新增此關聯</text></g>
-<defs><clipPath id="clip-jobs-payload"><rect x="3320" y="1041" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.payload"><title>索引工作的輸入參數；來源與處理設定須符合 document_index_id，不複製文件全文 — payload jsonb; NOT NULL</title>
-<text class="mono col" x="2724" y="1060">payload</text>
-<text class="mono type" x="3020" y="1060">jsonb</text>
-<text class="key" x="3167" y="1060"></text>
-<text class="type" x="3290" y="1060" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1060" clip-path="url(#clip-jobs-payload)">索引工作的輸入參數；來源與處理設定須符合 document_index_id，不複製文件全文</text></g>
-<rect x="2711" y="1070" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-jobs-execution_state"><rect x="3320" y="1069" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.execution_state"><title>執行階段、可重用進度及最近一次錯誤；可供自動重試恢復，錯誤資訊須去敏 — execution_state jsonb; NULL</title>
-<text class="mono col" x="2724" y="1088">execution_state</text>
-<text class="mono type" x="3020" y="1088">jsonb</text>
-<text class="key" x="3167" y="1088"></text>
-<text class="type" x="3290" y="1088" text-anchor="end">NULL</text>
-<text class="note" x="3320" y="1088" clip-path="url(#clip-jobs-execution_state)">執行階段、可重用進度及最近一次錯誤；可供自動重試恢復，錯誤資訊須去敏</text></g>
-<defs><clipPath id="clip-jobs-execution_verification"><rect x="3320" y="1097" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.execution_verification"><title>目前領取憑證 claim_token 與租約期限 lease_expires_at；每次領取更新，防止過期 worker 寫入 — execution_verification jsonb; NULL</title>
-<text class="mono col" x="2724" y="1116">execution_verification</text>
-<text class="mono type" x="3020" y="1116">jsonb</text>
-<text class="key" x="3167" y="1116"></text>
-<text class="type" x="3290" y="1116" text-anchor="end">NULL</text>
-<text class="note" x="3320" y="1116" clip-path="url(#clip-jobs-execution_verification)">目前領取憑證 claim_token 與租約期限 lease_expires_at；每次領取更新，防止過期 worker 寫入</text></g>
-<rect x="2711" y="1126" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-jobs-created_at"><rect x="3320" y="1125" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.created_at"><title>本工作建立時間；自動重試不重設 — created_at timestamptz; NOT NULL</title>
-<text class="mono col" x="2724" y="1144">created_at</text>
-<text class="mono type" x="3020" y="1144">timestamptz</text>
-<text class="key" x="3167" y="1144"></text>
-<text class="type" x="3290" y="1144" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1144" clip-path="url(#clip-jobs-created_at)">本工作建立時間；自動重試不重設</text></g>
-<defs><clipPath id="clip-jobs-updated_at"><rect x="3320" y="1153" width="496" height="28"/></clipPath></defs>
-<g data-column="jobs.updated_at"><title>工作狀態、進度或租約最後更新時間 — updated_at timestamptz; NOT NULL</title>
-<text class="mono col" x="2724" y="1172">updated_at</text>
-<text class="mono type" x="3020" y="1172">timestamptz</text>
-<text class="key" x="3167" y="1172"></text>
-<text class="type" x="3290" y="1172" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1172" clip-path="url(#clip-jobs-updated_at)">工作狀態、進度或租約最後更新時間</text></g>
+<g class="table" id="table-jobs" data-name="jobs" tabindex="0" role="button" aria-label="jobs Infrastructure 工作執行紀錄">
+<rect x="2710" y="650" width="1120" height="646" rx="12" fill="white" stroke="#c6d1df"/>
+<path d="M 2722 650 H 3818 Q 3830 650 3830 662 V 703 H 2710 V 662 Q 2710 650 2722 650" fill="#a76522"/>
+<text x="2728" y="683" class="mono" font-size="24" fill="white" font-weight="700">jobs</text>
+<text x="3812" y="683" text-anchor="end" font-size="17" fill="white">Infrastructure 工作執行紀錄 · 18 欄</text>
+<g data-column="jobs.id"><title>id | uuid | PK · DEFAULT gen_random_uuid() | 資料列識別碼</title><rect x="2711" y="710" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="731">id</text><text class="type mono" x="3055" y="731">uuid</text><text class="key" x="3225" y="731">PK · DEFAULT gen_random_uu…</text><text class="note" x="3490" y="731">資料列識別碼</text></g>
+<g data-column="jobs.knowledge_base_id"><title>knowledge_base_id | uuid | NOT NULL · FK / 複合 FK | 工作所屬專案與成員</title><rect x="2711" y="740" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="761">knowledge_base_id</text><text class="type mono" x="3055" y="761">uuid</text><text class="key" x="3225" y="761">NOT NULL · FK / 複合 FK</text><text class="note" x="3490" y="761">工作所屬專案與成員</text></g>
+<g data-column="jobs.document_id"><title>document_id | uuid | NOT NULL · 複合 FK | 工作所屬文件</title><rect x="2711" y="770" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="791">document_id</text><text class="type mono" x="3055" y="791">uuid</text><text class="key" x="3225" y="791">NOT NULL · 複合 FK</text><text class="note" x="3490" y="791">工作所屬文件</text></g>
+<g data-column="jobs.document_index_id"><title>document_index_id | uuid | NOT NULL · 複合 FK | 待建立或啟用的同文件索引</title><rect x="2711" y="800" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="821">document_index_id</text><text class="type mono" x="3055" y="821">uuid</text><text class="key" x="3225" y="821">NOT NULL · 複合 FK</text><text class="note" x="3490" y="821">待建立或啟用的同文件索引</text></g>
+<g data-column="jobs.generation"><title>generation | bigint | NOT NULL · CHECK &gt; 0 | 此工作對應的請求世代</title><rect x="2711" y="830" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="851">generation</text><text class="type mono" x="3055" y="851">bigint</text><text class="key" x="3225" y="851">NOT NULL · CHECK &gt; 0</text><text class="note" x="3490" y="851">此工作對應的請求世代</text></g>
+<g data-column="jobs.status"><title>status | text | NOT NULL · CHECK | queued / running</title><rect x="2711" y="860" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="881">status</text><text class="type mono" x="3055" y="881">text</text><text class="key" x="3225" y="881">NOT NULL · CHECK</text><text class="note" x="3490" y="881">queued / running</text></g>
+<g data-column="jobs.attempts"><title>attempts | integer | NOT NULL · DEFAULT 0 · CHECK 0…4 | 已領取執行的次數；上限 4</title><rect x="2711" y="890" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="911">attempts</text><text class="type mono" x="3055" y="911">integer</text><text class="key" x="3225" y="911">NOT NULL · DEFAULT 0 · CHE…</text><text class="note" x="3490" y="911">已領取執行的次數；上限 4</text></g>
+<g data-column="jobs.available_at"><title>available_at | timestamptz | NOT NULL · DEFAULT now() | 最早可領取時間</title><rect x="2711" y="920" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="941">available_at</text><text class="type mono" x="3055" y="941">timestamptz</text><text class="key" x="3225" y="941">NOT NULL · DEFAULT now()</text><text class="note" x="3490" y="941">最早可領取時間</text></g>
+<g data-column="jobs.reserved_at"><title>reserved_at | timestamptz | NULL · CHECK | running 必須有值；queued 必須 NULL</title><rect x="2711" y="950" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="971">reserved_at</text><text class="type mono" x="3055" y="971">timestamptz</text><text class="key" x="3225" y="971">NULL · CHECK</text><text class="note" x="3490" y="971">running 必須有值；queued 必…</text></g>
+<g data-column="jobs.lease_token"><title>lease_token | uuid | NULL · CHECK | running 必須有值；queued 必須 NULL</title><rect x="2711" y="980" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1001">lease_token</text><text class="type mono" x="3055" y="1001">uuid</text><text class="key" x="3225" y="1001">NULL · CHECK</text><text class="note" x="3490" y="1001">running 必須有值；queued 必…</text></g>
+<g data-column="jobs.lease_expires_at"><title>lease_expires_at | timestamptz | NULL | 獨立租約到期欄；初始 migration 0008 建立；允許 NULL</title><rect x="2711" y="1010" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1031">lease_expires_at</text><text class="type mono" x="3055" y="1031">timestamptz</text><text class="key" x="3225" y="1031">NULL</text><text class="note" x="3490" y="1031">獨立租約到期欄；migration 001…</text></g>
+<g data-column="jobs.idempotency_key"><title>idempotency_key | text | UNIQUE · NULL | 非 NULL key 不得重複</title><rect x="2711" y="1040" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1061">idempotency_key</text><text class="type mono" x="3055" y="1061">text</text><text class="key" x="3225" y="1061">UNIQUE · NULL</text><text class="note" x="3490" y="1061">非 NULL key 不得重複</text></g>
+<g data-column="jobs.retry_of_failed_job_id"><title>retry_of_failed_job_id | uuid | NULL · 複合 FK | 手動重試的失敗紀錄來源</title><rect x="2711" y="1070" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1091">retry_of_failed_job_id</text><text class="type mono" x="3055" y="1091">uuid</text><text class="key" x="3225" y="1091">NULL · 複合 FK</text><text class="note" x="3490" y="1091">手動重試的失敗紀錄來源</text></g>
+<g data-column="jobs.payload"><title>payload | jsonb | NOT NULL · CHECK object | 工作輸入</title><rect x="2711" y="1100" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1121">payload</text><text class="type mono" x="3055" y="1121">jsonb</text><text class="key" x="3225" y="1121">NOT NULL · CHECK object</text><text class="note" x="3490" y="1121">工作輸入</text></g>
+<g data-column="jobs.execution_state"><title>execution_state | jsonb | NULL · CHECK object | 可選的執行進度或結果狀態</title><rect x="2711" y="1130" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1151">execution_state</text><text class="type mono" x="3055" y="1151">jsonb</text><text class="key" x="3225" y="1151">NULL · CHECK object</text><text class="note" x="3490" y="1151">可選的執行進度或結果狀態</text></g>
+<g data-column="jobs.execution_verification"><title>execution_verification | jsonb | NULL · CHECK object | running 租約驗證；含 claim_token 與 lease_expires_at 字串</title><rect x="2711" y="1160" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1181">execution_verification</text><text class="type mono" x="3055" y="1181">jsonb</text><text class="key" x="3225" y="1181">NULL · CHECK object</text><text class="note" x="3490" y="1181">running 租約驗證；含 claim_…</text></g>
+<g data-column="jobs.created_at"><title>created_at | timestamptz | NOT NULL · DEFAULT now() | 建立時間</title><rect x="2711" y="1190" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1211">created_at</text><text class="type mono" x="3055" y="1211">timestamptz</text><text class="key" x="3225" y="1211">NOT NULL · DEFAULT now()</text><text class="note" x="3490" y="1211">建立時間</text></g>
+<g data-column="jobs.updated_at"><title>updated_at | timestamptz | NOT NULL · DEFAULT now() | 更新時間；後續更新由寫入端維護</title><rect x="2711" y="1220" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1241">updated_at</text><text class="type mono" x="3055" y="1241">timestamptz</text><text class="key" x="3225" y="1241">NOT NULL · DEFAULT now()</text><text class="note" x="3490" y="1241">更新時間；後續更新由寫入端維護</text></g>
+<text x="2728" y="1281" font-size="14" fill="#5e7085">UNIQUE(knowledge_base_id, document_id)：每個成員最多一筆未完成工作。</text>
 </g>
-<g class="table" id="table-failed_jobs" data-name="failed_jobs" tabindex="0" role="button" aria-label="failed_jobs">
-<rect x="2710" y="1296" width="1120" height="488" rx="10" fill="white" stroke="#cdd6e3"/>
-<path d="M2720 1296 H3820 Q3830 1296 3830 1306 V1336 H2710 V1306 Q2710 1296 2720 1296" fill="#b16b23"/>
-<text x="2726" y="1323" font-size="19" font-weight="700" fill="white">failed_jobs</text>
-<text x="3814" y="1323" text-anchor="end" font-size="14" fill="white">15 欄位</text>
-<rect x="2711" y="1340" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-failed_jobs-id"><rect x="3320" y="1339" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.id"><title>失敗紀錄識別碼 — id uuid; PK</title>
-<text class="mono col" x="2724" y="1358">id</text>
-<text class="mono type" x="3020" y="1358">uuid</text>
-<text class="key" x="3167" y="1358">PK</text>
-<text class="type" x="3290" y="1358" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1358" clip-path="url(#clip-failed_jobs-id)">失敗紀錄識別碼</text></g>
-<defs><clipPath id="clip-failed_jobs-job_id"><rect x="3320" y="1367" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.job_id"><title>原 jobs.id；原工作已刪除，只供追溯，不建立指向 jobs 的 FK — job_id uuid; NOT NULL, UNIQUE</title>
-<text class="mono col" x="2724" y="1386">job_id</text>
-<text class="mono type" x="3020" y="1386">uuid</text>
-<text class="key" x="3167" y="1386">UQ</text>
-<text class="type" x="3290" y="1386" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1386" clip-path="url(#clip-failed_jobs-job_id)">原 jobs.id；原工作已刪除，只供追溯，不建立指向 jobs 的 FK</text></g>
-<rect x="2711" y="1396" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-failed_jobs-knowledge_base_id"><rect x="3320" y="1395" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.knowledge_base_id"><title>原工作所屬的專案知識庫 — knowledge_base_id uuid; NOT NULL, FK</title>
-<text class="mono col" x="2724" y="1414">knowledge_base_id</text>
-<text class="mono type" x="3020" y="1414">uuid</text>
-<text class="key" x="3167" y="1414">FK</text>
-<text class="type" x="3290" y="1414" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1414" clip-path="url(#clip-failed_jobs-knowledge_base_id)">原工作所屬的專案知識庫</text></g>
-<defs><clipPath id="clip-failed_jobs-document_id"><rect x="3320" y="1423" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.document_id"><title>原工作更新的共用文件 — document_id uuid; NOT NULL, FK</title>
-<text class="mono col" x="2724" y="1442">document_id</text>
-<text class="mono type" x="3020" y="1442">uuid</text>
-<text class="key" x="3167" y="1442">FK</text>
-<text class="type" x="3290" y="1442" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1442" clip-path="url(#clip-failed_jobs-document_id)">原工作更新的共用文件</text></g>
-<rect x="2711" y="1452" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-failed_jobs-document_index_id"><rect x="3320" y="1451" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.document_index_id"><title>原工作要建置或啟用的文件索引 — document_index_id uuid; NOT NULL, FK</title>
-<text class="mono col" x="2724" y="1470">document_index_id</text>
-<text class="mono type" x="3020" y="1470">uuid</text>
-<text class="key" x="3167" y="1470">FK</text>
-<text class="type" x="3290" y="1470" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1470" clip-path="url(#clip-failed_jobs-document_index_id)">原工作要建置或啟用的文件索引</text></g>
-<defs><clipPath id="clip-failed_jobs-generation"><rect x="3320" y="1479" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.generation"><title>原工作要求的更新序號；人工重試前檢查是否過時 — generation bigint; NOT NULL</title>
-<text class="mono col" x="2724" y="1498">generation</text>
-<text class="mono type" x="3020" y="1498">bigint</text>
-<text class="key" x="3167" y="1498"></text>
-<text class="type" x="3290" y="1498" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1498" clip-path="url(#clip-failed_jobs-generation)">原工作要求的更新序號；人工重試前檢查是否過時</text></g>
-<rect x="2711" y="1508" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-failed_jobs-attempts"><rect x="3320" y="1507" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.attempts"><title>歸檔時的執行次數；本版重試耗盡時為 4 — attempts integer; NOT NULL</title>
-<text class="mono col" x="2724" y="1526">attempts</text>
-<text class="mono type" x="3020" y="1526">integer</text>
-<text class="key" x="3167" y="1526"></text>
-<text class="type" x="3290" y="1526" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1526" clip-path="url(#clip-failed_jobs-attempts)">歸檔時的執行次數；本版重試耗盡時為 4</text></g>
-<defs><clipPath id="clip-failed_jobs-error_code"><rect x="3320" y="1535" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.error_code"><title>最後一次失敗的分類碼；例外未提供時可為 NULL — error_code text; NULL</title>
-<text class="mono col" x="2724" y="1554">error_code</text>
-<text class="mono type" x="3020" y="1554">text</text>
-<text class="key" x="3167" y="1554"></text>
-<text class="type" x="3290" y="1554" text-anchor="end">NULL</text>
-<text class="note" x="3320" y="1554" clip-path="url(#clip-failed_jobs-error_code)">最後一次失敗的分類碼；例外未提供時可為 NULL</text></g>
-<rect x="2711" y="1564" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-failed_jobs-error_message"><rect x="3320" y="1563" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.error_message"><title>最後一次失敗的去敏摘要；未提供時可為 NULL — error_message text; NULL</title>
-<text class="mono col" x="2724" y="1582">error_message</text>
-<text class="mono type" x="3020" y="1582">text</text>
-<text class="key" x="3167" y="1582"></text>
-<text class="type" x="3290" y="1582" text-anchor="end">NULL</text>
-<text class="note" x="3320" y="1582" clip-path="url(#clip-failed_jobs-error_message)">最後一次失敗的去敏摘要；未提供時可為 NULL</text></g>
-<defs><clipPath id="clip-failed_jobs-blocked_reasons"><rect x="3320" y="1591" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.blocked_reasons"><title>索引未完成的阻礙清單；沒有額外阻礙時為空陣列 — blocked_reasons jsonb; NOT NULL, DEFAULT &#x27;[]&#x27;</title>
-<text class="mono col" x="2724" y="1610">blocked_reasons</text>
-<text class="mono type" x="3020" y="1610">jsonb</text>
-<text class="key" x="3167" y="1610"></text>
-<text class="type" x="3290" y="1610" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1610" clip-path="url(#clip-failed_jobs-blocked_reasons)">索引未完成的阻礙清單；沒有額外阻礙時為空陣列</text></g>
-<rect x="2711" y="1620" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-failed_jobs-retry_payload"><rect x="3320" y="1619" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.retry_payload"><title>重建工作需要的原輸入與執行進度；不保留可使用的領取憑證，重試須重新驗證進度 — retry_payload jsonb; NOT NULL</title>
-<text class="mono col" x="2724" y="1638">retry_payload</text>
-<text class="mono type" x="3020" y="1638">jsonb</text>
-<text class="key" x="3167" y="1638"></text>
-<text class="type" x="3290" y="1638" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1638" clip-path="url(#clip-failed_jobs-retry_payload)">重建工作需要的原輸入與執行進度；不保留可使用的領取憑證，重試須重新驗證進度</text></g>
-<defs><clipPath id="clip-failed_jobs-failed_at"><rect x="3320" y="1647" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.failed_at"><title>第 4 次執行失敗的時間 — failed_at timestamptz; NOT NULL</title>
-<text class="mono col" x="2724" y="1666">failed_at</text>
-<text class="mono type" x="3020" y="1666">timestamptz</text>
-<text class="key" x="3167" y="1666"></text>
-<text class="type" x="3290" y="1666" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1666" clip-path="url(#clip-failed_jobs-failed_at)">第 4 次執行失敗的時間</text></g>
-<rect x="2711" y="1676" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-failed_jobs-retried_at"><rect x="3320" y="1675" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.retried_at"><title>人工重試建立新工作的時間；同一紀錄只能重新排入一次 — retried_at timestamptz; NULL</title>
-<text class="mono col" x="2724" y="1694">retried_at</text>
-<text class="mono type" x="3020" y="1694">timestamptz</text>
-<text class="key" x="3167" y="1694"></text>
-<text class="type" x="3290" y="1694" text-anchor="end">NULL</text>
-<text class="note" x="3320" y="1694" clip-path="url(#clip-failed_jobs-retried_at)">人工重試建立新工作的時間；同一紀錄只能重新排入一次</text></g>
-<defs><clipPath id="clip-failed_jobs-created_at"><rect x="3320" y="1703" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.created_at"><title>失敗紀錄寫入時間 — created_at timestamptz; NOT NULL</title>
-<text class="mono col" x="2724" y="1722">created_at</text>
-<text class="mono type" x="3020" y="1722">timestamptz</text>
-<text class="key" x="3167" y="1722"></text>
-<text class="type" x="3290" y="1722" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1722" clip-path="url(#clip-failed_jobs-created_at)">失敗紀錄寫入時間</text></g>
-<rect x="2711" y="1732" width="1118" height="28" fill="#f5f7fa"/>
-<defs><clipPath id="clip-failed_jobs-updated_at"><rect x="3320" y="1731" width="496" height="28"/></clipPath></defs>
-<g data-column="failed_jobs.updated_at"><title>最後更新時間；人工重試時與 retried_at 一起更新 — updated_at timestamptz; NOT NULL</title>
-<text class="mono col" x="2724" y="1750">updated_at</text>
-<text class="mono type" x="3020" y="1750">timestamptz</text>
-<text class="key" x="3167" y="1750"></text>
-<text class="type" x="3290" y="1750" text-anchor="end">NN</text>
-<text class="note" x="3320" y="1750" clip-path="url(#clip-failed_jobs-updated_at)">最後更新時間；人工重試時與 retried_at 一起更新</text></g>
+<g class="table" id="table-failed_jobs" data-name="failed_jobs" tabindex="0" role="button" aria-label="failed_jobs Infrastructure 最終失敗紀錄">
+<rect x="2710" y="1320" width="1120" height="556" rx="12" fill="white" stroke="#c6d1df"/>
+<path d="M 2722 1320 H 3818 Q 3830 1320 3830 1332 V 1373 H 2710 V 1332 Q 2710 1320 2722 1320" fill="#a76522"/>
+<text x="2728" y="1353" class="mono" font-size="24" fill="white" font-weight="700">failed_jobs</text>
+<text x="3812" y="1353" text-anchor="end" font-size="17" fill="white">Infrastructure 最終失敗紀錄 · 15 欄</text>
+<g data-column="failed_jobs.id"><title>id | uuid | PK · DEFAULT gen_random_uuid() | 資料列識別碼</title><rect x="2711" y="1380" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1401">id</text><text class="type mono" x="3055" y="1401">uuid</text><text class="key" x="3225" y="1401">PK · DEFAULT gen_random_uu…</text><text class="note" x="3490" y="1401">資料列識別碼</text></g>
+<g data-column="failed_jobs.job_id"><title>job_id | uuid | UNIQUE · NOT NULL · 無 FK | 原工作識別；原 jobs 列會刪除</title><rect x="2711" y="1410" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1431">job_id</text><text class="type mono" x="3055" y="1431">uuid</text><text class="key" x="3225" y="1431">UNIQUE · NOT NULL · 無 FK</text><text class="note" x="3490" y="1431">原工作識別；原 jobs 列會刪除</text></g>
+<g data-column="failed_jobs.knowledge_base_id"><title>knowledge_base_id | uuid | NOT NULL · FK | 失敗所屬 knowledge_bases.id</title><rect x="2711" y="1440" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1461">knowledge_base_id</text><text class="type mono" x="3055" y="1461">uuid</text><text class="key" x="3225" y="1461">NOT NULL · FK</text><text class="note" x="3490" y="1461">失敗所屬 knowledge_bases.…</text></g>
+<g data-column="failed_jobs.document_id"><title>document_id | uuid | NOT NULL · 複合 FK | 原工作所屬文件</title><rect x="2711" y="1470" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1491">document_id</text><text class="type mono" x="3055" y="1491">uuid</text><text class="key" x="3225" y="1491">NOT NULL · 複合 FK</text><text class="note" x="3490" y="1491">原工作所屬文件</text></g>
+<g data-column="failed_jobs.document_index_id"><title>document_index_id | uuid | NOT NULL · 複合 FK | 原工作所屬索引</title><rect x="2711" y="1500" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1521">document_index_id</text><text class="type mono" x="3055" y="1521">uuid</text><text class="key" x="3225" y="1521">NOT NULL · 複合 FK</text><text class="note" x="3490" y="1521">原工作所屬索引</text></g>
+<g data-column="failed_jobs.generation"><title>generation | bigint | NOT NULL · CHECK &gt; 0 | 失敗工作對應世代</title><rect x="2711" y="1530" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1551">generation</text><text class="type mono" x="3055" y="1551">bigint</text><text class="key" x="3225" y="1551">NOT NULL · CHECK &gt; 0</text><text class="note" x="3490" y="1551">失敗工作對應世代</text></g>
+<g data-column="failed_jobs.attempts"><title>attempts | integer | NOT NULL · CHECK = 4 | 封存時已達 4 次執行</title><rect x="2711" y="1560" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1581">attempts</text><text class="type mono" x="3055" y="1581">integer</text><text class="key" x="3225" y="1581">NOT NULL · CHECK = 4</text><text class="note" x="3490" y="1581">封存時已達 4 次執行</text></g>
+<g data-column="failed_jobs.error_code"><title>error_code | text | NULL | 失敗分類</title><rect x="2711" y="1590" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1611">error_code</text><text class="type mono" x="3055" y="1611">text</text><text class="key" x="3225" y="1611">NULL</text><text class="note" x="3490" y="1611">失敗分類</text></g>
+<g data-column="failed_jobs.error_message"><title>error_message | text | NULL | 失敗說明</title><rect x="2711" y="1620" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1641">error_message</text><text class="type mono" x="3055" y="1641">text</text><text class="key" x="3225" y="1641">NULL</text><text class="note" x="3490" y="1641">失敗說明</text></g>
+<g data-column="failed_jobs.blocked_reasons"><title>blocked_reasons | jsonb | NOT NULL · DEFAULT [] · CHECK array | 阻塞原因列表</title><rect x="2711" y="1650" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1671">blocked_reasons</text><text class="type mono" x="3055" y="1671">jsonb</text><text class="key" x="3225" y="1671">NOT NULL · DEFAULT [] · CH…</text><text class="note" x="3490" y="1671">阻塞原因列表</text></g>
+<g data-column="failed_jobs.retry_payload"><title>retry_payload | jsonb | NOT NULL · CHECK object | 重新派送所需輸入</title><rect x="2711" y="1680" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1701">retry_payload</text><text class="type mono" x="3055" y="1701">jsonb</text><text class="key" x="3225" y="1701">NOT NULL · CHECK object</text><text class="note" x="3490" y="1701">重新派送所需輸入</text></g>
+<g data-column="failed_jobs.failed_at"><title>failed_at | timestamptz | NOT NULL · DEFAULT now() | 最終失敗時間</title><rect x="2711" y="1710" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1731">failed_at</text><text class="type mono" x="3055" y="1731">timestamptz</text><text class="key" x="3225" y="1731">NOT NULL · DEFAULT now()</text><text class="note" x="3490" y="1731">最終失敗時間</text></g>
+<g data-column="failed_jobs.retried_at"><title>retried_at | timestamptz | NULL | 已使用人工重試入口的時間</title><rect x="2711" y="1740" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1761">retried_at</text><text class="type mono" x="3055" y="1761">timestamptz</text><text class="key" x="3225" y="1761">NULL</text><text class="note" x="3490" y="1761">已使用人工重試入口的時間</text></g>
+<g data-column="failed_jobs.created_at"><title>created_at | timestamptz | NOT NULL · DEFAULT now() | 建立時間</title><rect x="2711" y="1770" width="1118" height="30" fill="white"/><text class="col mono" x="2728" y="1791">created_at</text><text class="type mono" x="3055" y="1791">timestamptz</text><text class="key" x="3225" y="1791">NOT NULL · DEFAULT now()</text><text class="note" x="3490" y="1791">建立時間</text></g>
+<g data-column="failed_jobs.updated_at"><title>updated_at | timestamptz | NOT NULL · DEFAULT now() | 更新時間；後續更新由寫入端維護</title><rect x="2711" y="1800" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="2728" y="1821">updated_at</text><text class="type mono" x="3055" y="1821">timestamptz</text><text class="key" x="3225" y="1821">NOT NULL · DEFAULT now()</text><text class="note" x="3490" y="1821">更新時間；後續更新由寫入端維護</text></g>
+<text x="2728" y="1861" font-size="14" fill="#5e7085">UNIQUE(job_id)；沒有 job_id → jobs.id 的實體 FK。Model 的邏輯關聯不改變此事實。</text>
 </g>
+<g class="table" id="table-document_index_success_receipts" data-name="document_index_success_receipts" tabindex="0" role="button" aria-label="document_index_success_receipts Infrastructure 成功工作收據">
+<rect x="70" y="1900" width="1120" height="376" rx="12" fill="white" stroke="#c6d1df"/>
+<path d="M 82 1900 H 1178 Q 1190 1900 1190 1912 V 1953 H 70 V 1912 Q 70 1900 82 1900" fill="#7151a3"/>
+<text x="88" y="1933" class="mono" font-size="24" fill="white" font-weight="700">document_index_success_receipts</text>
+<text x="1172" y="1933" text-anchor="end" font-size="17" fill="white">成功收據 · 9 欄</text>
+<g data-column="document_index_success_receipts.job_id"><title>job_id | uuid | PK | 原工作識別；原 jobs 列會刪除</title><rect x="71" y="1960" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="1981">job_id</text><text class="type mono" x="415" y="1981">uuid</text><text class="key" x="585" y="1981">PK</text><text class="note" x="850" y="1981">原工作識別；原 jobs 列會刪除</text></g>
+<g data-column="document_index_success_receipts.project_id"><title>project_id | text | NOT NULL | 完成時的外部專案識別；保留歷史查詢範圍</title><rect x="71" y="1990" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="2011">project_id</text><text class="type mono" x="415" y="2011">text</text><text class="key" x="585" y="2011">NOT NULL</text><text class="note" x="850" y="2011">完成時的外部專案識別；保留歷史查詢範圍</text></g>
+<g data-column="document_index_success_receipts.knowledge_base_id"><title>knowledge_base_id | uuid | NOT NULL | 完成時的知識庫識別</title><rect x="71" y="2020" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="2041">knowledge_base_id</text><text class="type mono" x="415" y="2041">uuid</text><text class="key" x="585" y="2041">NOT NULL</text><text class="note" x="850" y="2041">完成時的知識庫識別</text></g>
+<g data-column="document_index_success_receipts.document_id"><title>document_id | uuid | NOT NULL | 原工作所屬文件</title><rect x="71" y="2050" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="2071">document_id</text><text class="type mono" x="415" y="2071">uuid</text><text class="key" x="585" y="2071">NOT NULL</text><text class="note" x="850" y="2071">原工作所屬文件</text></g>
+<g data-column="document_index_success_receipts.document_index_id"><title>document_index_id | uuid | NOT NULL | 原工作完成的索引</title><rect x="71" y="2080" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="2101">document_index_id</text><text class="type mono" x="415" y="2101">uuid</text><text class="key" x="585" y="2101">NOT NULL</text><text class="note" x="850" y="2101">原工作完成的索引</text></g>
+<g data-column="document_index_success_receipts.generation"><title>generation | bigint | NOT NULL · CHECK &gt; 0 | 原工作對應世代</title><rect x="71" y="2110" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="2131">generation</text><text class="type mono" x="415" y="2131">bigint</text><text class="key" x="585" y="2131">NOT NULL · CHECK &gt; 0</text><text class="note" x="850" y="2131">原工作對應世代</text></g>
+<g data-column="document_index_success_receipts.attempts"><title>attempts | integer | NOT NULL · CHECK 0…4 | 成功時已領取執行的次數</title><rect x="71" y="2140" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="2161">attempts</text><text class="type mono" x="415" y="2161">integer</text><text class="key" x="585" y="2161">NOT NULL · CHECK 0…4</text><text class="note" x="850" y="2161">成功時已領取執行的次數</text></g>
+<g data-column="document_index_success_receipts.execution_verification"><title>execution_verification | jsonb | NULL | 原工作執行驗證</title><rect x="71" y="2170" width="1118" height="30" fill="white"/><text class="col mono" x="88" y="2191">execution_verification</text><text class="type mono" x="415" y="2191">jsonb</text><text class="key" x="585" y="2191">NULL</text><text class="note" x="850" y="2191">原工作執行驗證</text></g>
+<g data-column="document_index_success_receipts.completed_at"><title>completed_at | timestamptz | NOT NULL | 成功收據寫入時間</title><rect x="71" y="2200" width="1118" height="30" fill="#f3f6fa"/><text class="col mono" x="88" y="2221">completed_at</text><text class="type mono" x="415" y="2221">timestamptz</text><text class="key" x="585" y="2221">NOT NULL</text><text class="note" x="850" y="2221">成功收據寫入時間</text></g>
+<text x="88" y="2261" font-size="14" fill="#5e7085">job_id 主鍵；無 FK。保存歷史專案及工作目標，不阻擋業務資料清理。</text>
+</g>
+<text x="70" y="2362" font-size="18" fill="#375466">完整 CHECK、唯一鍵、部分索引與流程政策：rag-database-schema.md；互動選表與欄位搜尋：rag-database-schema.html。</text>
 </svg>

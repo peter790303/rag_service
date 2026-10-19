@@ -5,10 +5,11 @@ import { test } from 'node:test'
 import { Module } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 import 'reflect-metadata'
+import { concatMap, firstValueFrom, from, toArray } from 'rxjs'
 
 import type { DocumentIndexRequestResult } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-request.dto.ts'
-import type { DocumentIndexingStatusDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-status.dto.ts'
-import type { RetryDocumentIndexingResultDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/retry-document-indexing-result.dto.ts'
+import type { DocumentIndexingStatusDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-status.dto.ts'
+import type { RetryDocumentIndexingResultDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/retry-document-indexing-result.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
 import { DocumentIndexingTargetStateEnum } from '../../../src/Application/DocumentIndexes/Enums/document-indexing-target-state.enum.ts'
 import { DocumentIndexingRequestedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-requested.event.ts'
@@ -28,25 +29,28 @@ import { DocumentIndexingRequestedListener } from '../../../src/Application/Docu
 import { ReadDocumentIndexingStatusListener } from '../../../src/Application/DocumentIndexes/Listeners/read-document-indexing-status.listener.ts'
 import { RetryDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
 import { IndexRequestDocumentUnavailableException } from '../../../src/Application/Documents/Exceptions/index-request-document-unavailable.exception.ts'
+import { IndexRequestKnowledgeBaseDocumentUnavailableException } from '../../../src/Application/KnowledgeBaseDocuments/Exceptions/index-request-knowledge-base-document-unavailable.exception.ts'
+import { PruneKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prune-knowledge-base-documents.use-case.ts'
 import { ServiceAuthenticator } from '../../../src/Application/KnowledgeBases/Contracts/service-authenticator.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
 import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { IndexRequestMembershipUnavailableException } from '../../../src/Application/Memberships/Exceptions/index-request-membership-unavailable.exception.ts'
-import { PruneKnowledgeBaseMembershipsUseCase } from '../../../src/Application/Memberships/UseCases/prune-knowledge-base-memberships.use-case.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { KnowledgeIndexPendingException } from '../../../src/Domain/DocumentIndex/Exceptions/knowledge-index-pending.exception.ts'
+import { DocumentReferenceResolutionAmbiguousException } from '../../../src/Domain/KnowledgeBase/Exceptions/document-reference-resolution-ambiguous.exception.ts'
 import { KnowledgeBaseProjectMismatchException } from '../../../src/Domain/KnowledgeBase/Exceptions/knowledge-base-project-mismatch.exception.ts'
-import { KnowledgeMembershipPruneConflictException } from '../../../src/Domain/Membership/Exceptions/knowledge-membership-prune-conflict.exception.ts'
+import { KnowledgeRetrievalIncompleteException } from '../../../src/Domain/KnowledgeBase/Exceptions/knowledge-retrieval-incomplete.exception.ts'
+import { RequiredDocumentFullContentMissingException } from '../../../src/Domain/KnowledgeBase/Exceptions/required-document-full-content-missing.exception.ts'
+import { KnowledgeBaseDocumentPruneConflictException } from '../../../src/Domain/KnowledgeBaseDocument/Exceptions/knowledge-base-document-prune-conflict.exception.ts'
 import { HmacProjectServiceAuthenticator } from '../../../src/Infrastructure/Auth/hmac-project-service.authenticator.ts'
 import { DocumentIndexesController } from '../../../src/Interfaces/Http/Controllers/document-indexes.controller.ts'
 import { HealthController } from '../../../src/Interfaces/Http/Controllers/health.controller.ts'
-import { KnowledgeBaseMembershipsController } from '../../../src/Interfaces/Http/Controllers/knowledge-base-memberships.controller.ts'
+import { KnowledgeBaseDocumentsController } from '../../../src/Interfaces/Http/Controllers/knowledge-base-documents.controller.ts'
 import { KnowledgeBaseRetrievalController } from '../../../src/Interfaces/Http/Controllers/knowledge-base-retrieval.controller.ts'
 import { ApplicationErrorFilter } from '../../../src/Interfaces/Http/ExceptionHandlers/application-error.filter.ts'
 import { createGlobalValidationPipe } from '../../../src/Interfaces/Http/Pipes/create-global-validation-pipe.ts'
 import { createKnowledgeServiceConfigFixture } from '../../Support/knowledge-service-config.fixture.ts'
-import { createRestoredMembershipFixture } from '../../Unit/Application/document-index-lifecycle.fixture.ts'
+import { createRestoredKnowledgeBaseDocumentFixture } from '../../Unit/Application/document-index-lifecycle.fixture.ts'
 
 let authenticated = true
 let serviceError: Error | null = null
@@ -61,13 +65,16 @@ const indexResponse: DocumentIndexRequestResult = {
   reusedReadyIndex: true,
   blockedByFailedJob: false,
 }
-const retryResponse: RetryDocumentIndexingResultDto = {
+const retryResponse: RetryDocumentIndexingResultDTO = {
   jobId: 'job-2',
   failedJobId: 'failed-1',
   status: DocumentIndexingTargetStateEnum.QUEUED,
   retryOfFailedJobId: 'failed-1',
 }
-const pruneResponse = [createRestoredMembershipFixture(), createRestoredMembershipFixture({ documentId: 'document-2' })]
+const pruneResponse = [
+  createRestoredKnowledgeBaseDocumentFixture(),
+  createRestoredKnowledgeBaseDocumentFixture({ documentId: 'document-2' }),
+]
 const validIndexBody = {
   knowledgeBaseId: '11111111-1111-4111-8111-111111111111',
   projectId: 'project-1',
@@ -97,10 +104,10 @@ const useCaseProviders = [
   { provide: RetrieveKnowledgeBaseContentUseCase, useValue: { execute: async () => resultOrThrow(null) } },
   { provide: ReadDocumentIndexingStatusListener, useValue: { handle: async () => resultOrThrow(jobStatusResponse) } },
   { provide: RetryDocumentIndexingListener, useValue: { handle: async () => resultOrThrow(retryResponse) } },
-  { provide: PruneKnowledgeBaseMembershipsUseCase, useValue: { execute: async () => resultOrThrow(pruneResponse) } },
+  { provide: PruneKnowledgeBaseDocumentsUseCase, useValue: { execute: async () => resultOrThrow(pruneResponse) } },
 ]
 const readyAt = new Date('2026-10-14T00:00:00.000Z')
-let jobStatusResponse: DocumentIndexingStatusDto = {
+let jobStatusResponse: DocumentIndexingStatusDTO = {
   activeIndex: {
     id: 'index-1',
     status: DocumentIndexStatusEnum.READY,
@@ -146,7 +153,7 @@ Object.assign(jobStatusResponse, { internalStatusData: 'hidden' })
     HealthController,
     DocumentIndexesController,
     KnowledgeBaseRetrievalController,
-    KnowledgeBaseMembershipsController,
+    KnowledgeBaseDocumentsController,
   ],
   providers: [{ provide: ServiceAuthenticator, useValue: { authenticate: () => authenticated } }, ...useCaseProviders],
 })
@@ -157,7 +164,7 @@ class HttpContractTestModule {}
     HealthController,
     DocumentIndexesController,
     KnowledgeBaseRetrievalController,
-    KnowledgeBaseMembershipsController,
+    KnowledgeBaseDocumentsController,
   ],
   providers: [
     {
@@ -193,12 +200,12 @@ test('HTTP contract returns 422 for invalid DTOs, 401 for failed auth, and 404 f
   try {
     await app.listen(0, '127.0.0.1')
     const baseUrl = await app.getUrl()
-    const invalidDto = await fetch(`${baseUrl}/v1/index-requests`, {
+    const invalidDTO = await fetch(`${baseUrl}/v1/index-requests`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: '{}',
     })
-    assert.equal(invalidDto.status, 422)
+    assert.equal(invalidDTO.status, 422)
 
     const invalidSource = await fetch(`${baseUrl}/v1/index-requests`, {
       method: 'POST',
@@ -363,8 +370,8 @@ test('HTTP exposes typed application and domain error envelopes and keeps unexpe
         message: 'Document is no longer available',
       },
       {
-        error: new IndexRequestMembershipUnavailableException(),
-        name: 'IndexRequestMembershipUnavailableException',
+        error: new IndexRequestKnowledgeBaseDocumentUnavailableException(),
+        name: 'IndexRequestKnowledgeBaseDocumentUnavailableException',
         code: 'INDEX_REQUEST_MEMBERSHIP_UNAVAILABLE',
         message: 'Membership is no longer available',
       },
@@ -446,7 +453,7 @@ test('HTTP exposes typed application and domain error envelopes and keeps unexpe
     const errors = [
       { error: new KnowledgeIndexPendingException(), status: 409 },
       { error: new KnowledgeBaseProjectMismatchException(), status: 409 },
-      { error: new KnowledgeMembershipPruneConflictException('kb-1', 'document-1'), status: 409 },
+      { error: new KnowledgeBaseDocumentPruneConflictException('kb-1', 'document-1'), status: 409 },
       { error: new DocumentIndexingNotFoundException('job-1'), status: 404 },
       { error: new KnowledgeEmbeddingUnavailableException(), status: 502 },
     ]
@@ -456,7 +463,7 @@ test('HTTP exposes typed application and domain error envelopes and keeps unexpe
       ...applicationErrors.map((error) => ({ ...error, status: 409 })),
     ]
 
-    for (const { error, status, code, message } of expectedErrors) {
+    const assertErrorResponse = async ({ error, status, code, message }: (typeof expectedErrors)[number]) => {
       serviceError = error
       const response = await fetch(`${baseUrl}/v1/retrieve/hybrid`, {
         method: 'POST',
@@ -466,6 +473,8 @@ test('HTTP exposes typed application and domain error envelopes and keeps unexpe
       assert.equal(response.status, status)
       assert.deepEqual(await response.json(), { code, message })
     }
+
+    await firstValueFrom(from(expectedErrors).pipe(concatMap(assertErrorResponse), toArray()))
 
     serviceError = new Error('internal database credential must not be returned')
     const unexpected = await fetch(`${baseUrl}/v1/retrieve/hybrid`, {
@@ -525,6 +534,71 @@ test('HTTP authenticates signed project scopes across body and route endpoints',
     assert.equal(health.status, 200)
     assert.deepEqual(await health.json(), { status: 'ok' })
   } finally {
+    await app.close()
+  }
+})
+
+test('HTTP retrieval incomplete errors preserve project authorization and return a bounded conflict response', async () => {
+  const app = await NestFactory.create(SignedHttpContractTestModule, { logger: false })
+  app.useGlobalPipes(createGlobalValidationPipe())
+  app.useGlobalFilters(new ApplicationErrorFilter())
+
+  try {
+    await app.listen(0, '127.0.0.1')
+    const baseUrl = await app.getUrl()
+    const path = '/v1/retrieve/hybrid'
+    const body = {
+      projectId: 'worker-shared',
+      queryText: '專案規範',
+      documentReference: 'BackEnd/Agent-Teams/CONTEXT.md',
+      topK: 5,
+    }
+    const errors = [
+      new DocumentReferenceResolutionAmbiguousException({ matchingDocumentCount: 0 }),
+      new DocumentReferenceResolutionAmbiguousException({ matchingDocumentCount: 2 }),
+      new KnowledgeRetrievalIncompleteException(),
+      new RequiredDocumentFullContentMissingException({ documentId: 'private-document-id' }),
+    ]
+    const assertIncompleteResponse = async (error: KnowledgeRetrievalIncompleteException) => {
+      serviceError = error
+      const response = await fetch(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers: signedHeaders('POST', path, body.projectId, body),
+        body: JSON.stringify(body),
+      })
+      assert.equal(response.status, 409)
+      assert.deepEqual(await response.json(), {
+        code: 'KNOWLEDGE_RETRIEVAL_INCOMPLETE',
+        message: 'Knowledge retrieval is missing required facts',
+      })
+    }
+    await firstValueFrom(from(errors).pipe(concatMap(assertIncompleteResponse), toArray()))
+
+    const wrongScope = await fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: signedHeaders('POST', path, 'other-project', body),
+      body: JSON.stringify(body),
+    })
+    assert.equal(wrongScope.status, 401)
+    assert.equal(JSON.stringify(await wrongScope.json()).includes('KNOWLEDGE_RETRIEVAL_INCOMPLETE'), false)
+
+    const invalidBodies = [
+      { ...body, topK: 0 },
+      { ...body, topK: 101 },
+      { ...body, limit: 0 },
+      { ...body, limit: 101 },
+    ]
+    const assertInvalidLimit = async (invalidBody: (typeof invalidBodies)[number]) => {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers: signedHeaders('POST', path, body.projectId, invalidBody),
+        body: JSON.stringify(invalidBody),
+      })
+      assert.equal(response.status, 422)
+    }
+    await firstValueFrom(from(invalidBodies).pipe(concatMap(assertInvalidLimit), toArray()))
+  } finally {
+    serviceError = null
     await app.close()
   }
 })

@@ -1,4 +1,4 @@
-export type RetrievalDocumentIndexDto = {
+export type RetrievalDocumentIndexDTO = {
   id: string
   documentId: string
   revisionId: string

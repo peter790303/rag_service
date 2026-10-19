@@ -17,7 +17,7 @@ import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Applicatio
 import { DocumentGarbageCollectionRequestedListener } from '../../../src/Application/Documents/Listeners/document-garbage-collection-requested.listener.ts'
 import { InspectDocumentRetentionUseCase } from '../../../src/Application/Documents/UseCases/inspect-document-retention.use-case.ts'
 import { LockDocumentRetentionParentsUseCase } from '../../../src/Application/Documents/UseCases/lock-document-retention-parents.use-case.ts'
-import { InspectMembershipRetentionUseCase } from '../../../src/Application/Memberships/UseCases/inspect-membership-retention.use-case.ts'
+import { InspectKnowledgeBaseDocumentRetentionUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/inspect-knowledge-base-document-retention.use-case.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
@@ -25,7 +25,7 @@ import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/M
 import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
 import { FailedJobModel } from '../../../src/Infrastructure/Persistence/Models/failed-job.model.ts'
 import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
 import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
 import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
@@ -35,7 +35,7 @@ import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persiste
 import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
 import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
 import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentMembershipRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document-membership.repository.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
 import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
@@ -54,7 +54,7 @@ test(
       const documentIndexModelRepository = dataSource.getRepository(DocumentIndexModel)
       const failedJobModelRepository = dataSource.getRepository(FailedJobModel)
       const jobModelRepository = dataSource.getRepository(JobModel)
-      const membershipModelRepository = dataSource.getRepository(KnowledgeBaseDocumentMembershipModel)
+      const knowledgeBaseDocumentModelRepository = dataSource.getRepository(KnowledgeBaseDocumentModel)
       const key = randomUUID()
       const base = await knowledgeBaseModelRepository.save(
         knowledgeBaseModelRepository.create({ projectId: `failed-gc-project-${key}`, projectName: `failed-gc-${key}` }),
@@ -73,8 +73,8 @@ test(
           unreferencedSince: null,
         }),
       )
-      await membershipModelRepository.save(
-        membershipModelRepository.create({
+      await knowledgeBaseDocumentModelRepository.save(
+        knowledgeBaseDocumentModelRepository.create({
           knowledgeBaseId: base.id,
           documentId: document.id,
           activeDocumentIndexId: null,
@@ -83,8 +83,8 @@ test(
           alwaysIncludeFullContent: false,
         }),
       )
-      await membershipModelRepository.save(
-        membershipModelRepository.create({
+      await knowledgeBaseDocumentModelRepository.save(
+        knowledgeBaseDocumentModelRepository.create({
           knowledgeBaseId: retryBase.id,
           documentId: document.id,
           activeDocumentIndexId: null,
@@ -169,7 +169,7 @@ test(
       const documentIndexPersistenceFixture = new DocumentIndexPersistenceFixture(
         persistenceTransaction,
         jobRepository,
-        new KnowledgeBaseDocumentMembershipRepository(persistenceTransaction),
+        new KnowledgeBaseDocumentRepository(persistenceTransaction),
         new DocumentIndexRepository(persistenceTransaction),
         new KnowledgeBaseRepository(persistenceTransaction),
         documentRepository,
@@ -181,41 +181,38 @@ test(
       const collectGarbage = new DocumentGarbageCollectionRequestedListener(
         documentIndexPersistenceFixture.persistenceTransaction,
         documentIndexPersistenceFixture.documentRepository,
-        new PlanDocumentIndexGarbageUseCase(
-          documentIndexPersistenceFixture.documentIndexRepository,
-          documentIndexPersistenceFixture.failedJobRepository,
-        ),
+        new PlanDocumentIndexGarbageUseCase(documentIndexPersistenceFixture.documentIndexRepository),
         new CollectDocumentIndexGarbageUseCase(
           documentIndexPersistenceFixture.documentIndexRepository,
           documentIndexPersistenceFixture.jobRepository,
           documentIndexPersistenceFixture.failedJobRepository,
-          new InspectMembershipRetentionUseCase(documentIndexPersistenceFixture.membershipRepository),
+          new InspectKnowledgeBaseDocumentRetentionUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+          ),
           new CollectDocumentRelationGarbageUseCase(documentIndexPersistenceFixture.documentRelationRepository),
           new CollectIndexChunkGarbageUseCase(documentIndexPersistenceFixture.chunkRepository),
         ),
         new PlanDocumentRevisionGarbageUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
         new CollectDocumentRevisionGarbageUseCase(
           documentIndexPersistenceFixture.documentRevisionRepository,
-          new InspectDocumentIndexRetentionUseCase(
-            documentIndexPersistenceFixture.documentIndexRepository,
-            documentIndexPersistenceFixture.jobRepository,
-            documentIndexPersistenceFixture.failedJobRepository,
-          ),
+          new InspectDocumentIndexRetentionUseCase(documentIndexPersistenceFixture.documentIndexRepository),
         ),
         new PlanDocumentRelationGarbageUseCase(documentIndexPersistenceFixture.documentRelationRepository),
         new LockDocumentRetentionParentsUseCase(documentIndexPersistenceFixture.documentRepository),
         new InspectDocumentRetentionUseCase(
-          new InspectMembershipRetentionUseCase(documentIndexPersistenceFixture.membershipRepository),
-          new InspectDocumentRevisionRetentionUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
-          new InspectDocumentIndexRetentionUseCase(
-            documentIndexPersistenceFixture.documentIndexRepository,
-            documentIndexPersistenceFixture.jobRepository,
-            documentIndexPersistenceFixture.failedJobRepository,
+          new InspectKnowledgeBaseDocumentRetentionUseCase(
+            documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
           ),
+          new InspectDocumentRevisionRetentionUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
+          new InspectDocumentIndexRetentionUseCase(documentIndexPersistenceFixture.documentIndexRepository),
           new InspectDocumentRelationRetentionUseCase(documentIndexPersistenceFixture.documentRelationRepository),
           documentIndexPersistenceFixture.documentRepository,
+          documentIndexPersistenceFixture.jobRepository,
+          documentIndexPersistenceFixture.failedJobRepository,
         ),
         { gcRetentionMs: retentionMs },
+        documentIndexPersistenceFixture.jobRepository,
+        documentIndexPersistenceFixture.failedJobRepository,
       )
       const failureCountBeforeCollection = await failedJobModelRepository.count()
       const deleted = await collectGarbage.handle(new DocumentGarbageCollectionRequestedEvent())

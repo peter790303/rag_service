@@ -19,7 +19,7 @@ export type RetrievalDocumentRelationView = RetrievalDocumentRelationResolutionV
   evidenceText: string
 }
 
-export type RetrievalDocumentRelationDto = {
+export type RetrievalDocumentRelationDTO = {
   id: string
   sourceIndexId: string
   targetDocumentId: string | null

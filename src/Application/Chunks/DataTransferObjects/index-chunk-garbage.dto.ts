@@ -1,4 +1,4 @@
-export type IndexChunkGarbageDto = {
+export type IndexChunkGarbageDTO = {
   documentIndexId: string
   documentId: string
   unreferencedSince: Date | null

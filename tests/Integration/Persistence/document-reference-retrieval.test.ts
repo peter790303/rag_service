@@ -17,7 +17,7 @@ import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk
 import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
 import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
 import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
 import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
 import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
@@ -27,7 +27,7 @@ import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persiste
 import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
 import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
 import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentMembershipRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document-membership.repository.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
 import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
 import { HybridKnowledgeRetrievalResource } from '../../../src/Interfaces/Http/Resources/hybrid-knowledge-retrieval.resource.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
@@ -91,7 +91,7 @@ test(
       const documentModelRepository = dataSource.getRepository(DocumentModel)
       const documentRevisionModelRepository = dataSource.getRepository(DocumentRevisionModel)
       const documentIndexModelRepository = dataSource.getRepository(DocumentIndexModel)
-      const membershipModelRepository = dataSource.getRepository(KnowledgeBaseDocumentMembershipModel)
+      const knowledgeBaseDocumentModelRepository = dataSource.getRepository(KnowledgeBaseDocumentModel)
       const chunkModelRepository = dataSource.getRepository(ChunkModel)
       const projectId = `retrieval-${randomUUID()}`
       const projectName = `Retrieval project ${randomUUID()}`
@@ -141,8 +141,8 @@ test(
             unreferencedSince: null,
           }),
         )
-        await membershipModelRepository.save(
-          membershipModelRepository.create({
+        await knowledgeBaseDocumentModelRepository.save(
+          knowledgeBaseDocumentModelRepository.create({
             knowledgeBaseId,
             documentId: document.id,
             activeDocumentIndexId: index.id,
@@ -191,7 +191,7 @@ test(
       const documentIndexPersistenceFixture = new DocumentIndexPersistenceFixture(
         persistenceTransaction,
         new JobRepository(persistenceTransaction),
-        new KnowledgeBaseDocumentMembershipRepository(persistenceTransaction),
+        new KnowledgeBaseDocumentRepository(persistenceTransaction),
         new DocumentIndexRepository(persistenceTransaction),
         knowledgeBaseRepository,
         new DocumentRepository(persistenceTransaction),
@@ -212,32 +212,45 @@ test(
         'docs/target.md',
       ])
 
-      await context.test('inverse membership relations retain knowledge-base and document scope', async () => {
-        const scopedBase = await retrievalDataSource.getRepository(KnowledgeBaseModel).findOneOrFail({
-          where: { projectId },
-          relations: { memberships: { document: true } },
-        })
-        assert.deepEqual(scopedBase.memberships.map((membership) => membership.document.sourcePath).sort(), [
-          'docs/closer.md',
-          'docs/target.md',
-        ])
-        const scopedDocument = await retrievalDataSource.getRepository(DocumentModel).findOneOrFail({
-          where: { sourceType: DocumentSourceTypeEnum.REPOSITORY, sourceKey: projectId, sourcePath: 'docs/target.md' },
-          relations: { memberships: { knowledgeBase: true } },
-        })
-        assert.deepEqual(
-          scopedDocument.memberships.map((membership) => membership.knowledgeBase.projectId),
-          [projectId],
-        )
-        const otherScopedBase = await retrievalDataSource.getRepository(KnowledgeBaseModel).findOneOrFail({
-          where: { projectId: otherBase.projectId },
-          relations: { memberships: { document: true } },
-        })
-        assert.deepEqual(
-          otherScopedBase.memberships.map((membership) => membership.document.sourcePath),
-          ['docs/other-project.md'],
-        )
-      })
+      await context.test(
+        'inverse knowledgeBaseDocument relations retain knowledge-base and document scope',
+        async () => {
+          const scopedBase = await retrievalDataSource.getRepository(KnowledgeBaseModel).findOneOrFail({
+            where: { projectId },
+            relations: { knowledgeBaseDocuments: { document: true } },
+          })
+          assert.deepEqual(
+            scopedBase.knowledgeBaseDocuments
+              .map((knowledgeBaseDocument) => knowledgeBaseDocument.document.sourcePath)
+              .sort(),
+            ['docs/closer.md', 'docs/target.md'],
+          )
+          const scopedDocument = await retrievalDataSource.getRepository(DocumentModel).findOneOrFail({
+            where: {
+              sourceType: DocumentSourceTypeEnum.REPOSITORY,
+              sourceKey: projectId,
+              sourcePath: 'docs/target.md',
+            },
+            relations: { knowledgeBaseDocuments: { knowledgeBase: true } },
+          })
+          assert.deepEqual(
+            scopedDocument.knowledgeBaseDocuments.map(
+              (knowledgeBaseDocument) => knowledgeBaseDocument.knowledgeBase.projectId,
+            ),
+            [projectId],
+          )
+          const otherScopedBase = await retrievalDataSource.getRepository(KnowledgeBaseModel).findOneOrFail({
+            where: { projectId: otherBase.projectId },
+            relations: { knowledgeBaseDocuments: { document: true } },
+          })
+          assert.deepEqual(
+            otherScopedBase.knowledgeBaseDocuments.map(
+              (knowledgeBaseDocument) => knowledgeBaseDocument.document.sourcePath,
+            ),
+            ['docs/other-project.md'],
+          )
+        },
+      )
 
       await context.test('retrieval pool rejects native writes without affecting the writable pool', async () => {
         await assert.rejects(

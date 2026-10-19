@@ -1,9 +1,9 @@
-import type { DocumentIndexExecutionVerificationDto } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-verification.dto.ts'
 
 /** Converts the lease fields to the stored JSON column names. */
 export class JobExecutionVerificationAdapter {
   static toJobExecutionVerificationPersistence(
-    jobExecutionVerification: DocumentIndexExecutionVerificationDto,
+    jobExecutionVerification: DocumentIndexExecutionVerificationDTO,
   ): Record<string, unknown> {
     const storedJobExecutionVerification: Record<string, unknown> = {
       stage: jobExecutionVerification.stage,

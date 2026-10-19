@@ -9,7 +9,11 @@ const config = {
   embeddingApiUrl: 'https://embedding.example.test/v1/embeddings',
   embeddingModel: 'test-model',
   embeddingDimensions: 2,
-} satisfies Pick<KnowledgeServiceConfig, 'embeddingApiUrl' | 'embeddingModel' | 'embeddingDimensions'>
+  externalRequestTimeoutMs: 12_345,
+} satisfies Pick<
+  KnowledgeServiceConfig,
+  'embeddingApiUrl' | 'embeddingModel' | 'embeddingDimensions' | 'externalRequestTimeoutMs'
+>
 
 const assertEmbeddingUnavailable = (error: unknown): boolean => {
   assert.ok(error instanceof KnowledgeEmbeddingUnavailableException)
@@ -87,7 +91,7 @@ test('embedding client bounds requests and maps timeout aborts to knowledge avai
 
   await assert.rejects(new HttpEmbeddingClient(config).embed(['question']), assertEmbeddingUnavailable)
 
-  assert.equal(timeoutMs, 30_000)
+  assert.equal(timeoutMs, config.externalRequestTimeoutMs)
   assert.equal(requestSignal, timeoutSignal)
 })
 
@@ -131,4 +135,16 @@ test('embedding client preserves the response JSON failure as its cause', async 
 
     return true
   })
+})
+
+test('HTTP embedding honors caller cancellation in addition to its request timeout', async (context) => {
+  const controller = new AbortController()
+  let requestSignal: AbortSignal | null | undefined
+  context.mock.method(globalThis, 'fetch', async (_input: RequestInfo | URL, init?: RequestInit) => {
+    requestSignal = init?.signal
+    controller.abort()
+    throw new DOMException('aborted', 'AbortError')
+  })
+  await assert.rejects(new HttpEmbeddingClient(config).embed(['text'], controller.signal), assertEmbeddingUnavailable)
+  assert.equal(requestSignal?.aborted, true)
 })

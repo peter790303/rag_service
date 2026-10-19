@@ -31,7 +31,7 @@ const createDocumentRepository = (context: TestContext, currentTitle: string | n
     generatedMaps: [],
     raw: [],
   }))
-  const findOneByOrFail = context.mock.method(documentModelRepository, 'findOneByOrFail', async () => document)
+  const findOneBy = context.mock.method(documentModelRepository, 'findOneBy', async () => document)
 
   const persistenceTransaction = new PersistenceTransaction({ manager } as DataSource)
 
@@ -41,7 +41,7 @@ const createDocumentRepository = (context: TestContext, currentTitle: string | n
     modelRepository: documentModelRepository,
     document,
     upsert,
-    findOneByOrFail,
+    findOneBy,
     repository: new DocumentRepository(persistenceTransaction),
   }
 }
@@ -54,15 +54,12 @@ test('upsertBySourceTypeAndSourceKeyAndSourcePath omits an unspecified title and
     unreferencedSince: null,
   })
 
-  assert.ok(document instanceof Document)
-  assert.notEqual(document, fixture.document)
-  assert.equal(document.currentTitle, fixture.document.currentTitle)
-  assert.deepEqual(document.createdAt.nativeDate, fixture.document.createdAt)
+  assert.equal(document, undefined)
+  assert.equal(fixture.findOneBy.mock.callCount(), 0)
   assert.deepEqual(fixture.upsert.mock.calls[0]?.arguments, [
     { ...candidateSource, unreferencedSince: null },
     conflictOptions,
   ])
-  assert.deepEqual(fixture.findOneByOrFail.mock.calls[0]?.arguments, [sourceIdentity])
 })
 
 test('upsertTitleBySourceTypeAndSourceKeyAndSourcePath includes a supplied title without changing the source identity conflict target', async (context) => {
@@ -74,10 +71,8 @@ test('upsertTitleBySourceTypeAndSourceKeyAndSourcePath includes a supplied title
     currentTitle: 'renamed title',
   })
 
-  assert.ok(document instanceof Document)
-  assert.notEqual(document, fixture.document)
-  assert.equal(document.currentTitle, fixture.document.currentTitle)
-  assert.deepEqual(document.createdAt.nativeDate, fixture.document.createdAt)
+  assert.equal(document, undefined)
+  assert.equal(fixture.findOneBy.mock.callCount(), 0)
   assert.deepEqual(fixture.upsert.mock.calls[0]?.arguments, [
     { ...candidateSource, unreferencedSince: null, currentTitle: 'renamed title' },
     conflictOptions,
@@ -100,7 +95,7 @@ test('upsertTitleBySourceTypeAndSourceKeyAndSourcePath stores caller-supplied li
   ])
 })
 
-test('upsertBySourceTypeAndSourceKeyAndSourcePath performs both the conflict write and identity read on the caller transaction manager', async (context) => {
+test('separate source write and identity read use the caller transaction manager', async (context) => {
   const fixture = createDocumentRepository(context, null)
   const transactionManager = createRepositoryManagerStub()
   const documentModelRepository = transactionManager.getRepository(DocumentModel)
@@ -109,23 +104,34 @@ test('upsertBySourceTypeAndSourceKeyAndSourcePath performs both the conflict wri
     generatedMaps: [],
     raw: [],
   }))
-  const findOneByOrFail = context.mock.method(documentModelRepository, 'findOneByOrFail', async () => fixture.document)
+  const findOneBy = context.mock.method(documentModelRepository, 'findOneBy', async () => fixture.document)
 
-  const document = await fixture.transaction.bind(transactionManager, () =>
-    fixture.repository.upsertBySourceTypeAndSourceKeyAndSourcePath({
+  const document = await fixture.transaction.bind(transactionManager, async () => {
+    const result = await fixture.repository.upsertBySourceTypeAndSourceKeyAndSourcePath({
       ...candidateSource,
       unreferencedSince: null,
-    }),
-  )
+    })
+    assert.equal(result, undefined)
+
+    return fixture.repository.findBySourceTypeAndSourceKeyAndSourcePath(sourceIdentity)
+  })
 
   assert.ok(document instanceof Document)
   assert.notEqual(document, fixture.document)
   assert.equal(document.currentTitle, fixture.document.currentTitle)
   assert.deepEqual(document.createdAt.nativeDate, fixture.document.createdAt)
   assert.equal(fixture.upsert.mock.callCount(), 0)
-  assert.equal(fixture.findOneByOrFail.mock.callCount(), 0)
+  assert.equal(fixture.findOneBy.mock.callCount(), 0)
   assert.deepEqual(upsert.mock.calls[0]?.arguments, [{ ...candidateSource, unreferencedSince: null }, conflictOptions])
-  assert.deepEqual(findOneByOrFail.mock.calls[0]?.arguments, [sourceIdentity])
+  assert.deepEqual(findOneBy.mock.calls[0]?.arguments, [sourceIdentity])
+})
+
+test('source identity lookup returns null when the persisted document is unavailable', async (context) => {
+  const fixture = createDocumentRepository(context, null)
+  fixture.findOneBy.mock.mockImplementation(async () => null)
+
+  assert.equal(await fixture.repository.findBySourceTypeAndSourceKeyAndSourcePath(sourceIdentity), null)
+  assert.deepEqual(fixture.findOneBy.mock.calls[0]?.arguments, [sourceIdentity])
 })
 
 test('document locks keep the requested ID and distinguish blocking from skip-locked acquisition', async (context) => {

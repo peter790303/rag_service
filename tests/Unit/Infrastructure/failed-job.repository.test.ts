@@ -57,30 +57,38 @@ test('failed-job records whitelist columns and isolate Date and JSON values for 
   const original = structuredClone(input)
   context.mock.method(modelRepository, 'findOneBy', async () => model)
   context.mock.method(modelRepository, 'findBy', async () => [model])
-  const save = context.mock.method(modelRepository, 'save', async () => model)
+  const insert = context.mock.method(
+    modelRepository,
+    'insert',
+    async (attributes: Parameters<typeof modelRepository.insert>[0]) => {
+      assert.ok(attributes)
+
+      return { identifiers: [], generatedMaps: [], raw: [] }
+    },
+  )
   const repository = new FailedJobRepository(new PersistenceTransaction({ manager } as DataSource))
   const found = await repository.findFailure({ id: model.id })
   const saved = await repository.archive(input)
   const records = await repository.findByDocumentIndexId({ documentIndexId: model.documentIndexId })
   assert.ok(found)
   assert.deepEqual(found, original)
-  assert.deepEqual(saved, original)
+  assert.equal(saved, undefined)
   assert.deepEqual(records, [original])
   assert.equal(Object.getPrototypeOf(found), Object.prototype)
   assert.equal('documentIndex' in found, false)
-  assert.notEqual(saved.failedAt, model.failedAt)
-  assert.notEqual(saved.retryPayload.nested, model.retryPayload.nested)
-  assert.notEqual(saved.blockedReasons[0], model.blockedReasons[0])
-  assert.notEqual(save.mock.calls[0]?.arguments[0], input)
-  assert.notEqual(save.mock.calls[0]?.arguments[0]?.failedAt, input.failedAt)
-  assert.notEqual(save.mock.calls[0]?.arguments[0]?.retryPayload, input.retryPayload)
+  assert.deepEqual(insert.mock.calls[0]?.arguments, [original])
+  const inserted = insert.mock.calls[0]?.arguments[0]
+  assert.ok(inserted && !Array.isArray(inserted))
+  assert.notEqual(inserted, input)
+  assert.notEqual(inserted.failedAt, input.failedAt)
+  assert.notEqual(inserted.retryPayload, input.retryPayload)
   found.failedAt.setTime(0)
   found.retriedAt?.setTime(0)
   found.createdAt.setTime(0)
   found.updatedAt.setTime(0)
   found.retryPayload.nested = { document: 'changed' }
   found.blockedReasons.push({ reason: { code: 'changed' } })
-  assert.deepEqual(saved, original)
+  assert.equal(saved, undefined)
   assert.deepEqual(records, [original])
   assert.equal(model.failedAt.getTime(), original.failedAt.getTime())
   assert.equal(model.retriedAt?.getTime(), original.retriedAt.getTime())

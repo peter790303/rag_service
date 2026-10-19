@@ -1,13 +1,13 @@
 import { ReadLeaseDocumentIndexesAssembler } from './read-lease-document-indexes.assembler.ts'
-import type { DocumentIndexExecutionRecordDto } from '../DataTransferObjects/document-index-execution-record.dto.ts'
-import type { ExpiredDocumentIndexExecutionDto } from '../DataTransferObjects/expired-document-index-execution.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
+import type { ExpiredDocumentIndexExecutionDTO } from '../DataTransferObjects/expired-document-index-execution.dto.ts'
 import type { DOCUMENT_INDEX_EXECUTION_STATUS } from '../Helpers/document-index-execution-lifecycle.helper.ts'
 import type { DocumentIndexExecutionRetryFields } from '../QueryObjects/document-index-execution.query-object.ts'
 import type { ArchiveDocumentIndexFailureQueryObject } from '../QueryObjects/document-index-failure.query-object.ts'
 
 /** Maps failed execution state to a queued retry or a failed-job archive. */
 export class WriteFailDocumentIndexesAssembler {
-  static toExpiredExecution(jobRecord: DocumentIndexExecutionRecordDto): ExpiredDocumentIndexExecutionDto {
+  static toExpiredExecution(jobRecord: DocumentIndexExecutionRecordDTO): ExpiredDocumentIndexExecutionDTO {
     const leaseExpiresAt = ReadLeaseDocumentIndexesAssembler.toDocumentIndexExecutionLease(jobRecord).leaseExpiresAt
 
     return {
@@ -53,7 +53,7 @@ export class WriteFailDocumentIndexesAssembler {
   }
 
   static toDocumentIndexFailureArchive(
-    expiredJob: ExpiredDocumentIndexExecutionDto,
+    expiredJob: ExpiredDocumentIndexExecutionDTO,
     errorCode: string,
     errorMessage: string,
     executionState: Record<string, unknown>,

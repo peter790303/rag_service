@@ -1,5 +1,5 @@
 import type { DocumentRelation } from '../../../Domain/DocumentRelation/document-relation.ts'
-import type { RetrievalDocumentDto } from '../../Documents/DataTransferObjects/retrieval-document.dto.ts'
+import type { RetrievalDocumentDTO } from '../../Documents/DataTransferObjects/retrieval-document.dto.ts'
 import type {
   RetrievalDocumentRelationResolutionView,
   RetrievalDocumentRelationView,
@@ -7,7 +7,7 @@ import type {
 
 interface RetrievalDocumentRelationViewFacts {
   relation: DocumentRelation
-  sourceDocument: RetrievalDocumentDto
+  sourceDocument: RetrievalDocumentDTO
   resolution: RetrievalDocumentRelationResolutionView
 }
 

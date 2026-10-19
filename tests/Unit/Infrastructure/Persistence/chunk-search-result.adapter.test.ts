@@ -3,11 +3,11 @@ import { test } from 'node:test'
 
 import { Chunk } from '../../../../src/Domain/Chunk/chunk.ts'
 import { ChunkSearchResultAdapter } from '../../../../src/Infrastructure/Persistence/Adapters/chunk-search-result.adapter.ts'
-import type { ChunkSemanticQueryRowDto } from '../../../../src/Infrastructure/Persistence/Adapters/chunk-search-result.adapter.ts'
+import type { ChunkSemanticQueryRowDTO } from '../../../../src/Infrastructure/Persistence/Adapters/chunk-search-result.adapter.ts'
 import { InvalidChunkEmbeddingException } from '../../../../src/Infrastructure/Persistence/Exceptions/invalid-chunk-embedding.exception.ts'
 
 const queryVector = Object.freeze([1, 0, 0])
-const createSemanticQueryRowDTO = (embedding: string | number[]): ChunkSemanticQueryRowDto => ({
+const createSemanticQueryRowDTO = (embedding: string | number[]): ChunkSemanticQueryRowDTO => ({
   id: '20000000-0000-4000-8000-000000000002',
   documentIndexId: '30000000-0000-4000-8000-000000000001',
   ordinal: 3,
@@ -79,12 +79,13 @@ test('candidate adapters preserve null search vectors', () => {
 })
 
 test('candidate adapters reject malformed wire representations rather than substitute a vector', () => {
-  for (const embedding of ['{"coordinate":1}', '[1,"invalid"]', '[1,1e309]', '[1']) {
+  const testCases = ['{"coordinate":1}', '[1,"invalid"]', '[1,1e309]', '[1']
+  testCases.forEach((embedding) => {
     assert.throws(
       () => ChunkSearchResultAdapter.toVectorMatchedChunks([createSemanticQueryRowDTO(embedding)], queryVector),
       InvalidChunkEmbeddingException,
     )
-  }
+  })
 })
 
 test('semantic candidate restoration preserves source spans, nullable tokens and isolated headings', () => {
@@ -108,4 +109,11 @@ test('semantic candidate restoration preserves source spans, nullable tokens and
   assert.deepEqual(semanticQueryRowDTO, originalSemanticQueryRowDTO)
   matchedChunk.headingPath.push('Changed output')
   assert.deepEqual(semanticQueryRowDTO.headingPath, ['Title', '中文'])
+})
+
+test('vector bind parameters preserve coordinate order, signs and precision without changing the input', () => {
+  const vector = Object.freeze([1.25, -2.5, 0, 0.000001])
+
+  assert.equal(ChunkSearchResultAdapter.toVectorParameter(vector), '[1.25,-2.5,0,0.000001]')
+  assert.deepEqual(vector, [1.25, -2.5, 0, 0.000001])
 })

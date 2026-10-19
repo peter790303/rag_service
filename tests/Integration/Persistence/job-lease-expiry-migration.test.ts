@@ -11,14 +11,14 @@ import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Mode
 import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
 import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
 import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
 import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
 import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 test(
-  'lease migration backfills legacy running jobs across pages and preserves unavailable expiry and queued nulls',
+  'fresh jobs schema supports indexed lease expiry, exact-boundary recovery and unavailable expiry',
   { skip: !process.env.RAG_DATABASE_URL },
   async () => {
     const { schema, dataSource, cleanup } = await createPersistenceTestDatabase()
@@ -29,7 +29,7 @@ test(
       const documentModelRepository = dataSource.getRepository(DocumentModel)
       const documentRevisionModelRepository = dataSource.getRepository(DocumentRevisionModel)
       const documentIndexModelRepository = dataSource.getRepository(DocumentIndexModel)
-      const membershipModelRepository = dataSource.getRepository(KnowledgeBaseDocumentMembershipModel)
+      const knowledgeBaseDocumentModelRepository = dataSource.getRepository(KnowledgeBaseDocumentModel)
       const jobModelRepository = dataSource.getRepository(JobModel)
       const key = randomUUID()
       const bases = await knowledgeBaseModelRepository.save(
@@ -73,8 +73,8 @@ test(
           unreferencedSince: null,
         }),
       )
-      await membershipModelRepository.save(
-        membershipModelRepository.create(
+      await knowledgeBaseDocumentModelRepository.save(
+        knowledgeBaseDocumentModelRepository.create(
           bases.map((base) => ({
             knowledgeBaseId: base.id,
             documentId: document.id,
@@ -107,15 +107,13 @@ test(
         ),
       )
 
-      // Revert only the new migration, then write through the old columns before running its real backfill.
-      await dataSource.undoLastMigration()
       const validRecords = records.slice(0, 251)
       const missingExpiryRecord = records[251]!
       const invalidExpiryRecord = records[252]!
       const queuedRecord = records[253]!
       const leaseToken = randomUUID()
       const leaseExpiresAt = '2026-10-14T08:05:00.000+08:00'
-      const legacyLease = {
+      const runningLease = {
         status: DOCUMENT_INDEX_EXECUTION_STATUS.RUNNING,
         attempts: 1,
         reservedAt: new Date('2026-10-14T00:00:00.000Z'),
@@ -125,26 +123,21 @@ test(
 
       await jobModelRepository.update(
         { id: In(validRecords.map((record) => record.id)) },
-        { ...legacyLease, executionVerification: verification },
+        { ...runningLease, leaseExpiresAt: new Date(leaseExpiresAt), executionVerification: verification },
       )
       await jobModelRepository.update(missingExpiryRecord.id, {
-        ...legacyLease,
+        ...runningLease,
         executionVerification: { claim_token: leaseToken, lease_expires_at: '' },
       })
       await jobModelRepository.update(invalidExpiryRecord.id, {
-        ...legacyLease,
+        ...runningLease,
         executionVerification: { claim_token: leaseToken, lease_expires_at: 'invalid' },
       })
 
-      const migrations = await dataSource.runMigrations()
-      assert.deepEqual(
-        migrations.map((migration) => migration.name),
-        ['AddJobLeaseExpiry1729000000010'],
-      )
-      const backfilled = await jobModelRepository.findBy({ id: In(validRecords.map((record) => record.id)) })
-      assert.equal(backfilled.length, 251)
-      assert.ok(backfilled.every((record) => record.leaseExpiresAt?.getTime() === new Date(leaseExpiresAt).getTime()))
-      assert.ok(backfilled.every((record) => record.executionVerification?.lease_expires_at === leaseExpiresAt))
+      const persisted = await jobModelRepository.findBy({ id: In(validRecords.map((record) => record.id)) })
+      assert.equal(persisted.length, 251)
+      assert.ok(persisted.every((record) => record.leaseExpiresAt?.getTime() === new Date(leaseExpiresAt).getTime()))
+      assert.ok(persisted.every((record) => record.executionVerification?.lease_expires_at === leaseExpiresAt))
       const missingExpiry = await jobModelRepository.findOneByOrFail({ id: missingExpiryRecord.id })
       const invalidExpiry = await jobModelRepository.findOneByOrFail({ id: invalidExpiryRecord.id })
       const queued = await jobModelRepository.findOneByOrFail({ id: queuedRecord.id })

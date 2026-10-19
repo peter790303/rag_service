@@ -1,1 +1,1 @@
-export type LoadRetrievalDocumentRelationsDto = { documentIndexIds: readonly string[] }
+export type LoadRetrievalDocumentRelationsDTO = { documentIndexIds: readonly string[] }

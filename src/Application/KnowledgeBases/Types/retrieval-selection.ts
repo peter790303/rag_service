@@ -2,10 +2,10 @@ import type { RankedCandidate } from './ranked-candidate.ts'
 import type { DateTime } from '../../../Domain/Document/ValueObjects/date-time.ts'
 import type { DocumentRelationResolutionEnum } from '../../../Domain/DocumentRelation/Enums/document-relation-resolution.enum.ts'
 import type { DocumentReference } from '../../../Domain/DocumentRelation/ValueObjects/document-reference.ts'
-import type { RetrievalProfileSettingsDto } from '../DataTransferObjects/retrieval-profile-settings.dto.ts'
+import type { RetrievalProfileSettingsDTO } from '../DataTransferObjects/retrieval-profile-settings.dto.ts'
 
 export type RetrievalScopeInput<
-  TMembership extends {
+  TKnowledgeBaseDocument extends {
     documentId: string
     activeDocumentIndexId: string | null
     alwaysIncludeFullContent: boolean
@@ -29,23 +29,23 @@ export type RetrievalScopeInput<
   queryEmbedding: number[]
   queryEmbeddingModelId: string | undefined
   lexicalProfileVersion: string
-  profiles: RetrievalProfileSettingsDto
+  profiles: RetrievalProfileSettingsDTO
   documentReference: string | undefined
   includeNonEffective: boolean
   knowledgeBaseId: string | null
-  memberships: TMembership[]
+  knowledgeBaseDocuments: TKnowledgeBaseDocument[]
   documents: TDocument[]
   indexes: TIndex[]
   revisions: TRevision[]
 }
 
-export type RetrievalScopeSelection<TMembership, TIndex> = {
-  requestedMembers: TMembership[]
+export type RetrievalScopeSelection<TKnowledgeBaseDocument, TIndex> = {
+  requestedMembers: TKnowledgeBaseDocument[]
   activeIndexIds: string[]
   retrievalIndexIds: string[]
   relationTargetIndexIds: string[]
   requiredIndexIds: string[]
-  requiredMembers: TMembership[]
+  requiredMembers: TKnowledgeBaseDocument[]
   activeIndexes: TIndex[]
 }
 

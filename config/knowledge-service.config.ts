@@ -1,3 +1,5 @@
+import { resolve } from 'node:path'
+
 import { ServiceConfigurationException } from '../src/Application/KnowledgeBases/Exceptions/service-configuration.exception.ts'
 
 function invalidConfiguration(diagnostic: string): never {
@@ -9,10 +11,16 @@ export interface KnowledgeServiceConfig {
   port: number
   databaseUrl: string
   databaseSchema: string
+  embeddingTransport: 'local' | 'http'
+  embeddingRevision: string
+  embeddingCacheDir: string
   embeddingModel: string
   embeddingDimensions: number
   embeddingApiUrl: string
   embeddingApiKey?: string
+  chunkingTransport: 'host-cli' | 'http'
+  chunkingCliPath: string
+  chunkingCliMaxOutputBytes: number
   chunkingModel: string
   chunkingApiUrl: string
   chunkingApiKey?: string
@@ -20,6 +28,7 @@ export interface KnowledgeServiceConfig {
   gcPollMs: number
   gcRetentionMs: number
   workerLeaseSeconds: number
+  externalRequestTimeoutMs: number
   serviceAuthSecret: string
 }
 
@@ -58,34 +67,64 @@ const positiveInteger = (name: string, candidateValue: string | undefined, fallb
 
 export const loadKnowledgeServiceConfig = (env: NodeJS.ProcessEnv = process.env): KnowledgeServiceConfig => {
   const { databaseUrl, databaseSchema } = loadKnowledgeDatabaseConfig(env)
-  const embeddingApiUrl = env.RAG_EMBEDDING_API_URL?.trim()
+  const embeddingTransport = env.RAG_EMBEDDING_TRANSPORT?.trim() || 'local'
 
-  if (!embeddingApiUrl) invalidConfiguration('RAG_EMBEDDING_API_URL is required')
+  if (embeddingTransport !== 'local' && embeddingTransport !== 'http')
+    invalidConfiguration('RAG_EMBEDDING_TRANSPORT must be local or http')
 
-  let parsedEmbeddingApiUrl: URL
-  try {
-    parsedEmbeddingApiUrl = new URL(embeddingApiUrl)
-  } catch {
-    invalidConfiguration('RAG_EMBEDDING_API_URL must be a valid URL')
+  const embeddingModel = env.RAG_EMBEDDING_MODEL?.trim() || 'Xenova/paraphrase-multilingual-MiniLM-L12-v2'
+  const embeddingRevision =
+    env.RAG_EMBEDDING_REVISION?.trim() ||
+    (embeddingModel === 'Xenova/paraphrase-multilingual-MiniLM-L12-v2'
+      ? '2c4055b12046f11709e9df2c122e59ffbdc2f900'
+      : '')
+
+  if (embeddingTransport === 'local' && !embeddingRevision)
+    invalidConfiguration('RAG_EMBEDDING_REVISION is required for a custom local model')
+
+  if (
+    embeddingTransport === 'local' &&
+    (!/^[a-zA-Z0-9_-][a-zA-Z0-9_.-]*\/[a-zA-Z0-9_-][a-zA-Z0-9_.-]*$/.test(embeddingModel) ||
+      !/^[a-zA-Z0-9_-]+$/.test(embeddingRevision))
+  )
+    invalidConfiguration('Local embedding model and revision must identify a cache directory safely')
+
+  const embeddingApiUrl = env.RAG_EMBEDDING_API_URL?.trim() || ''
+
+  if (embeddingTransport === 'http') {
+    if (!embeddingApiUrl) invalidConfiguration('RAG_EMBEDDING_API_URL is required')
+
+    let parsedEmbeddingApiUrl: URL
+    try {
+      parsedEmbeddingApiUrl = new URL(embeddingApiUrl)
+    } catch {
+      invalidConfiguration('RAG_EMBEDDING_API_URL must be a valid URL')
+    }
+
+    if (!['http:', 'https:'].includes(parsedEmbeddingApiUrl.protocol))
+      invalidConfiguration('RAG_EMBEDDING_API_URL must use HTTP or HTTPS')
   }
 
-  if (!['http:', 'https:'].includes(parsedEmbeddingApiUrl.protocol)) {
-    invalidConfiguration('RAG_EMBEDDING_API_URL must use HTTP or HTTPS')
-  }
+  const chunkingTransport = env.RAG_CHUNKING_TRANSPORT?.trim() || 'host-cli'
 
-  const chunkingApiUrl = env.RAG_CHUNKING_API_URL?.trim()
+  if (chunkingTransport !== 'host-cli' && chunkingTransport !== 'http')
+    invalidConfiguration('RAG_CHUNKING_TRANSPORT must be host-cli or http')
 
-  if (!chunkingApiUrl) invalidConfiguration('RAG_CHUNKING_API_URL is required')
+  const chunkingApiUrl = env.RAG_CHUNKING_API_URL?.trim() || ''
 
-  let parsedChunkingApiUrl: URL
-  try {
-    parsedChunkingApiUrl = new URL(chunkingApiUrl)
-  } catch {
-    invalidConfiguration('RAG_CHUNKING_API_URL must be a valid URL')
-  }
+  if (chunkingTransport === 'http') {
+    if (!chunkingApiUrl) invalidConfiguration('RAG_CHUNKING_API_URL is required')
 
-  if (!['http:', 'https:'].includes(parsedChunkingApiUrl.protocol)) {
-    invalidConfiguration('RAG_CHUNKING_API_URL must use HTTP or HTTPS')
+    let parsedChunkingApiUrl: URL
+    try {
+      parsedChunkingApiUrl = new URL(chunkingApiUrl)
+    } catch {
+      invalidConfiguration('RAG_CHUNKING_API_URL must be a valid URL')
+    }
+
+    if (!['http:', 'https:'].includes(parsedChunkingApiUrl.protocol)) {
+      invalidConfiguration('RAG_CHUNKING_API_URL must use HTTP or HTTPS')
+    }
   }
 
   const serviceAuthSecret = env.RAG_SERVICE_AUTH_SECRET?.trim() ?? ''
@@ -98,10 +137,20 @@ export const loadKnowledgeServiceConfig = (env: NodeJS.ProcessEnv = process.env)
     port: positiveInteger('PORT', env.PORT, 30700),
     databaseUrl,
     databaseSchema,
-    embeddingModel: env.RAG_EMBEDDING_MODEL?.trim() || 'Xenova/all-MiniLM-L6-v2',
+    embeddingTransport,
+    embeddingModel,
+    embeddingRevision,
+    embeddingCacheDir: resolve(env.RAG_EMBEDDING_CACHE_DIR?.trim() || '.cache/embeddings'),
     embeddingDimensions: positiveInteger('RAG_EMBEDDING_DIMENSIONS', env.RAG_EMBEDDING_DIMENSIONS, 384),
     embeddingApiUrl,
     ...(env.RAG_EMBEDDING_API_KEY ? { embeddingApiKey: env.RAG_EMBEDDING_API_KEY } : {}),
+    chunkingTransport,
+    chunkingCliPath: env.RAG_CHUNKING_CLI_PATH?.trim() || env.CODEX_CLI_PATH?.trim() || 'codex',
+    chunkingCliMaxOutputBytes: positiveInteger(
+      'RAG_CHUNKING_CLI_MAX_OUTPUT_BYTES',
+      env.RAG_CHUNKING_CLI_MAX_OUTPUT_BYTES,
+      4194304,
+    ),
     chunkingModel: env.RAG_CHUNKING_MODEL?.trim() || 'gpt-6.1-sol',
     chunkingApiUrl,
     ...(env.RAG_CHUNKING_API_KEY ? { chunkingApiKey: env.RAG_CHUNKING_API_KEY } : {}),
@@ -109,6 +158,11 @@ export const loadKnowledgeServiceConfig = (env: NodeJS.ProcessEnv = process.env)
     gcPollMs: positiveInteger('RAG_GC_POLL_MS', env.RAG_GC_POLL_MS, 60000),
     gcRetentionMs: positiveInteger('RAG_GC_RETENTION_MS', env.RAG_GC_RETENTION_MS, 86400000),
     workerLeaseSeconds: positiveInteger('RAG_JOB_LEASE_SECONDS', env.RAG_JOB_LEASE_SECONDS, 300),
+    externalRequestTimeoutMs: positiveInteger(
+      'RAG_EXTERNAL_REQUEST_TIMEOUT_MS',
+      env.RAG_EXTERNAL_REQUEST_TIMEOUT_MS,
+      30000,
+    ),
     serviceAuthSecret,
   }
 }

@@ -1,9 +1,9 @@
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
-import type { DocumentIndexRecordDto } from '../DataTransferObjects/document-index-record.dto.ts'
+import type { DocumentIndexRecordDTO } from '../DataTransferObjects/document-index-record.dto.ts'
 
 /** Maps restored domain lifecycle fields and persistence metadata to an application record. */
 export class ReadDocumentIndexAssembler {
-  static toDocumentIndexRecordDTO(restoredDocumentIndexDTO: DocumentIndex): DocumentIndexRecordDto {
+  static toDocumentIndexRecordDTO(restoredDocumentIndexDTO: DocumentIndex): DocumentIndexRecordDTO {
     const documentIndex = restoredDocumentIndexDTO
 
     return {

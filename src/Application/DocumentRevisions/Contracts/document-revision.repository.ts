@@ -12,7 +12,7 @@ export abstract class DocumentRevisionRepository {
     documentRevisionContentQO: DocumentRevisionContentQueryObject,
   ): Promise<DocumentRevision | null>
 
-  abstract create(createDocumentRevisionQO: CreateDocumentRevisionQueryObject): Promise<DocumentRevision>
+  abstract create(createDocumentRevisionQO: CreateDocumentRevisionQueryObject): Promise<void>
 
   abstract findByDocumentIdOrderByCreatedAtDesc(
     documentRevisionDocumentQO: DocumentRevisionDocumentQueryObject,

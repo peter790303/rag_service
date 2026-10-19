@@ -13,11 +13,12 @@ import { InvalidIndexRetrySourceContextException } from '../../../Application/Do
 import { PreparedIndexCollectedException } from '../../../Application/DocumentIndexes/Exceptions/prepared-index-collected.exception.ts'
 import { StaleDocumentIndexingFailureException } from '../../../Application/DocumentIndexes/Exceptions/stale-document-indexing-failure.exception.ts'
 import { IndexRequestDocumentUnavailableException } from '../../../Application/Documents/Exceptions/index-request-document-unavailable.exception.ts'
+import { IndexRequestKnowledgeBaseDocumentUnavailableException } from '../../../Application/KnowledgeBaseDocuments/Exceptions/index-request-knowledge-base-document-unavailable.exception.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import { IndexRequestMembershipUnavailableException } from '../../../Application/Memberships/Exceptions/index-request-membership-unavailable.exception.ts'
 import { KnowledgeIndexPendingException } from '../../../Domain/DocumentIndex/Exceptions/knowledge-index-pending.exception.ts'
 import { KnowledgeBaseProjectMismatchException } from '../../../Domain/KnowledgeBase/Exceptions/knowledge-base-project-mismatch.exception.ts'
-import { KnowledgeMembershipPruneConflictException } from '../../../Domain/Membership/Exceptions/knowledge-membership-prune-conflict.exception.ts'
+import { KnowledgeRetrievalIncompleteException } from '../../../Domain/KnowledgeBase/Exceptions/knowledge-retrieval-incomplete.exception.ts'
+import { KnowledgeBaseDocumentPruneConflictException } from '../../../Domain/KnowledgeBaseDocument/Exceptions/knowledge-base-document-prune-conflict.exception.ts'
 
 type ApplicationError =
   | ActiveDocumentIndexExecutionPreventsRetryException
@@ -32,12 +33,13 @@ type ApplicationError =
   | PreparedIndexCollectedException
   | StaleDocumentIndexingFailureException
   | IndexRequestDocumentUnavailableException
-  | IndexRequestMembershipUnavailableException
+  | IndexRequestKnowledgeBaseDocumentUnavailableException
   | KnowledgeIndexPendingException
   | KnowledgeBaseProjectMismatchException
+  | KnowledgeRetrievalIncompleteException
   | DocumentIndexingNotFoundException
   | KnowledgeEmbeddingUnavailableException
-  | KnowledgeMembershipPruneConflictException
+  | KnowledgeBaseDocumentPruneConflictException
 
 @Catch(
   ActiveDocumentIndexExecutionPreventsRetryException,
@@ -52,21 +54,29 @@ type ApplicationError =
   PreparedIndexCollectedException,
   StaleDocumentIndexingFailureException,
   IndexRequestDocumentUnavailableException,
-  IndexRequestMembershipUnavailableException,
+  IndexRequestKnowledgeBaseDocumentUnavailableException,
   KnowledgeIndexPendingException,
   KnowledgeBaseProjectMismatchException,
+  KnowledgeRetrievalIncompleteException,
   DocumentIndexingNotFoundException,
   KnowledgeEmbeddingUnavailableException,
-  KnowledgeMembershipPruneConflictException,
+  KnowledgeBaseDocumentPruneConflictException,
 )
 export class ApplicationErrorFilter implements ExceptionFilter {
   catch(error: ApplicationError, host: ArgumentsHost): void {
     const status = this.statusFor(error)
     const code = error.code
-    host.switchToHttp().getResponse<{ status(code: number): { json(body: unknown): void } }>().status(status).json({
-      code,
-      message: error.message,
-    })
+    host
+      .switchToHttp()
+      .getResponse<{ status(code: number): { json(body: unknown): void } }>()
+      .status(status)
+      .json({
+        code,
+        message:
+          error instanceof KnowledgeRetrievalIncompleteException
+            ? 'Knowledge retrieval is missing required facts'
+            : error.message,
+      })
   }
 
   private statusFor(error: ApplicationError): HttpStatus {

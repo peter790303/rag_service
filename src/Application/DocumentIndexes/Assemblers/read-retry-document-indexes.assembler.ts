@@ -2,26 +2,26 @@ import type { Document } from '../../../Domain/Document/document.ts'
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
 import type { DocumentRevision } from '../../../Domain/DocumentRevision/document-revision.ts'
 import type { KnowledgeBase } from '../../../Domain/KnowledgeBase/knowledge-base.ts'
-import type { Membership } from '../../../Domain/Membership/membership.ts'
-import type { DocumentIndexExecutionRecordDto } from '../DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexFailureRecordDto } from '../DataTransferObjects/document-index-failure-record.dto.ts'
+import type { KnowledgeBaseDocument } from '../../../Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexFailureRecordDTO } from '../DataTransferObjects/document-index-failure-record.dto.ts'
 import type { DocumentIndexingRetryContext } from '../DataTransferObjects/document-indexing-retry-context.dto.ts'
 
 export class ReadRetryDocumentIndexesAssembler {
   static toDocumentIndexingRetryContext(retryContextRecords: {
-    failedJob: DocumentIndexFailureRecordDto
+    failedJob: DocumentIndexFailureRecordDTO
     knowledgeBase: Pick<KnowledgeBase, 'id' | 'projectId'>
     document: Document | null
-    membership: Membership | null
+    knowledgeBaseDocument: KnowledgeBaseDocument | null
     index: DocumentIndex | null
-    activeJob: DocumentIndexExecutionRecordDto | null
+    activeJob: DocumentIndexExecutionRecordDTO | null
     targetRevision: DocumentRevision | null
   }): DocumentIndexingRetryContext {
     const failedJob = this.toRetryDocumentIndexingResult(retryContextRecords.failedJob)
     const knowledgeBase = retryContextRecords.knowledgeBase
     const targetRevision = retryContextRecords.targetRevision
     const sourceDocument = this.toRetryDocument(retryContextRecords.document, targetRevision)
-    const membership = retryContextRecords.membership
+    const knowledgeBaseDocument = retryContextRecords.knowledgeBaseDocument
     const documentIndex = this.toRetryDocumentIndex(retryContextRecords.index)
     const activeJob = this.toRetryActiveExecution(retryContextRecords.activeJob)
 
@@ -29,14 +29,14 @@ export class ReadRetryDocumentIndexesAssembler {
       failedJob: failedJob,
       knowledgeBase,
       document: sourceDocument,
-      membership,
+      knowledgeBaseDocument,
       documentIndex,
       activeJob: activeJob,
     }
   }
 
   private static toRetryDocumentIndexingResult(
-    failedJobRecord: DocumentIndexFailureRecordDto,
+    failedJobRecord: DocumentIndexFailureRecordDTO,
   ): DocumentIndexingRetryContext['failedJob'] {
     const generation = failedJobRecord.generation
     const retryPayload = this.toExecutionRetryPayload(failedJobRecord.retryPayload)
@@ -104,7 +104,7 @@ export class ReadRetryDocumentIndexesAssembler {
   }
 
   private static toRetryActiveExecution(
-    activeJobRecord: DocumentIndexExecutionRecordDto | null,
+    activeJobRecord: DocumentIndexExecutionRecordDTO | null,
   ): DocumentIndexingRetryContext['activeJob'] {
     if (activeJobRecord === null) return null
 

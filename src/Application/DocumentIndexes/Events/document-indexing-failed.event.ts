@@ -1,10 +1,10 @@
-import type { DocumentIndexingDeliveryDto } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
 import type { DocumentIndexingFailureDecision } from '../DataTransferObjects/document-indexing-failure-decision.dto.ts'
 import { InvalidDocumentIndexingFailureDecisionException } from '../Exceptions/invalid-document-indexing-failure-decision.exception.ts'
 
 /** Document indexing failed under this claim, with its failure time and retry outcome recorded. */
 export class DocumentIndexingFailedEvent {
-  readonly jobDelivery: DocumentIndexingDeliveryDto
+  readonly jobDelivery: DocumentIndexingDeliveryDTO
 
   readonly failureDecision: DocumentIndexingFailureDecision
 
@@ -12,7 +12,7 @@ export class DocumentIndexingFailedEvent {
     jobDelivery,
     failureDecision,
   }: {
-    readonly jobDelivery: DocumentIndexingDeliveryDto
+    readonly jobDelivery: DocumentIndexingDeliveryDTO
     readonly failureDecision: DocumentIndexingFailureDecision
   }) {
     if (typeof failureDecision.errorCode !== 'string' || !failureDecision.errorCode.trim()) {

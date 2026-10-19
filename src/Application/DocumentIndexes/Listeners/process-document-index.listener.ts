@@ -5,16 +5,16 @@ import type { ReplaceIndexChunkUseCaseContract } from '../../Chunks/Contracts/re
 import { ChunkPlanningUnavailableException } from '../../Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
 import type { LoadDocumentRevisionUseCaseContract } from '../../DocumentRevisions/Contracts/load-document-revision.use-case.contract.ts'
 import type { ReserveDocumentForIndexingUseCaseContract } from '../../Documents/Contracts/reserve-document-for-indexing.use-case.contract.ts'
+import type { ReserveKnowledgeBaseDocumentForIndexingUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/reserve-knowledge-base-document-for-indexing.use-case.contract.ts'
 import { EmbeddingProvider } from '../../KnowledgeBases/Contracts/embedding-provider.ts'
 import type { PersistenceTransaction } from '../../KnowledgeBases/Contracts/persistence-transaction.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import type { ReserveMembershipForIndexingUseCaseContract } from '../../Memberships/Contracts/reserve-membership-for-indexing.use-case.contract.ts'
 import { ProcessDocumentIndexAssembler } from '../Assemblers/process-document-index.assembler.ts'
 import type { DocumentIndexExecutionQueue } from '../Contracts/document-index-execution.queue.ts'
 import type { DocumentIndexRepository } from '../Contracts/document-index.repository.ts'
-import type { DocumentIndexingDeliveryDto } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
 import type { DocumentIndexingFailureDecision } from '../DataTransferObjects/document-indexing-failure-decision.dto.ts'
-import type { DocumentIndexingProgressDto } from '../DataTransferObjects/document-indexing-progress.dto.ts'
+import type { DocumentIndexingProgressDTO } from '../DataTransferObjects/document-indexing-progress.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../Enums/document-index-execution-stage.enum.ts'
 import { DocumentIndexedEvent } from '../Events/document-indexed.event.ts'
 import type { DocumentIndexingDispatchedEvent } from '../Events/document-indexing-dispatched.event.ts'
@@ -34,7 +34,7 @@ export class ProcessDocumentIndexListener {
   constructor(
     private readonly transaction: PersistenceTransaction,
     private readonly reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
-    private readonly reserveMembershipForIndexing: ReserveMembershipForIndexingUseCaseContract,
+    private readonly reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
     private readonly documentIndexExecutionQueue: DocumentIndexExecutionQueue,
     private readonly documentIndexRepository: DocumentIndexRepository,
     private readonly replaceIndexChunk: ReplaceIndexChunkUseCaseContract,
@@ -47,7 +47,7 @@ export class ProcessDocumentIndexListener {
   ) {}
 
   async handle(event: DocumentIndexingDispatchedEvent): Promise<void> {
-    const job: DocumentIndexingDeliveryDto = {
+    const job: DocumentIndexingDeliveryDTO = {
       id: event.jobId,
       knowledgeBaseId: event.knowledgeBaseId,
       documentId: event.documentId,
@@ -61,7 +61,7 @@ export class ProcessDocumentIndexListener {
     try {
       const renewalIntervalMs = Math.max(1, Math.floor((job.leaseExpiresAt.getTime() - Date.now()) / 3))
 
-      const loadingProgress: DocumentIndexingProgressDto = {
+      const loadingProgress: DocumentIndexingProgressDTO = {
         stage: DocumentIndexExecutionStageEnum.LOADING,
         completedUnits: 0,
         totalUnits: null,
@@ -70,31 +70,31 @@ export class ProcessDocumentIndexListener {
       const content = await this.withLeaseRenewal(job, loadingProgress, renewalIntervalMs, () =>
         this.loadContent(job.documentIndexId),
       )
-      const planningProgress: DocumentIndexingProgressDto = {
+      const planningProgress: DocumentIndexingProgressDTO = {
         stage: DocumentIndexExecutionStageEnum.PLANNING,
         completedUnits: 0,
         totalUnits: null,
       }
       await this.heartbeat(job, planningProgress)
-      const plan = await this.withLeaseRenewal(job, planningProgress, renewalIntervalMs, () =>
-        this.chunkPlanner.plan(content),
+      const plan = await this.withLeaseRenewal(job, planningProgress, renewalIntervalMs, (signal) =>
+        this.chunkPlanner.plan(content, signal),
       )
       const chunkContents = plan.chunks.map((chunk) => chunk.content)
-      const embeddingProgress: DocumentIndexingProgressDto = {
+      const embeddingProgress: DocumentIndexingProgressDTO = {
         stage: DocumentIndexExecutionStageEnum.EMBEDDING,
         completedUnits: 0,
         totalUnits: plan.chunks.length,
       }
       await this.heartbeat(job, embeddingProgress)
-      const vectors = await this.withLeaseRenewal(job, embeddingProgress, renewalIntervalMs, () =>
-        this.embeddings.embed(chunkContents),
+      const vectors = await this.withLeaseRenewal(job, embeddingProgress, renewalIntervalMs, (signal) =>
+        this.embeddings.embed(chunkContents, signal),
       )
 
       if (vectors.length !== plan.chunks.length || vectors.some((vector) => vector === undefined)) {
         throw new KnowledgeEmbeddingUnavailableException()
       }
 
-      const persistingProgress: DocumentIndexingProgressDto = {
+      const persistingProgress: DocumentIndexingProgressDTO = {
         stage: DocumentIndexExecutionStageEnum.PERSISTING,
         completedUnits: plan.chunks.length,
         totalUnits: plan.chunks.length,
@@ -133,11 +133,12 @@ export class ProcessDocumentIndexListener {
   }
 
   private async withLeaseRenewal<T>(
-    job: DocumentIndexingDeliveryDto,
-    progress: DocumentIndexingProgressDto,
+    job: DocumentIndexingDeliveryDTO,
+    progress: DocumentIndexingProgressDTO,
     renewalIntervalMs: number,
-    operation: () => Promise<T>,
+    operation: (signal: AbortSignal) => Promise<T>,
   ): Promise<T> {
+    const cancellation = new AbortController()
     let timer: ReturnType<typeof setTimeout> | undefined
     let active = true
     let heartbeatFailed = false
@@ -165,13 +166,16 @@ export class ProcessDocumentIndexListener {
       }
     }
 
-    const operationResult = Promise.resolve().then(operation)
+    const operationResult = Promise.resolve().then(() => operation(cancellation.signal))
     scheduleRenewal()
 
     try {
       return await Promise.race([operationResult, heartbeatFailure])
     } catch (error) {
-      if (heartbeatFailed) await operationResult.catch(() => undefined)
+      if (heartbeatFailed) {
+        cancellation.abort(error)
+        await operationResult.catch(() => undefined)
+      }
 
       throw error
     } finally {
@@ -181,19 +185,19 @@ export class ProcessDocumentIndexListener {
     }
   }
 
-  private async heartbeat(job: DocumentIndexingDeliveryDto, progress: DocumentIndexingProgressDto): Promise<void> {
+  private async heartbeat(job: DocumentIndexingDeliveryDTO, progress: DocumentIndexingProgressDTO): Promise<void> {
     await this.transaction.run(async () => {
       const document = await this.reserveDocumentForIndexing.execute({ documentId: job.documentId })
 
       if (!document) throw new InvalidDocumentIndexExecutionLeaseException()
 
-      const membership = await this.reserveMembershipForIndexing.execute({
+      const knowledgeBaseDocument = await this.reserveKnowledgeBaseDocumentForIndexing.execute({
         knowledgeBaseId: job.knowledgeBaseId,
         documentId: job.documentId,
         generation: job.generation,
       })
 
-      if (!membership || membership.requestedGeneration !== job.generation)
+      if (!knowledgeBaseDocument || knowledgeBaseDocument.requestedGeneration !== job.generation)
         throw new InvalidDocumentIndexExecutionLeaseException()
 
       const record = await this.documentIndexExecutionQueue.lockExecution({ jobId: job.id })
@@ -251,7 +255,7 @@ export class ProcessDocumentIndexListener {
 
   private failureDecision(
     error: unknown,
-    job: DocumentIndexingDeliveryDto,
+    job: DocumentIndexingDeliveryDTO,
     failedAt: Date,
   ): DocumentIndexingFailureDecision {
     const transition = new DocumentIndexExecutionLifecycle({

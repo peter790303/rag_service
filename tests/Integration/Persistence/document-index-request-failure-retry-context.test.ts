@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { test } from 'node:test'
 
+import { concatMap, firstValueFrom, from, toArray } from 'rxjs'
+
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
 import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
 import { DocumentIndexingTargetStateEnum } from '../../../src/Application/DocumentIndexes/Enums/document-indexing-target-state.enum.ts'
@@ -15,19 +17,21 @@ import { DispatchDocumentIndexingListener } from '../../../src/Application/Docum
 import { DocumentIndexingFailedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-failed.listener.ts'
 import { DocumentIndexingRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-requested.listener.ts'
 import { RetryDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
+import { StartDocumentIndexPruningRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/start-document-index-pruning-retention.use-case.ts'
 import type { GetDocumentRevisionForIndexRetryUseCaseContract } from '../../../src/Application/DocumentRevisions/Contracts/get-document-revision-for-index-retry.use-case.contract.ts'
 import { GetDocumentRevisionForIndexRetryUseCase } from '../../../src/Application/DocumentRevisions/UseCases/get-document-revision-for-index-retry.use-case.ts'
 import { PrepareDocumentRevisionForIndexRequestUseCase } from '../../../src/Application/DocumentRevisions/UseCases/prepare-document-revision-for-index-request.use-case.ts'
 import { GetDocumentForIndexRetryUseCase } from '../../../src/Application/Documents/UseCases/get-document-for-index-retry.use-case.ts'
 import { PrepareDocumentForIndexRequestUseCase } from '../../../src/Application/Documents/UseCases/prepare-document-for-index-request.use-case.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
+import { ActivateKnowledgeBaseDocumentIndexUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/activate-knowledge-base-document-index.use-case.ts'
+import { GetKnowledgeBaseDocumentIndexingStateUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/get-knowledge-base-document-indexing-state.use-case.ts'
+import { InspectKnowledgeBaseDocumentRetentionUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/inspect-knowledge-base-document-retention.use-case.ts'
+import { PrepareKnowledgeBaseDocumentForIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prepare-knowledge-base-document-for-index-request.use-case.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
+import { SaveKnowledgeBaseDocumentIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/save-knowledge-base-document-index-request.use-case.ts'
 import { EnsureIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/ensure-indexing-knowledge-base.use-case.ts'
 import { GetIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/get-indexing-knowledge-base.use-case.ts'
-import { ActivateMembershipIndexUseCase } from '../../../src/Application/Memberships/UseCases/activate-membership-index.use-case.ts'
-import { GetMembershipIndexingStateUseCase } from '../../../src/Application/Memberships/UseCases/get-membership-indexing-state.use-case.ts'
-import { PrepareMembershipForIndexRequestUseCase } from '../../../src/Application/Memberships/UseCases/prepare-membership-for-index-request.use-case.ts'
-import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
-import { SaveMembershipIndexRequestUseCase } from '../../../src/Application/Memberships/UseCases/save-membership-index-request.use-case.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
 import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
@@ -36,13 +40,14 @@ import { FailedJobModel } from '../../../src/Infrastructure/Persistence/Models/f
 import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
 import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
 import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
+import { DocumentIndexSuccessReceiptRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index-success-receipt.repository.ts'
 import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
 import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
 import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-revision.repository.ts'
 import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
 import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
 import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentMembershipRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document-membership.repository.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
 import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
@@ -53,13 +58,20 @@ const config: KnowledgeServiceConfig = {
   databaseSchema: 'public',
   embeddingModel: 'integration-test-model',
   embeddingDimensions: 384,
+  embeddingTransport: 'http',
+  embeddingRevision: '',
+  embeddingCacheDir: '/unused',
   embeddingApiUrl: 'https://unused.invalid',
+  chunkingTransport: 'http',
+  chunkingCliPath: 'codex',
+  chunkingCliMaxOutputBytes: 4194304,
   chunkingModel: 'integration-test-chunker',
   chunkingApiUrl: 'https://unused.invalid',
   workerPollMs: 1000,
   gcPollMs: 60000,
   gcRetentionMs: 86400000,
   workerLeaseSeconds: 30,
+  externalRequestTimeoutMs: 30000,
   serviceAuthSecret: 'integration-test-secret',
 }
 
@@ -81,7 +93,7 @@ const createArchivedRequest = async (
     const documentIndexPersistenceFixture = new DocumentIndexPersistenceFixture(
       persistenceTransaction,
       new JobRepository(persistenceTransaction),
-      new KnowledgeBaseDocumentMembershipRepository(persistenceTransaction),
+      new KnowledgeBaseDocumentRepository(persistenceTransaction),
       new DocumentIndexRepository(persistenceTransaction),
       new KnowledgeBaseRepository(persistenceTransaction),
       new DocumentRepository(persistenceTransaction),
@@ -105,14 +117,23 @@ const createArchivedRequest = async (
       documentIndexPersistenceFixture.persistenceTransaction,
       new EnsureIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
       new PrepareDocumentForIndexRequestUseCase(documentIndexPersistenceFixture.documentRepository),
-      new PrepareMembershipForIndexRequestUseCase(documentIndexPersistenceFixture.membershipRepository),
+      new PrepareKnowledgeBaseDocumentForIndexRequestUseCase(
+        documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+      ),
       new PrepareDocumentRevisionForIndexRequestUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
       documentIndexPersistenceFixture.documentIndexRepository,
       documentIndexPersistenceFixture.jobRepository,
       documentIndexPersistenceFixture.failedJobRepository,
       pipelineSettings,
       writeRequestDocumentIndexesAssembler,
-      new SaveMembershipIndexRequestUseCase(documentIndexPersistenceFixture.membershipRepository),
+      new SaveKnowledgeBaseDocumentIndexRequestUseCase(documentIndexPersistenceFixture.knowledgeBaseDocumentRepository),
+      new StartDocumentIndexPruningRetentionUseCase(
+        documentIndexPersistenceFixture.documentIndexRepository,
+        documentIndexPersistenceFixture.jobRepository,
+        new InspectKnowledgeBaseDocumentRetentionUseCase(
+          documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+        ),
+      ),
     ).handle(
       new DocumentIndexingRequestedEvent({
         knowledgeBaseId: randomUUID(),
@@ -131,38 +152,48 @@ const createArchivedRequest = async (
     const claimNext = new DispatchDocumentIndexingListener(
       documentIndexPersistenceFixture.persistenceTransaction,
       new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-      new ReserveMembershipForIndexingUseCase(documentIndexPersistenceFixture.membershipRepository),
+      new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+        documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+      ),
       documentIndexPersistenceFixture.documentIndexRepository,
       documentIndexPersistenceFixture.jobRepository,
       documentIndexPersistenceFixture.failedJobRepository,
       config.workerLeaseSeconds,
-      new ActivateMembershipIndexUseCase(documentIndexPersistenceFixture.membershipRepository),
+      new ActivateKnowledgeBaseDocumentIndexUseCase(documentIndexPersistenceFixture.knowledgeBaseDocumentRepository),
+      new GetIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
+      new DocumentIndexSuccessReceiptRepository(documentIndexPersistenceFixture.persistenceTransaction),
     )
     const failJob = new DocumentIndexingFailedListener(
       documentIndexPersistenceFixture.persistenceTransaction,
       new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-      new ReserveMembershipForIndexingUseCase(documentIndexPersistenceFixture.membershipRepository),
+      new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+        documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+      ),
       documentIndexPersistenceFixture.jobRepository,
       documentIndexPersistenceFixture.documentIndexRepository,
       documentIndexPersistenceFixture.failedJobRepository,
     )
-    await [1, 2, 3, 4].reduce(async (previousFailure, attempt) => {
-      await previousFailure
-      const claim = await claimNext.handle()
-      assert.ok(claim)
-      assert.equal(claim.id, originalJob.id)
-      assert.equal(claim.attempts, attempt)
-      const failedAt = new Date(Date.now() - 60_000)
-      await failJob.handle({
-        jobDelivery: claim,
-        failureDecision: {
-          errorCode: 'CONTEXT_TEST_FAILURE',
-          errorMessage: `Attempt ${attempt} failed`,
-          failedAt,
-          retryAt: attempt < 4 ? failedAt : null,
-        },
-      })
-    }, Promise.resolve())
+    await firstValueFrom(
+      from([1, 2, 3, 4]).pipe(
+        concatMap(async (attempt) => {
+          const claim = await claimNext.handle()
+          assert.ok(claim)
+          assert.equal(claim.id, originalJob.id)
+          assert.equal(claim.attempts, attempt)
+          const failedAt = new Date(Date.now() - 60_000)
+          await failJob.handle({
+            jobDelivery: claim,
+            failureDecision: {
+              errorCode: 'CONTEXT_TEST_FAILURE',
+              errorMessage: `Attempt ${attempt} failed`,
+              failedAt,
+              retryAt: attempt < 4 ? failedAt : null,
+            },
+          })
+        }),
+        toArray(),
+      ),
+    )
     assert.equal(await jobModelRepository.count(), 0)
     const archive = await failedJobModelRepository.findOneByOrFail({ jobId: originalJob.id })
     assert.equal(archive.attempts, 4)
@@ -186,7 +217,9 @@ const createArchivedRequest = async (
         documentIndexPersistenceFixture.persistenceTransaction,
         new GetIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
         new GetDocumentForIndexRetryUseCase(documentIndexPersistenceFixture.documentRepository),
-        new GetMembershipIndexingStateUseCase(documentIndexPersistenceFixture.membershipRepository),
+        new GetKnowledgeBaseDocumentIndexingStateUseCase(
+          documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+        ),
         createRetryRevisionReader?.(persistenceTransaction, retryRevisionReader) ?? retryRevisionReader,
         documentIndexPersistenceFixture.documentIndexRepository,
         documentIndexPersistenceFixture.jobRepository,
@@ -195,7 +228,9 @@ const createArchivedRequest = async (
         config,
         writeRequestDocumentIndexesAssembler,
         new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-        new ReserveMembershipForIndexingUseCase(documentIndexPersistenceFixture.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+          documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+        ),
       ),
     }
   } catch (error) {
@@ -211,53 +246,57 @@ test(
     skip: !process.env.RAG_DATABASE_URL,
   },
   async (t) => {
-    await [
-      { name: 'nonempty context', context: { source: 'repository', metadata: { tags: ['guide'] } } },
-      { name: 'context containing a payload property', context: { source: 'repository', payload: 'metadata value' } },
-    ].reduce(async (previousCase, { name, context }) => {
-      await previousCase
-      await t.test(name, async () => {
-        const archivedDocumentIndexRequestFixture = await createArchivedRequest(context)
+    await firstValueFrom(
+      from([
+        { name: 'nonempty context', context: { source: 'repository', metadata: { tags: ['guide'] } } },
+        { name: 'context containing a payload property', context: { source: 'repository', payload: 'metadata value' } },
+      ]).pipe(
+        concatMap(async ({ name, context }) => {
+          await t.test(name, async () => {
+            const archivedDocumentIndexRequestFixture = await createArchivedRequest(context)
 
-        try {
-          const result = await archivedDocumentIndexRequestFixture.retry.handle({
-            projectId: archivedDocumentIndexRequestFixture.projectId,
-            failedJobId: archivedDocumentIndexRequestFixture.archive.id,
+            try {
+              const result = await archivedDocumentIndexRequestFixture.retry.handle({
+                projectId: archivedDocumentIndexRequestFixture.projectId,
+                failedJobId: archivedDocumentIndexRequestFixture.archive.id,
+              })
+              assert.equal(result.status, DocumentIndexingTargetStateEnum.QUEUED)
+              assert.equal(typeof result.jobId, 'string')
+              assert.ok(result.jobId)
+              assert.notEqual(result.jobId, archivedDocumentIndexRequestFixture.originalJob.id)
+              assert.notEqual(result.jobId, archivedDocumentIndexRequestFixture.archive.id)
+              const retriedJob = await archivedDocumentIndexRequestFixture.jobs.findOneByOrFail({ id: result.jobId })
+              assert.deepEqual(retriedJob.payload, context)
+              assert.equal(retriedJob.status, DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED)
+              assert.equal(retriedJob.attempts, 0)
+              assert.equal(retriedJob.documentIndexId, archivedDocumentIndexRequestFixture.originalJob.documentIndexId)
+              assert.equal(retriedJob.generation, archivedDocumentIndexRequestFixture.originalJob.generation)
+              assert.equal(retriedJob.retryOfFailedJobId, archivedDocumentIndexRequestFixture.archive.id)
+              assert.equal(retriedJob.leaseToken, null)
+              assert.equal(retriedJob.reservedAt, null)
+              assert.equal(retriedJob.executionVerification, null)
+              assert.equal(retriedJob.executionState, null)
+              const consumedArchive = await archivedDocumentIndexRequestFixture.failedJobs.findOneByOrFail({
+                id: archivedDocumentIndexRequestFixture.archive.id,
+              })
+              assert.ok(consumedArchive.retriedAt)
+              assert.deepEqual(consumedArchive.retryPayload, archivedDocumentIndexRequestFixture.archive.retryPayload)
+              await assert.rejects(
+                archivedDocumentIndexRequestFixture.retry.handle({
+                  projectId: archivedDocumentIndexRequestFixture.projectId,
+                  failedJobId: archivedDocumentIndexRequestFixture.archive.id,
+                }),
+                DocumentIndexingFailureAlreadyRetriedException,
+              )
+              assert.equal(await archivedDocumentIndexRequestFixture.jobs.count(), 1)
+            } finally {
+              await archivedDocumentIndexRequestFixture.cleanup()
+            }
           })
-          assert.equal(result.status, DocumentIndexingTargetStateEnum.QUEUED)
-          assert.equal(typeof result.jobId, 'string')
-          assert.ok(result.jobId)
-          assert.notEqual(result.jobId, archivedDocumentIndexRequestFixture.originalJob.id)
-          assert.notEqual(result.jobId, archivedDocumentIndexRequestFixture.archive.id)
-          const retriedJob = await archivedDocumentIndexRequestFixture.jobs.findOneByOrFail({ id: result.jobId })
-          assert.deepEqual(retriedJob.payload, context)
-          assert.equal(retriedJob.status, DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED)
-          assert.equal(retriedJob.attempts, 0)
-          assert.equal(retriedJob.documentIndexId, archivedDocumentIndexRequestFixture.originalJob.documentIndexId)
-          assert.equal(retriedJob.generation, archivedDocumentIndexRequestFixture.originalJob.generation)
-          assert.equal(retriedJob.retryOfFailedJobId, archivedDocumentIndexRequestFixture.archive.id)
-          assert.equal(retriedJob.leaseToken, null)
-          assert.equal(retriedJob.reservedAt, null)
-          assert.equal(retriedJob.executionVerification, null)
-          assert.equal(retriedJob.executionState, null)
-          const consumedArchive = await archivedDocumentIndexRequestFixture.failedJobs.findOneByOrFail({
-            id: archivedDocumentIndexRequestFixture.archive.id,
-          })
-          assert.ok(consumedArchive.retriedAt)
-          assert.deepEqual(consumedArchive.retryPayload, archivedDocumentIndexRequestFixture.archive.retryPayload)
-          await assert.rejects(
-            archivedDocumentIndexRequestFixture.retry.handle({
-              projectId: archivedDocumentIndexRequestFixture.projectId,
-              failedJobId: archivedDocumentIndexRequestFixture.archive.id,
-            }),
-            DocumentIndexingFailureAlreadyRetriedException,
-          )
-          assert.equal(await archivedDocumentIndexRequestFixture.jobs.count(), 1)
-        } finally {
-          await archivedDocumentIndexRequestFixture.cleanup()
-        }
-      })
-    }, Promise.resolve())
+        }),
+        toArray(),
+      ),
+    )
   },
 )
 
@@ -267,57 +306,61 @@ test(
     skip: !process.env.RAG_DATABASE_URL,
   },
   async (t) => {
-    await ['context drift', 'source drift', 'invalid archived input'].reduce(async (previousCase, name) => {
-      await previousCase
-      await t.test(name, async () => {
-        const archivedDocumentIndexRequestFixture = await createArchivedRequest({
-          source: 'repository',
-          payload: 'metadata value',
-        })
-
-        try {
-          if (name === 'source drift') {
-            const index = await archivedDocumentIndexRequestFixture.indexes.findOneByOrFail({
-              id: archivedDocumentIndexRequestFixture.archive.documentIndexId,
+    await firstValueFrom(
+      from(['context drift', 'source drift', 'invalid archived input']).pipe(
+        concatMap(async (name) => {
+          await t.test(name, async () => {
+            const archivedDocumentIndexRequestFixture = await createArchivedRequest({
+              source: 'repository',
+              payload: 'metadata value',
             })
-            await archivedDocumentIndexRequestFixture.revisions.update(index.revisionId, {
-              content: 'Changed source content',
-            })
-          } else {
-            await archivedDocumentIndexRequestFixture.failedJobs.update(
-              archivedDocumentIndexRequestFixture.archive.id,
-              {
-                retryPayload: {
-                  ...archivedDocumentIndexRequestFixture.archive.retryPayload,
-                  input: name === 'context drift' ? { source: 'changed context' } : ['invalid context'],
-                },
-              },
-            )
-          }
 
-          await assert.rejects(
-            archivedDocumentIndexRequestFixture.retry.handle({
-              projectId: archivedDocumentIndexRequestFixture.projectId,
-              failedJobId: archivedDocumentIndexRequestFixture.archive.id,
-            }),
-            name === 'invalid archived input'
-              ? InvalidIndexRetrySourceContextException
-              : StaleDocumentIndexingFailureException,
-          )
-          assert.equal(await archivedDocumentIndexRequestFixture.jobs.count(), 0)
-          assert.equal(
-            (
-              await archivedDocumentIndexRequestFixture.failedJobs.findOneByOrFail({
-                id: archivedDocumentIndexRequestFixture.archive.id,
-              })
-            ).retriedAt,
-            null,
-          )
-        } finally {
-          await archivedDocumentIndexRequestFixture.cleanup()
-        }
-      })
-    }, Promise.resolve())
+            try {
+              if (name === 'source drift') {
+                const index = await archivedDocumentIndexRequestFixture.indexes.findOneByOrFail({
+                  id: archivedDocumentIndexRequestFixture.archive.documentIndexId,
+                })
+                await archivedDocumentIndexRequestFixture.revisions.update(index.revisionId, {
+                  content: 'Changed source content',
+                })
+              } else {
+                await archivedDocumentIndexRequestFixture.failedJobs.update(
+                  archivedDocumentIndexRequestFixture.archive.id,
+                  {
+                    retryPayload: {
+                      ...archivedDocumentIndexRequestFixture.archive.retryPayload,
+                      input: name === 'context drift' ? { source: 'changed context' } : ['invalid context'],
+                    },
+                  },
+                )
+              }
+
+              await assert.rejects(
+                archivedDocumentIndexRequestFixture.retry.handle({
+                  projectId: archivedDocumentIndexRequestFixture.projectId,
+                  failedJobId: archivedDocumentIndexRequestFixture.archive.id,
+                }),
+                name === 'invalid archived input'
+                  ? InvalidIndexRetrySourceContextException
+                  : StaleDocumentIndexingFailureException,
+              )
+              assert.equal(await archivedDocumentIndexRequestFixture.jobs.count(), 0)
+              assert.equal(
+                (
+                  await archivedDocumentIndexRequestFixture.failedJobs.findOneByOrFail({
+                    id: archivedDocumentIndexRequestFixture.archive.id,
+                  })
+                ).retriedAt,
+                null,
+              )
+            } finally {
+              await archivedDocumentIndexRequestFixture.cleanup()
+            }
+          })
+        }),
+        toArray(),
+      ),
+    )
   },
 )
 

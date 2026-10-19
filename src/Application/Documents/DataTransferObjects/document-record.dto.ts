@@ -1,4 +1,4 @@
-export type DocumentRecordDto = {
+export type DocumentRecordDTO = {
   id: string
   sourceType: string
   sourceKey: string

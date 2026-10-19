@@ -20,14 +20,14 @@ export type DocumentIndexRequestIndex = {
   status: DocumentIndexStatus
 }
 
-export type DocumentIndexRequestMembership = {
+export type DocumentIndexRequestKnowledgeBaseDocument = {
   knowledgeBaseId: string
   documentId: string
   requestedGeneration: string
   activeDocumentIndexId: string | null
 }
 
-export type DocumentIndexRequestInitialMembershipState = {
+export type DocumentIndexRequestInitialKnowledgeBaseDocumentState = {
   requestedGeneration: 0
   activeDocumentIndexId: null
   isEntry: false

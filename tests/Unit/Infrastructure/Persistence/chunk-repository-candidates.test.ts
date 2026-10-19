@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 import type { DataSource, EntityManager } from 'typeorm'
 
 import { Chunk } from '../../../../src/Domain/Chunk/chunk.ts'
-import type { ChunkSemanticQueryRowDto } from '../../../../src/Infrastructure/Persistence/Adapters/chunk-search-result.adapter.ts'
+import type { ChunkSemanticQueryRowDTO } from '../../../../src/Infrastructure/Persistence/Adapters/chunk-search-result.adapter.ts'
 import { ReadTransactionDataSourceMismatchException } from '../../../../src/Infrastructure/Persistence/Exceptions/read-transaction-data-source-mismatch.exception.ts'
 import { ReadTransactionNotActiveException } from '../../../../src/Infrastructure/Persistence/Exceptions/read-transaction-not-active.exception.ts'
 import { ChunkModel } from '../../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
@@ -79,7 +79,7 @@ describe('ChunkRepository vector transaction boundaries', () => {
     const documentIndexIds = Object.freeze(['30000000-0000-4000-8000-000000000001'])
     const queryVector = Object.freeze([0.125, -0.375, 0.625])
     const chunkVectorSimilarityQO = Object.freeze({ documentIndexIds, queryVector, limit: 7 })
-    const semanticQueryRowDTO: ChunkSemanticQueryRowDto = {
+    const semanticQueryRowDTO: ChunkSemanticQueryRowDTO = {
       id: '20000000-0000-4000-8000-000000000002',
       documentIndexId: documentIndexIds[0]!,
       ordinal: 3,

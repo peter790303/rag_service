@@ -1,10 +1,10 @@
 import type { KnowledgeBase } from '../../../Domain/KnowledgeBase/knowledge-base.ts'
-import type { KnowledgeBaseIdQueryObject } from '../QueryObjects/knowledge-base.query-object.ts'
-import type { KnowledgeBaseProjectQueryObject } from '../QueryObjects/knowledge-base.query-object.ts'
-import type { KnowledgeBaseProjectScopeQueryObject } from '../QueryObjects/knowledge-base.query-object.ts'
 import type {
   CreateKnowledgeBaseQueryObject,
-  SaveKnowledgeBaseQueryObject,
+  KnowledgeBaseIdQueryObject,
+  KnowledgeBaseProjectQueryObject,
+  KnowledgeBaseProjectScopeQueryObject,
+  UpdateKnowledgeBaseQueryObject,
 } from '../QueryObjects/knowledge-base.query-object.ts'
 
 export abstract class KnowledgeBaseRepository {
@@ -12,7 +12,7 @@ export abstract class KnowledgeBaseRepository {
 
   abstract create(createKnowledgeBaseQO: CreateKnowledgeBaseQueryObject): Promise<void>
 
-  abstract save(saveKnowledgeBaseQO: SaveKnowledgeBaseQueryObject): Promise<void>
+  abstract update(updateKnowledgeBaseQO: UpdateKnowledgeBaseQueryObject): Promise<void>
 
   abstract findByKnowledgeBaseIdAndProjectId(
     knowledgeBaseProjectScopeQO: KnowledgeBaseProjectScopeQueryObject,

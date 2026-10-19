@@ -1,8 +1,8 @@
 import type { MarkdownChunkPlan } from './markdown-chunk-plan.dto.ts'
-import type { DocumentIndexingDeliveryDto } from '../../DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../../DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
 
-export interface ReplaceIndexChunkInputDto {
-  job: DocumentIndexingDeliveryDto
+export interface ReplaceIndexChunkInputDTO {
+  job: DocumentIndexingDeliveryDTO
   markdownChunkPlan: MarkdownChunkPlan
   chunkEmbeddings: readonly number[][]
   now: Date

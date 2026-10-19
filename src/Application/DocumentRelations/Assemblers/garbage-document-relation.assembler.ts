@@ -1,7 +1,7 @@
 import type { DocumentRelation } from '../../../Domain/DocumentRelation/document-relation.ts'
 import type {
-  PlanDocumentRelationGarbageDto,
-  CollectDocumentRelationGarbageDto,
+  PlanDocumentRelationGarbageDTO,
+  CollectDocumentRelationGarbageDTO,
 } from '../DataTransferObjects/document-relation-garbage.dto.ts'
 import type {
   DocumentRelationSourceIndexQueryObject,
@@ -11,19 +11,19 @@ import type {
 
 export class GarbageDocumentRelationAssembler {
   static toDocumentRelationSourceIndexesQueryObject(
-    planDocumentRelationGarbageDTO: PlanDocumentRelationGarbageDto,
+    planDocumentRelationGarbageDTO: PlanDocumentRelationGarbageDTO,
   ): DocumentRelationSourceIndexesQueryObject {
     return { sourceIndexIds: [...planDocumentRelationGarbageDTO.sourceIndexIds] }
   }
 
   static toCollectionDocumentRelationSourceIndexesQueryObject(
-    collectDocumentRelationGarbageDTO: CollectDocumentRelationGarbageDto,
+    collectDocumentRelationGarbageDTO: CollectDocumentRelationGarbageDTO,
   ): DocumentRelationSourceIndexesQueryObject {
     return { sourceIndexIds: [collectDocumentRelationGarbageDTO.sourceIndexId] }
   }
 
   static toDocumentRelationSourceIndexQueryObject(
-    collectDocumentRelationGarbageDTO: CollectDocumentRelationGarbageDto,
+    collectDocumentRelationGarbageDTO: CollectDocumentRelationGarbageDTO,
   ): DocumentRelationSourceIndexQueryObject {
     return { sourceIndexId: collectDocumentRelationGarbageDTO.sourceIndexId }
   }

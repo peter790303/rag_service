@@ -1,8 +1,8 @@
-import type { DocumentIndexExecutionVerificationDto } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-verification.dto.ts'
-import type { DocumentIndexingStatusDto } from '../../../Application/DocumentIndexes/DataTransferObjects/document-indexing-status.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexingStatusDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/document-indexing-status.dto.ts'
 
 export class DocumentIndexingStatusResource {
-  static toDocumentIndexingStatusResource(jobStatus: DocumentIndexingStatusDto): DocumentIndexingStatusDto {
+  static toDocumentIndexingStatusResource(jobStatus: DocumentIndexingStatusDTO): DocumentIndexingStatusDTO {
     const activeIndex = DocumentIndexingStatusResource.toActiveDocumentIndexResource(jobStatus.activeIndex)
     const requestedTarget = DocumentIndexingStatusResource.toRequestedDocumentIndexTargetResource(
       jobStatus.requestedTarget,
@@ -12,8 +12,8 @@ export class DocumentIndexingStatusResource {
   }
 
   private static toActiveDocumentIndexResource(
-    activeIndex: DocumentIndexingStatusDto['activeIndex'],
-  ): DocumentIndexingStatusDto['activeIndex'] {
+    activeIndex: DocumentIndexingStatusDTO['activeIndex'],
+  ): DocumentIndexingStatusDTO['activeIndex'] {
     if (activeIndex === null) return null
 
     return {
@@ -24,8 +24,8 @@ export class DocumentIndexingStatusResource {
   }
 
   private static toRequestedDocumentIndexTargetResource(
-    requestedTarget: DocumentIndexingStatusDto['requestedTarget'],
-  ): DocumentIndexingStatusDto['requestedTarget'] {
+    requestedTarget: DocumentIndexingStatusDTO['requestedTarget'],
+  ): DocumentIndexingStatusDTO['requestedTarget'] {
     if (requestedTarget === null) return null
 
     const executionVerification = DocumentIndexingStatusResource.toDocumentIndexExecutionVerificationResource(
@@ -46,8 +46,8 @@ export class DocumentIndexingStatusResource {
   }
 
   private static toDocumentIndexExecutionVerificationResource(
-    executionVerification: DocumentIndexExecutionVerificationDto | null,
-  ): DocumentIndexExecutionVerificationDto | null {
+    executionVerification: DocumentIndexExecutionVerificationDTO | null,
+  ): DocumentIndexExecutionVerificationDTO | null {
     if (executionVerification === null) return null
 
     return {

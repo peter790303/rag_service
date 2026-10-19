@@ -1,11 +1,12 @@
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
-import type { Membership } from '../../../Domain/Membership/membership.ts'
-import type { DocumentIndexExecutionRecordDto } from '../DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexExecutionVerificationDto } from '../DataTransferObjects/document-index-execution-verification.dto.ts'
-import type { DocumentIndexFailureRecordDto } from '../DataTransferObjects/document-index-failure-record.dto.ts'
+import type { KnowledgeBaseDocument } from '../../../Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexFailureRecordDTO } from '../DataTransferObjects/document-index-failure-record.dto.ts'
+import type { DocumentIndexSuccessReceiptDTO } from '../DataTransferObjects/document-index-success-receipt.dto.ts'
 import type { DocumentIndexingStatusFacts } from '../DataTransferObjects/document-indexing-status-facts.dto.ts'
-import type { DocumentIndexingStatusSourceDto } from '../DataTransferObjects/document-indexing-status-source.dto.ts'
-import type { DocumentIndexingStatusDto } from '../DataTransferObjects/document-indexing-status.dto.ts'
+import type { DocumentIndexingStatusSourceDTO } from '../DataTransferObjects/document-indexing-status-source.dto.ts'
+import type { DocumentIndexingStatusDTO } from '../DataTransferObjects/document-indexing-status.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../Enums/document-index-execution-stage.enum.ts'
 import { DocumentIndexingTargetStateEnum } from '../Enums/document-indexing-target-state.enum.ts'
 
@@ -13,13 +14,14 @@ type RequestedTarget = NonNullable<DocumentIndexingStatusFacts['requestedTarget'
 
 /** Projects status facts after the use case has chosen the target state. */
 export class ReadStatusDocumentIndexesAssembler {
-  static toActiveIndexingStatusSource(activeJob: DocumentIndexExecutionRecordDto): DocumentIndexingStatusSourceDto {
+  static toActiveIndexingStatusSource(activeJob: DocumentIndexExecutionRecordDTO): DocumentIndexingStatusSourceDTO {
     return {
       knowledgeBaseId: activeJob.knowledgeBaseId,
       documentId: activeJob.documentId,
       indexId: activeJob.documentIndexId,
       generation: activeJob.generation,
       activeJobStatus: activeJob.status,
+      hasSuccessfulReceipt: false,
       jobId: activeJob.id,
       failedJobId: null,
       attempts: activeJob.attempts,
@@ -29,13 +31,14 @@ export class ReadStatusDocumentIndexesAssembler {
     }
   }
 
-  static toFailedIndexingStatusSource(failedJob: DocumentIndexFailureRecordDto): DocumentIndexingStatusSourceDto {
+  static toFailedIndexingStatusSource(failedJob: DocumentIndexFailureRecordDTO): DocumentIndexingStatusSourceDTO {
     return {
       knowledgeBaseId: failedJob.knowledgeBaseId,
       documentId: failedJob.documentId,
       indexId: failedJob.documentIndexId,
       generation: failedJob.generation,
       activeJobStatus: null,
+      hasSuccessfulReceipt: false,
       jobId: null,
       failedJobId: failedJob.id,
       attempts: failedJob.attempts,
@@ -45,11 +48,29 @@ export class ReadStatusDocumentIndexesAssembler {
     }
   }
 
+  static toSuccessfulIndexingStatusSource(
+    successReceipt: DocumentIndexSuccessReceiptDTO,
+  ): DocumentIndexingStatusSourceDTO {
+    return {
+      knowledgeBaseId: successReceipt.knowledgeBaseId,
+      documentId: successReceipt.documentId,
+      indexId: successReceipt.documentIndexId,
+      generation: successReceipt.generation,
+      activeJobStatus: null,
+      hasSuccessfulReceipt: true,
+      jobId: successReceipt.jobId,
+      failedJobId: null,
+      attempts: successReceipt.attempts,
+      errorCode: null,
+      errorMessage: null,
+      executionVerification: this.restoreDocumentIndexExecutionVerification(successReceipt.executionVerification),
+    }
+  }
+
   static toDocumentIndexingStatusFacts(
-    source: DocumentIndexingStatusSourceDto,
-    membership: Membership | null,
+    source: DocumentIndexingStatusSourceDTO,
+    knowledgeBaseDocument: KnowledgeBaseDocument | null,
     activeIndex: DocumentIndex | null,
-    targetIndex: DocumentIndex | null,
   ): DocumentIndexingStatusFacts {
     const activeIndexStatus =
       activeIndex === null
@@ -59,7 +80,7 @@ export class ReadStatusDocumentIndexesAssembler {
             status: activeIndex.status,
             readyAt: activeIndex.readyAt?.nativeDate ?? null,
           }
-    const requestedTarget = this.toRequestedTargetFacts(source, membership, targetIndex)
+    const requestedTarget = this.toRequestedTargetFacts(source, knowledgeBaseDocument)
 
     return { activeIndex: activeIndexStatus, requestedTarget }
   }
@@ -67,7 +88,7 @@ export class ReadStatusDocumentIndexesAssembler {
   static toDocumentIndexingStatus(
     jobStatusFacts: DocumentIndexingStatusFacts,
     requestedTargetState: DocumentIndexingTargetStateEnum | null,
-  ): DocumentIndexingStatusDto {
+  ): DocumentIndexingStatusDTO {
     const activeIndex = this.toActiveDocumentIndexStatus(jobStatusFacts.activeIndex)
     const requestedTarget = this.toRequestedIndexingTargetStatus(jobStatusFacts.requestedTarget, requestedTargetState)
 
@@ -75,16 +96,15 @@ export class ReadStatusDocumentIndexesAssembler {
   }
 
   private static toRequestedTargetFacts(
-    source: DocumentIndexingStatusSourceDto,
-    membership: Membership | null,
-    targetIndex: DocumentIndex | null,
+    source: DocumentIndexingStatusSourceDTO,
+    knowledgeBaseDocument: KnowledgeBaseDocument | null,
   ): RequestedTarget {
     const targetStateFacts = {
-      requestedGeneration: membership?.requestedGeneration ?? null,
+      requestedGeneration: knowledgeBaseDocument?.requestedGeneration ?? null,
       targetGeneration: source.generation,
       activeJobStatus: source.activeJobStatus,
+      hasSuccessfulReceipt: source.hasSuccessfulReceipt,
       hasFailedJob: source.failedJobId !== null,
-      targetIndexStatus: targetIndex?.status ?? null,
     }
 
     return {
@@ -102,7 +122,7 @@ export class ReadStatusDocumentIndexesAssembler {
 
   private static restoreDocumentIndexExecutionVerification(
     storedExecutionVerification: Record<string, unknown> | null,
-  ): DocumentIndexExecutionVerificationDto | null {
+  ): DocumentIndexExecutionVerificationDTO | null {
     if (storedExecutionVerification === null) return null
 
     const stage = storedExecutionVerification.stage
@@ -134,7 +154,7 @@ export class ReadStatusDocumentIndexesAssembler {
 
   private static toActiveDocumentIndexStatus(
     activeDocumentIndex: DocumentIndexingStatusFacts['activeIndex'],
-  ): DocumentIndexingStatusDto['activeIndex'] {
+  ): DocumentIndexingStatusDTO['activeIndex'] {
     if (activeDocumentIndex === null) return null
 
     return { id: activeDocumentIndex.id, status: activeDocumentIndex.status, readyAt: activeDocumentIndex.readyAt }
@@ -143,7 +163,7 @@ export class ReadStatusDocumentIndexesAssembler {
   private static toRequestedIndexingTargetStatus(
     requestedJobTarget: RequestedTarget | null,
     requestedTargetState: DocumentIndexingTargetStateEnum | null,
-  ): DocumentIndexingStatusDto['requestedTarget'] {
+  ): DocumentIndexingStatusDTO['requestedTarget'] {
     if (requestedJobTarget === null || requestedTargetState === null) return null
 
     const executionVerification = this.toDocumentIndexExecutionVerification(requestedJobTarget.executionVerification)
@@ -162,8 +182,8 @@ export class ReadStatusDocumentIndexesAssembler {
   }
 
   private static toDocumentIndexExecutionVerification(
-    executionVerification: DocumentIndexExecutionVerificationDto | null,
-  ): DocumentIndexExecutionVerificationDto | null {
+    executionVerification: DocumentIndexExecutionVerificationDTO | null,
+  ): DocumentIndexExecutionVerificationDTO | null {
     if (executionVerification === null) return null
 
     return {

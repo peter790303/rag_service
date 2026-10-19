@@ -66,27 +66,22 @@ test('revision creation persists the supplied attributes without a content-hash 
     capturedAt: new Date('2026-10-02T01:00:00.000Z'),
     createdAt: new Date('2026-10-02T01:00:00.000Z'),
   }
-  const model = Object.assign(createPersistedRevision(), createDocumentRevisionQO)
   const dataSource = new DataSource({ type: 'postgres' })
   const modelRepository = dataSource.getRepository(DocumentRevisionModel)
   const lookup = context.mock.method(modelRepository, 'findOneBy', async () => {
     throw new Error('revision creation must not decide whether a revision exists')
   })
-  const save = context.mock.method(modelRepository, 'save', async () => model)
+  const insert = context.mock.method(modelRepository, 'insert', async () => ({
+    identifiers: [],
+    generatedMaps: [],
+    raw: [],
+  }))
 
   const persistedRevision = await new DocumentRevisionRepository(new PersistenceTransaction(dataSource)).create(
     createDocumentRevisionQO,
   )
 
-  assert.ok(persistedRevision instanceof DocumentRevision)
-  assert.notEqual(persistedRevision, model)
-  assert.equal(persistedRevision.id, model.id)
-  assert.equal(persistedRevision.documentId, createDocumentRevisionQO.documentId)
-  assert.equal(persistedRevision.contentSha256, createDocumentRevisionQO.contentSha256)
-  assert.equal(persistedRevision.title, createDocumentRevisionQO.title)
-  assert.equal(persistedRevision.content, createDocumentRevisionQO.content)
-  assert.deepEqual(persistedRevision.capturedAt.nativeDate, model.capturedAt)
-  assert.deepEqual(persistedRevision.createdAt.nativeDate, model.createdAt)
-  assert.deepEqual(save.mock.calls[0]?.arguments, [createDocumentRevisionQO])
+  assert.equal(persistedRevision, undefined)
+  assert.deepEqual(insert.mock.calls[0]?.arguments, [createDocumentRevisionQO])
   assert.equal(lookup.mock.callCount(), 0)
 })

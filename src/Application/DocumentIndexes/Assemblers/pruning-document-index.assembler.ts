@@ -1,6 +1,6 @@
-import type { MembershipRetentionDto } from '../../Memberships/DataTransferObjects/membership-retention.dto.ts'
-import type { MembershipPruningRequestedEvent } from '../../Memberships/Events/membership-pruning-requested.event.ts'
-import type { DocumentIndexExecutionsForMembershipQueryObject } from '../QueryObjects/document-index-execution.query-object.ts'
+import type { KnowledgeBaseDocumentRetentionDTO } from '../../KnowledgeBaseDocuments/DataTransferObjects/knowledge-base-document-retention.dto.ts'
+import type { KnowledgeBaseDocumentPruningStartedEvent } from '../../KnowledgeBaseDocuments/Events/knowledge-base-document-pruning-started.event.ts'
+import type { DocumentIndexExecutionsForKnowledgeBaseDocumentQueryObject } from '../QueryObjects/document-index-execution.query-object.ts'
 import type { DocumentIndexExecutionIdQueryObject } from '../QueryObjects/document-index-execution.query-object.ts'
 import type { DocumentIndexIdQueryObject } from '../QueryObjects/document-index.query-object.ts'
 
@@ -13,13 +13,13 @@ export class PruningDocumentIndexAssembler {
     return { documentIndexId }
   }
 
-  static toInspectMembershipRetentionDTO(documentIndexId: string): MembershipRetentionDto {
+  static toInspectKnowledgeBaseDocumentRetentionDTO(documentIndexId: string): KnowledgeBaseDocumentRetentionDTO {
     return { documentIndexId }
   }
 
-  static toDocumentIndexExecutionsForMembershipQueryObject(
-    event: MembershipPruningRequestedEvent,
-  ): DocumentIndexExecutionsForMembershipQueryObject {
+  static toDocumentIndexExecutionsForKnowledgeBaseDocumentQueryObject(
+    event: KnowledgeBaseDocumentPruningStartedEvent,
+  ): DocumentIndexExecutionsForKnowledgeBaseDocumentQueryObject {
     return {
       knowledgeBaseId: event.knowledgeBaseId,
       documentId: event.documentId,

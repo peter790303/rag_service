@@ -1,7 +1,7 @@
-export interface InspectDocumentRetentionDto {
+export interface InspectDocumentRetentionDTO {
   readonly documentId: string
 }
 
-export interface LockDocumentRetentionParentsDto {
+export interface LockDocumentRetentionParentsDTO {
   readonly documentIds: readonly string[]
 }

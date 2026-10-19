@@ -6,15 +6,15 @@ import { QueryFailedError } from 'typeorm'
 
 import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
 import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
-import type { DocumentIndexingClaimDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { DocumentIndexChunkReplacementRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-index-chunk-replacement-requested.listener.ts'
-import type { SavePlannedDocumentRelationsQueryObject } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
+import { AuthorizeDocumentIndexChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/authorize-document-index-chunk-replacement.use-case.ts'
+import type { InsertPlannedDocumentRelationsQueryObject } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
 import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
 import { Chunk } from '../../../src/Domain/Chunk/chunk.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { MarkdownSourceAdapter } from '../../../src/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
@@ -25,7 +25,7 @@ import { DocumentRelationModel } from '../../../src/Infrastructure/Persistence/M
 import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
 import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
 import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
 import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
 import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
@@ -33,7 +33,7 @@ import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence
 import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
 import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
 import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentMembershipRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document-membership.repository.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
@@ -60,12 +60,14 @@ class ConstraintFailingRelationRepository extends DocumentRelationRepository {
     super(testTransaction)
   }
 
-  override async savePlanned(savePlannedDocumentRelationsQO: SavePlannedDocumentRelationsQueryObject): Promise<void> {
-    const documentIndexId = savePlannedDocumentRelationsQO.relations[0]?.sourceIndexId
+  override async insertPlanned(
+    insertPlannedDocumentRelationsQO: InsertPlannedDocumentRelationsQueryObject,
+  ): Promise<void> {
+    const documentIndexId = insertPlannedDocumentRelationsQO.relations[0]?.sourceIndexId
     assert.ok(documentIndexId)
     const manager = this.testTransaction.manager
     assert.equal(manager.queryRunner?.isTransactionActive, true)
-    await super.savePlanned(savePlannedDocumentRelationsQO)
+    await super.insertPlanned(insertPlannedDocumentRelationsQO)
     const chunks = await manager.getRepository(ChunkModel).findBy({ documentIndexId })
     const documentRelationModelRepository = manager.getRepository(DocumentRelationModel)
     const writtenRelations = await documentRelationModelRepository.findBy({ sourceIndexId: documentIndexId })
@@ -108,7 +110,7 @@ test(
       const documentModelRepository = dataSource.getRepository(DocumentModel)
       const documentRevisionModelRepository = dataSource.getRepository(DocumentRevisionModel)
       const documentIndexModelRepository = dataSource.getRepository(DocumentIndexModel)
-      const membershipModelRepository = dataSource.getRepository(KnowledgeBaseDocumentMembershipModel)
+      const knowledgeBaseDocumentModelRepository = dataSource.getRepository(KnowledgeBaseDocumentModel)
       const jobModelRepository = dataSource.getRepository(JobModel)
       const chunkModelRepository = dataSource.getRepository(ChunkModel)
       const documentRelationModelRepository = dataSource.getRepository(DocumentRelationModel)
@@ -152,8 +154,8 @@ test(
           unreferencedSince: null,
         }),
       )
-      const membership = await membershipModelRepository.save(
-        membershipModelRepository.create({
+      const knowledgeBaseDocument = await knowledgeBaseDocumentModelRepository.save(
+        knowledgeBaseDocumentModelRepository.create({
           knowledgeBaseId: base.id,
           documentId: document.id,
           activeDocumentIndexId: null,
@@ -184,7 +186,7 @@ test(
           executionVerification: verification,
         }),
       )
-      const job: DocumentIndexingClaimDto = {
+      const job: DocumentIndexingClaimDTO = {
         id: jobRecord.id,
         knowledgeBaseId: base.id,
         documentId: document.id,
@@ -236,10 +238,10 @@ test(
       const createUseCase = (relationRepository = new DocumentRelationRepository(persistenceTransaction)) =>
         new ReplaceIndexChunkUseCase(
           persistenceTransaction,
-          new DocumentIndexChunkReplacementRequestedListener(
+          new AuthorizeDocumentIndexChunkReplacementUseCase(
             new ReserveDocumentForIndexingUseCase(new DocumentRepository(persistenceTransaction)),
-            new ReserveMembershipForIndexingUseCase(
-              new KnowledgeBaseDocumentMembershipRepository(persistenceTransaction),
+            new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+              new KnowledgeBaseDocumentRepository(persistenceTransaction),
             ),
             new JobRepository(persistenceTransaction),
             new DocumentIndexRepository(persistenceTransaction),
@@ -272,15 +274,15 @@ test(
         await assertOriginalRows()
         await jobModelRepository.update(job.id, { executionVerification: verification, leaseExpiresAt })
       })
-      await t.test('superseded membership generation leaves old rows intact', async () => {
-        await membershipModelRepository.update(
-          { knowledgeBaseId: membership.knowledgeBaseId, documentId: membership.documentId },
+      await t.test('superseded knowledgeBaseDocument generation leaves old rows intact', async () => {
+        await knowledgeBaseDocumentModelRepository.update(
+          { knowledgeBaseId: knowledgeBaseDocument.knowledgeBaseId, documentId: knowledgeBaseDocument.documentId },
           { requestedGeneration: '2' },
         )
         await assert.rejects(replace(createUseCase()), InvalidDocumentIndexExecutionLeaseException)
         await assertOriginalRows()
-        await membershipModelRepository.update(
-          { knowledgeBaseId: membership.knowledgeBaseId, documentId: membership.documentId },
+        await knowledgeBaseDocumentModelRepository.update(
+          { knowledgeBaseId: knowledgeBaseDocument.knowledgeBaseId, documentId: knowledgeBaseDocument.documentId },
           { requestedGeneration: '1' },
         )
       })

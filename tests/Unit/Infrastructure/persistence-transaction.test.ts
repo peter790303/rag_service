@@ -109,13 +109,19 @@ describe('PersistenceTransaction', () => {
     const defaultManager = {} as EntityManager
     const snapshotManager = {} as EntityManager
     const isolationLevels: string[] = []
+    let readTransactionOpen = false
     const openSnapshot = async <T>(
       isolation: string,
       operation: (manager: EntityManager) => Promise<T>,
     ): Promise<T> => {
       isolationLevels.push(isolation)
-
-      return operation(snapshotManager)
+      assert.equal(readTransactionOpen, false)
+      readTransactionOpen = true
+      try {
+        return await operation(snapshotManager)
+      } finally {
+        readTransactionOpen = false
+      }
     }
     const persistenceTransaction = new PersistenceTransaction(
       {
@@ -129,6 +135,7 @@ describe('PersistenceTransaction', () => {
     )
 
     const transactionOutcome = await persistenceTransaction.runReadOnlySnapshot(async () => {
+      assert.equal(readTransactionOpen, true)
       assert.equal(persistenceTransaction.manager, snapshotManager)
       await persistenceTransaction.run(async () => {
         assert.equal(persistenceTransaction.manager, snapshotManager)
@@ -138,6 +145,7 @@ describe('PersistenceTransaction', () => {
     })
 
     assert.equal(transactionOutcome, 'snapshot-result')
+    assert.equal(readTransactionOpen, false)
     assert.deepEqual(isolationLevels, ['REPEATABLE READ'])
     assert.equal(persistenceTransaction.manager, defaultManager)
   })

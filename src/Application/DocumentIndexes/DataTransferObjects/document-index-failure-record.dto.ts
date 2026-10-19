@@ -1,4 +1,4 @@
-export type DocumentIndexFailureRecordDto = {
+export type DocumentIndexFailureRecordDTO = {
   id: string
   jobId: string
   knowledgeBaseId: string

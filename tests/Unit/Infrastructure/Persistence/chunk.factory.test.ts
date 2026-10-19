@@ -94,10 +94,13 @@ describe('ChunkFactory', () => {
       { name: 'non-finite token count', state: { tokenCount: NaN }, exception: InvalidChunkTokenCountException },
     ]
 
-    for (const { name, state: invalidChunkState, exception } of invalidRows) {
-      await t.test(name, () => {
-        assert.throws(() => ChunkFactory.toChunk(createChunkModel(invalidChunkState)), exception)
-      })
-    }
+    const testCases = invalidRows
+    await Promise.all(
+      testCases.map(({ name, state: invalidChunkState, exception }) =>
+        t.test(name, () => {
+          assert.throws(() => ChunkFactory.toChunk(createChunkModel(invalidChunkState)), exception)
+        }),
+      ),
+    )
   })
 })

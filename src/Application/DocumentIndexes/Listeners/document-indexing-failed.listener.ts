@@ -1,6 +1,6 @@
 import type { ReserveDocumentForIndexingUseCaseContract } from '../../Documents/Contracts/reserve-document-for-indexing.use-case.contract.ts'
+import type { ReserveKnowledgeBaseDocumentForIndexingUseCaseContract } from '../../KnowledgeBaseDocuments/Contracts/reserve-knowledge-base-document-for-indexing.use-case.contract.ts'
 import type { PersistenceTransaction } from '../../KnowledgeBases/Contracts/persistence-transaction.ts'
-import type { ReserveMembershipForIndexingUseCaseContract } from '../../Memberships/Contracts/reserve-membership-for-indexing.use-case.contract.ts'
 import { ReadLeaseDocumentIndexesAssembler } from '../Assemblers/read-lease-document-indexes.assembler.ts'
 import { WriteFailDocumentIndexesAssembler } from '../Assemblers/write-fail-document-indexes.assembler.ts'
 import { WriteLifecycleDocumentIndexAssembler } from '../Assemblers/write-lifecycle-document-index.assembler.ts'
@@ -20,7 +20,7 @@ export class DocumentIndexingFailedListener {
   constructor(
     private readonly transaction: PersistenceTransaction,
     private readonly reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
-    private readonly reserveMembershipForIndexing: ReserveMembershipForIndexingUseCaseContract,
+    private readonly reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
     private readonly documentIndexExecutionQueue: DocumentIndexExecutionQueue,
     private readonly documentIndexRepository: DocumentIndexRepository,
     private readonly documentIndexFailureArchive: DocumentIndexFailureArchive,
@@ -29,13 +29,13 @@ export class DocumentIndexingFailedListener {
   async handle({ jobDelivery, failureDecision }: DocumentIndexingFailedEvent): Promise<void> {
     await this.transaction.run(async () => {
       const documentExists = await this.reserveDocumentForIndexing.execute({ documentId: jobDelivery.documentId })
-      const membershipRecord = await this.reserveMembershipForIndexing.execute({
+      const knowledgeBaseDocumentRecord = await this.reserveKnowledgeBaseDocumentForIndexing.execute({
         knowledgeBaseId: jobDelivery.knowledgeBaseId,
         documentId: jobDelivery.documentId,
         generation: jobDelivery.generation,
       })
 
-      if (!documentExists || membershipRecord?.requestedGeneration !== jobDelivery.generation) {
+      if (!documentExists || knowledgeBaseDocumentRecord?.requestedGeneration !== jobDelivery.generation) {
         throw new InvalidDocumentIndexExecutionLeaseException()
       }
 

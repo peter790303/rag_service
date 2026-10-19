@@ -13,7 +13,7 @@ import { HybridKnowledgeRetrievalResource } from '../../../src/Interfaces/Http/R
 test('retrieve maps adjacent chunks selected by the retrieval context', async () => {
   const snapshot = {
     knowledgeBaseId: 'kb',
-    memberships: [
+    knowledgeBaseDocuments: [
       { documentId: 'doc', activeDocumentIndexId: 'index', isEntry: false, alwaysIncludeFullContent: false },
       {
         documentId: 'other-doc',
@@ -126,7 +126,7 @@ test('retrieve maps adjacent chunks selected by the retrieval context', async ()
 test('relation target is resolved from the unique ready project member even when the stored id hint is wrong', async () => {
   const snapshot = {
     ...emptyRetrievalSnapshotFixture,
-    memberships: [
+    knowledgeBaseDocuments: [
       { documentId: 'source', activeDocumentIndexId: 'source-index', isEntry: false, alwaysIncludeFullContent: false },
       { documentId: 'target', activeDocumentIndexId: 'target-index', isEntry: false, alwaysIncludeFullContent: false },
     ],
@@ -259,7 +259,7 @@ test('relation target is resolved from the unique ready project member even when
 test('relation with a missing anchor is reported unresolved and is not expanded', async () => {
   const snapshot = {
     ...emptyRetrievalSnapshotFixture,
-    memberships: [
+    knowledgeBaseDocuments: [
       { documentId: 'source', activeDocumentIndexId: 'source-index', isEntry: false, alwaysIncludeFullContent: false },
       { documentId: 'target', activeDocumentIndexId: 'target-index', isEntry: false, alwaysIncludeFullContent: false },
     ],
@@ -351,7 +351,7 @@ test('relation with a missing anchor is reported unresolved and is not expanded'
 test('relation target reports ambiguity and does not expand duplicate project references', async () => {
   const snapshot = {
     ...emptyRetrievalSnapshotFixture,
-    memberships: [
+    knowledgeBaseDocuments: [
       { documentId: 'source', activeDocumentIndexId: 'source-index', isEntry: false, alwaysIncludeFullContent: false },
       {
         documentId: 'target-a',
@@ -442,7 +442,7 @@ test('relation target reports ambiguity and does not expand duplicate project re
 test('retrieve rejects active indexes created with a different embedding model', async () => {
   const snapshot = {
     ...emptyRetrievalSnapshotFixture,
-    memberships: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
+    knowledgeBaseDocuments: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
     indexes: [
       {
         id: 'index',

@@ -5,10 +5,10 @@ import type { ChunkRetrievalCandidatesQueryObject } from '../QueryObjects/chunk.
 import type { ChunkIndexOrdinalsQueryObject } from '../QueryObjects/chunk.query-object.ts'
 import type { ChunkLexicalSearchQueryObject } from '../QueryObjects/chunk.query-object.ts'
 import type { ChunkVectorSimilarityQueryObject } from '../QueryObjects/chunk.query-object.ts'
-import type { SaveChunksQueryObject } from '../QueryObjects/save-chunks.query-object.ts'
+import type { InsertChunksQueryObject } from '../QueryObjects/insert-chunks.query-object.ts'
 
 export abstract class ChunkRepository {
-  abstract saveChunks(saveChunksQO: SaveChunksQueryObject): Promise<void>
+  abstract insertChunks(insertChunksQO: InsertChunksQueryObject): Promise<void>
 
   abstract findByDocumentIndexId(chunkIndexQO: ChunkIndexQueryObject): Promise<Chunk[]>
 

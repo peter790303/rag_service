@@ -7,7 +7,7 @@ import type { RetrievalKnowledgeBaseContentAssemblerInput } from '../../../src/A
 export const createRetrievalKnowledgeBaseContentInputFixture = (): RetrievalKnowledgeBaseContentAssemblerInput => {
   const snapshot = createRetrievalSnapshotFixture({
     knowledgeBaseId: 'kb-1',
-    memberships: [
+    knowledgeBaseDocuments: [
       { documentId: 'document-1', activeDocumentIndexId: 'index-1', isEntry: true, alwaysIncludeFullContent: true },
     ],
     documents: [
@@ -52,7 +52,7 @@ export const createRetrievalKnowledgeBaseContentInputFixture = (): RetrievalKnow
   return {
     snapshot,
     chunkCountsByDocumentIndexId: { 'index-1': 8 },
-    requiredMembers: [snapshot.memberships[0]!],
+    requiredMembers: [snapshot.knowledgeBaseDocuments[0]!],
     rankedChunks: [
       { candidate: snapshot.chunks[0]!, score: 0.8, rank: 1, isEffective: true, isMandatoryContext: true },
     ],

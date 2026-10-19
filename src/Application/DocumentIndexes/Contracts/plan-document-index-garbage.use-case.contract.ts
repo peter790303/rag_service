@@ -1,8 +1,6 @@
-import type {
-  DocumentIndexGarbagePlanDto,
-  PlanDocumentIndexGarbageDto,
-} from '../DataTransferObjects/document-index-garbage.dto.ts'
+import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
+import type { PlanDocumentIndexGarbageDTO } from '../DataTransferObjects/document-index-garbage.dto.ts'
 
 export abstract class PlanDocumentIndexGarbageUseCaseContract {
-  abstract execute(planDocumentIndexGarbageDTO: PlanDocumentIndexGarbageDto): Promise<DocumentIndexGarbagePlanDto>
+  abstract execute(planDocumentIndexGarbageDTO: PlanDocumentIndexGarbageDTO): Promise<DocumentIndex[]>
 }

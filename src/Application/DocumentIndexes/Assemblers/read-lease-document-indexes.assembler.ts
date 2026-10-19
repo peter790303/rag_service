@@ -1,9 +1,9 @@
-import type { DocumentIndexExecutionLeaseDto } from '../DataTransferObjects/document-index-execution-lease.dto.ts'
-import type { DocumentIndexExecutionRecordDto } from '../DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionLeaseDTO } from '../DataTransferObjects/document-index-execution-lease.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
 
 /** Restores domain facts from whitelisted persisted fields without performing I/O. */
 export class ReadLeaseDocumentIndexesAssembler {
-  static toDocumentIndexExecutionLease(jobRecord: DocumentIndexExecutionRecordDto): DocumentIndexExecutionLeaseDto {
+  static toDocumentIndexExecutionLease(jobRecord: DocumentIndexExecutionRecordDTO): DocumentIndexExecutionLeaseDTO {
     const rawLeaseToken = jobRecord.executionVerification?.claim_token
     const leaseToken = typeof rawLeaseToken === 'string' ? rawLeaseToken : null
     const leaseExpiresAt = this.toLeaseExpiresAt(jobRecord)
@@ -21,7 +21,7 @@ export class ReadLeaseDocumentIndexesAssembler {
     }
   }
 
-  static toLeaseExpiresAt(jobRecord: Pick<DocumentIndexExecutionRecordDto, 'executionVerification'>): Date | null {
+  static toLeaseExpiresAt(jobRecord: Pick<DocumentIndexExecutionRecordDTO, 'executionVerification'>): Date | null {
     const rawLeaseExpiry = jobRecord.executionVerification?.lease_expires_at
     const parsedLeaseExpiry = typeof rawLeaseExpiry === 'string' ? new Date(rawLeaseExpiry) : null
     const leaseExpiresAt =

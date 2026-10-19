@@ -1,4 +1,4 @@
-export type ServiceAuthCredentialsDto = {
+export type ServiceAuthCredentialsDTO = {
   body: unknown
   headerProjectId: string
   issuedAt: string

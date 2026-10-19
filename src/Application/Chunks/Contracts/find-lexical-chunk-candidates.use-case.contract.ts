@@ -1,5 +1,5 @@
 import type { Chunk } from '../../../Domain/Chunk/chunk.ts'
-import type { FindLexicalChunkCandidatesDto } from '../DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
+import type { FindLexicalChunkCandidatesDTO } from '../DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
 
 /**
  * Matches terms inside the supplied active document indexes and returns raw lexical scores.
@@ -8,5 +8,5 @@ import type { FindLexicalChunkCandidatesDto } from '../DataTransferObjects/find-
  * Empty index scope, empty terms or a nonpositive limit produce no candidates.
  */
 export abstract class FindLexicalChunkCandidatesUseCaseContract {
-  abstract execute(findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDto): Promise<Chunk[]>
+  abstract execute(findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDTO): Promise<Chunk[]>
 }

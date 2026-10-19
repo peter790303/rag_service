@@ -2,7 +2,7 @@ import type { Chunk } from '../../../Domain/Chunk/chunk.ts'
 import { QueryRetrievalIndexChunkAssembler } from '../Assemblers/query-retrieval-index-chunk.assembler.ts'
 import type { ChunkRepository } from '../Contracts/chunk.repository.ts'
 import { LoadRetrievalIndexChunksUseCaseContract } from '../Contracts/load-retrieval-index-chunks.use-case.contract.ts'
-import type { LoadRetrievalIndexChunksDto } from '../DataTransferObjects/load-retrieval-index-chunks.dto.ts'
+import type { LoadRetrievalIndexChunksDTO } from '../DataTransferObjects/load-retrieval-index-chunks.dto.ts'
 
 /** Loads complete chunks for both retrieval and counting scopes without reading an index twice. */
 export class LoadRetrievalIndexChunksUseCase extends LoadRetrievalIndexChunksUseCaseContract {
@@ -10,8 +10,9 @@ export class LoadRetrievalIndexChunksUseCase extends LoadRetrievalIndexChunksUse
     super()
   }
 
-  async execute(loadRetrievalIndexChunksDTO: LoadRetrievalIndexChunksDto): Promise<Chunk[]> {
-    const { fullContentIndexIds, countedIndexIds } = loadRetrievalIndexChunksDTO
+  async execute(loadRetrievalIndexChunksDTO: LoadRetrievalIndexChunksDTO): Promise<Chunk[]> {
+    const { fullContentIndexIds, countedIndexIds } =
+      QueryRetrievalIndexChunkAssembler.toLoadRetrievalIndexChunksDTO(loadRetrievalIndexChunksDTO)
     const uniqueFullContentDocumentIndexIds = [...new Set(fullContentIndexIds)]
     const countOnlyDocumentIndexIds = [...new Set(countedIndexIds)].filter(
       (documentIndexId) => !uniqueFullContentDocumentIndexIds.includes(documentIndexId),

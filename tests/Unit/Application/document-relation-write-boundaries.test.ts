@@ -4,7 +4,7 @@ import test from 'node:test'
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
 import type { DocumentRelationRepository } from '../../../src/Application/DocumentRelations/Contracts/document-relation.repository.ts'
 import { InvalidDocumentRelationInputException } from '../../../src/Application/DocumentRelations/Exceptions/invalid-document-relation-input.exception.ts'
-import type { SavePlannedDocumentRelationsQueryObject } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
+import type { InsertPlannedDocumentRelationsQueryObject } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
 import { CollectDocumentRelationGarbageUseCase } from '../../../src/Application/DocumentRelations/UseCases/collect-document-relation-garbage.use-case.ts'
 import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
 import { InvalidDocumentRelationStateException } from '../../../src/Domain/DocumentRelation/Exceptions/invalid-document-relation-state.exception.ts'
@@ -21,11 +21,11 @@ const plannedRelation = {
 
 test('relation replacement rejects missing scope or malformed plan before clearing existing relations', async (context) => {
   const scenarios = [
-    { name: 'missing input', input: undefined, exception: InvalidDocumentRelationStateException },
+    { name: 'missing input', input: undefined, exception: InvalidDocumentRelationInputException },
     {
       name: 'missing index with empty plan',
       input: { plannedDocumentRelations: [] },
-      exception: InvalidDocumentRelationStateException,
+      exception: InvalidDocumentRelationInputException,
     },
     { name: 'missing plan', input: { documentIndexId: 'index-1' }, exception: InvalidDocumentRelationInputException },
     {
@@ -53,7 +53,7 @@ test('relation replacement rejects missing scope or malformed plan before cleari
         const useCase = new ReplacePlannedDocumentRelationsUseCase(
           createRepositoryStub<DocumentRelationRepository>({
             removeBySourceIndexId: async () => assert.fail('invalid replacement must not clear stored relations'),
-            savePlanned: async () => assert.fail('invalid replacement must not write relations'),
+            insertPlanned: async () => assert.fail('invalid replacement must not write relations'),
           }),
         )
         await assert.rejects(useCase.execute(input as ReplaceRelationsInput), exception)
@@ -64,13 +64,13 @@ test('relation replacement rejects missing scope or malformed plan before cleari
 
 test('relation replacement preserves null, zero and empty evidence, and an empty plan clears the scoped relations', async () => {
   const removedIndexes: string[] = []
-  const writes: SavePlannedDocumentRelationsQueryObject[] = []
+  const writes: InsertPlannedDocumentRelationsQueryObject[] = []
   const useCase = new ReplacePlannedDocumentRelationsUseCase(
     createRepositoryStub<DocumentRelationRepository>({
       removeBySourceIndexId: async ({ sourceIndexId }) => {
         removedIndexes.push(sourceIndexId)
       },
-      savePlanned: async (query) => {
+      insertPlanned: async (query) => {
         writes.push(query)
       },
     }),
@@ -94,10 +94,16 @@ test('relation replacement preserves null, zero and empty evidence, and an empty
 
 test('relation garbage collection rejects missing scope and lock facts even when no relations exist', async (context) => {
   const scenarios = [
-    { name: 'missing index', input: { lockedDocumentIds: [] }, exception: InvalidDocumentRelationStateException },
+    { name: 'missing input', input: undefined, exception: InvalidDocumentRelationInputException },
+    { name: 'missing index', input: { lockedDocumentIds: [] }, exception: InvalidDocumentRelationInputException },
     {
       name: 'missing lock facts',
       input: { sourceIndexId: 'index-1' },
+      exception: InvalidDocumentRelationInputException,
+    },
+    {
+      name: 'sparse lock facts',
+      input: { sourceIndexId: 'index-1', lockedDocumentIds: new Array(1) },
       exception: InvalidDocumentRelationInputException,
     },
   ]

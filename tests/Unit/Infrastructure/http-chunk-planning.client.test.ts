@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
+import { concatMap, firstValueFrom, from, toArray } from 'rxjs'
+
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
 import { ChunkPlanningUnavailableException } from '../../../src/Application/Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
 import { mapChunkPlanningResponse } from '../../../src/Infrastructure/External/ChunkPlanning/Adapters/chunk-planning-response.adapter.ts'
@@ -11,8 +13,12 @@ const chunkPlanningClient = (apiKey?: string) =>
   new HttpChunkPlanningClient({
     chunkingModel: 'gpt-6.1-sol',
     chunkingApiUrl: 'https://model.example/v1/chat/completions',
+    externalRequestTimeoutMs: 12_345,
     ...(apiKey ? { chunkingApiKey: apiKey } : {}),
-  } satisfies Pick<KnowledgeServiceConfig, 'chunkingModel' | 'chunkingApiUrl' | 'chunkingApiKey'>)
+  } satisfies Pick<
+    KnowledgeServiceConfig,
+    'chunkingModel' | 'chunkingApiUrl' | 'chunkingApiKey' | 'externalRequestTimeoutMs'
+  >)
 
 const createChunkPlanningResponse = (content: string): Response =>
   new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 })
@@ -109,17 +115,21 @@ test('semantic planner maps non-success HTTP and malformed responses to the doma
     createChunkPlanningResponse('{"chunkStarts":["block-0",4]}'),
   ]
 
-  await invalidResponses.reduce(async (previousRequest, response) => {
-    await previousRequest
-    context.mock.method(globalThis, 'fetch', async () => response)
+  await firstValueFrom(
+    from(invalidResponses).pipe(
+      concatMap(async (response) => {
+        context.mock.method(globalThis, 'fetch', async () => response)
 
-    await assert.rejects(
-      chunkPlanningClient().plan('A complete paragraph.\n\nAnother paragraph.\n\nLast paragraph.'),
-      ChunkPlanningUnavailableException,
-    )
+        await assert.rejects(
+          chunkPlanningClient().plan('A complete paragraph.\n\nAnother paragraph.\n\nLast paragraph.'),
+          ChunkPlanningUnavailableException,
+        )
 
-    context.mock.reset()
-  }, Promise.resolve())
+        context.mock.reset()
+      }),
+      toArray(),
+    ),
+  )
 })
 
 test('semantic planner skips the external service when source has no blocks', async (context) => {
@@ -146,7 +156,7 @@ test('semantic planner bounds requests and maps timeout aborts to a domain failu
 
   await assert.rejects(chunkPlanningClient().plan('A complete paragraph.'), ChunkPlanningUnavailableException)
 
-  assert.equal(timeoutMs, 30_000)
+  assert.equal(timeoutMs, 12_345)
   assert.equal(requestSignal, timeoutSignal)
 })
 
@@ -161,6 +171,45 @@ test('semantic planner preserves network failures as the domain failure cause', 
 
     return true
   })
+})
+
+test('semantic planner composes caller cancellation with its request timeout', async (context) => {
+  const cancellation = new AbortController()
+  const timeout = new AbortController()
+  let requestSignal: AbortSignal | null | undefined
+  context.mock.method(AbortSignal, 'timeout', () => timeout.signal)
+  context.mock.method(globalThis, 'fetch', async (_input: RequestInfo | URL, init?: RequestInit) => {
+    requestSignal = init?.signal
+    assert.ok(requestSignal)
+
+    return new Promise<Response>((_resolve, reject) => {
+      requestSignal?.addEventListener('abort', () => reject(requestSignal?.reason), { once: true })
+    })
+  })
+
+  const callerCause = new Error('lease lost')
+  const callerRequest = chunkPlanningClient().plan('A complete paragraph.', cancellation.signal)
+  cancellation.abort(callerCause)
+  await assert.rejects(callerRequest, (error: unknown) => {
+    assert.ok(error instanceof ChunkPlanningUnavailableException)
+    assert.equal(error.cause, callerCause)
+
+    return true
+  })
+  assert.equal(requestSignal?.aborted, true)
+  assert.equal(timeout.signal.aborted, false)
+
+  const timeoutCause = new DOMException('request timed out', 'TimeoutError')
+  const activeCaller = new AbortController()
+  const timedRequest = chunkPlanningClient().plan('A complete paragraph.', activeCaller.signal)
+  timeout.abort(timeoutCause)
+  await assert.rejects(timedRequest, (error: unknown) => {
+    assert.ok(error instanceof ChunkPlanningUnavailableException)
+    assert.equal(error.cause, timeoutCause)
+
+    return true
+  })
+  assert.equal(activeCaller.signal.aborted, false)
 })
 
 test('semantic planner preserves response JSON failures as the domain failure cause', async (context) => {

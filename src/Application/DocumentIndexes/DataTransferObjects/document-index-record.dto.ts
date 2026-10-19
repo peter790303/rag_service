@@ -1,7 +1,7 @@
 import type { DocumentIndexStatus } from '../../../Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import type { DocumentIndexStatusEnum } from '../../../Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 
-export type DocumentIndexRecordDto = {
+export type DocumentIndexRecordDTO = {
   id: string
   documentId: string
   revisionId: string

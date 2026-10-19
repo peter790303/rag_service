@@ -4,7 +4,9 @@ import { DocumentIndexesModule } from './document-indexes.module.ts'
 import { DocumentRelationsModule } from './document-relations.module.ts'
 import { DocumentRevisionsModule } from './document-revisions.module.ts'
 import { DocumentsModule } from './documents.module.ts'
-import { MembershipsModule } from './memberships.module.ts'
+import { KnowledgeBaseDocumentsModule } from './knowledge-base-documents.module.ts'
+import { DocumentIndexExecutionQueue } from '../../Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
+import { DocumentIndexFailureArchive } from '../../Application/DocumentIndexes/Contracts/document-index-failure.archive.ts'
 import { InspectDocumentIndexRetentionUseCaseContract } from '../../Application/DocumentIndexes/Contracts/inspect-document-index-retention.use-case.contract.ts'
 import { InspectDocumentRelationRetentionUseCaseContract } from '../../Application/DocumentRelations/Contracts/inspect-document-relation-retention.use-case.contract.ts'
 import { InspectDocumentRevisionRetentionUseCaseContract } from '../../Application/DocumentRevisions/Contracts/inspect-document-revision-retention.use-case.contract.ts'
@@ -12,11 +14,11 @@ import { DocumentRepository as DocumentRepositoryContract } from '../../Applicat
 import { StartDocumentPruningRetentionUseCaseContract } from '../../Application/Documents/Contracts/start-document-pruning-retention.use-case.contract.ts'
 import { InspectDocumentRetentionUseCase } from '../../Application/Documents/UseCases/inspect-document-retention.use-case.ts'
 import { StartDocumentPruningRetentionUseCase } from '../../Application/Documents/UseCases/start-document-pruning-retention.use-case.ts'
-import { InspectMembershipRetentionUseCaseContract } from '../../Application/Memberships/Contracts/inspect-membership-retention.use-case.contract.ts'
+import { InspectKnowledgeBaseDocumentRetentionUseCaseContract } from '../../Application/KnowledgeBaseDocuments/Contracts/inspect-knowledge-base-document-retention.use-case.contract.ts'
 
 @Module({
   imports: [
-    MembershipsModule,
+    KnowledgeBaseDocumentsModule,
     DocumentRevisionsModule,
     DocumentIndexesModule,
     DocumentRelationsModule,
@@ -26,25 +28,31 @@ import { InspectMembershipRetentionUseCaseContract } from '../../Application/Mem
     {
       provide: InspectDocumentRetentionUseCase,
       useFactory: (
-        membershipRetention: InspectMembershipRetentionUseCaseContract,
+        knowledgeBaseDocumentRetention: InspectKnowledgeBaseDocumentRetentionUseCaseContract,
         revisionRetention: InspectDocumentRevisionRetentionUseCaseContract,
         indexRetention: InspectDocumentIndexRetentionUseCaseContract,
         relationRetention: InspectDocumentRelationRetentionUseCaseContract,
         documentRepository: DocumentRepositoryContract,
+        documentIndexExecutionQueue: DocumentIndexExecutionQueue,
+        documentIndexFailureArchive: DocumentIndexFailureArchive,
       ) =>
         new InspectDocumentRetentionUseCase(
-          membershipRetention,
+          knowledgeBaseDocumentRetention,
           revisionRetention,
           indexRetention,
           relationRetention,
           documentRepository,
+          documentIndexExecutionQueue,
+          documentIndexFailureArchive,
         ),
       inject: [
-        InspectMembershipRetentionUseCaseContract,
+        InspectKnowledgeBaseDocumentRetentionUseCaseContract,
         InspectDocumentRevisionRetentionUseCaseContract,
         InspectDocumentIndexRetentionUseCaseContract,
         InspectDocumentRelationRetentionUseCaseContract,
         DocumentRepositoryContract,
+        DocumentIndexExecutionQueue,
+        DocumentIndexFailureArchive,
       ],
     },
     {

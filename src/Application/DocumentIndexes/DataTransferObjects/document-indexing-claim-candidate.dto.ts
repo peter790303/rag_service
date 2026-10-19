@@ -1,4 +1,4 @@
-import type { DocumentIndexExecutionRecordDto } from './document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from './document-index-execution-record.dto.ts'
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
 
 export const DOCUMENT_INDEXING_CLAIM_CANDIDATE_RESULT_KINDS = {
@@ -6,30 +6,30 @@ export const DOCUMENT_INDEXING_CLAIM_CANDIDATE_RESULT_KINDS = {
   skip: 'skip',
 } as const
 
-export type DocumentIndexingClaimMembershipDto = {
+export type DocumentIndexingClaimKnowledgeBaseDocumentDTO = {
   requestedGeneration: string
   activeDocumentIndexId: string | null
 }
 
-export type DocumentIndexingClaimExecutionDto = Pick<
-  DocumentIndexExecutionRecordDto,
+export type DocumentIndexingClaimExecutionDTO = Pick<
+  DocumentIndexExecutionRecordDTO,
   'id' | 'knowledgeBaseId' | 'documentId' | 'documentIndexId' | 'generation' | 'attempts'
 >
 
-export type DocumentIndexExecutionSiblingLeaseDto = { id: string; attempts: number; leaseExpiresAt: Date | null }
+export type DocumentIndexExecutionSiblingLeaseDTO = { id: string; attempts: number; leaseExpiresAt: Date | null }
 
-export type DocumentIndexingClaimCandidateDto = {
-  job: DocumentIndexingClaimExecutionDto
+export type DocumentIndexingClaimCandidateDTO = {
+  job: DocumentIndexingClaimExecutionDTO
   documentIndex: DocumentIndex | null
   previousDocumentIndex: DocumentIndex | null
-  membership: DocumentIndexingClaimMembershipDto | null
-  runningSiblingLeases: readonly DocumentIndexExecutionSiblingLeaseDto[]
+  knowledgeBaseDocument: DocumentIndexingClaimKnowledgeBaseDocumentDTO | null
+  runningSiblingLeases: readonly DocumentIndexExecutionSiblingLeaseDTO[]
 }
 
-export type DocumentIndexingClaimCandidateResultDto =
+export type DocumentIndexingClaimCandidateResultDTO =
   | {
       kind: typeof DOCUMENT_INDEXING_CLAIM_CANDIDATE_RESULT_KINDS.candidate
-      candidate: DocumentIndexingClaimCandidateDto
+      candidate: DocumentIndexingClaimCandidateDTO
     }
   | { kind: typeof DOCUMENT_INDEXING_CLAIM_CANDIDATE_RESULT_KINDS.skip; documentIndexId: string }
   | null

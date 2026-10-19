@@ -1,5 +1,5 @@
-import type { DocumentIndexRetentionDto } from '../../DocumentIndexes/DataTransferObjects/document-index-garbage.dto.ts'
-import type { PlanDocumentRevisionGarbageDto } from '../DataTransferObjects/document-revision-garbage.dto.ts'
+import type { DocumentIndexRetentionDTO } from '../../DocumentIndexes/DataTransferObjects/document-index-garbage.dto.ts'
+import type { PlanDocumentRevisionGarbageDTO } from '../DataTransferObjects/document-revision-garbage.dto.ts'
 import type {
   DocumentRevisionIdQueryObject,
   DocumentRevisionDocumentQueryObject,
@@ -8,7 +8,7 @@ import type {
 
 export class GarbageDocumentRevisionAssembler {
   static toDocumentRevisionGarbageCandidatesQueryObject(
-    planDocumentRevisionGarbageDTO: PlanDocumentRevisionGarbageDto,
+    planDocumentRevisionGarbageDTO: PlanDocumentRevisionGarbageDTO,
   ): DocumentRevisionGarbageCandidatesQueryObject {
     return { cutoff: planDocumentRevisionGarbageDTO.retentionCutoff }
   }
@@ -21,7 +21,7 @@ export class GarbageDocumentRevisionAssembler {
     return { documentId }
   }
 
-  static toDocumentIndexRetentionDTO(revisionId: string): DocumentIndexRetentionDto {
+  static toDocumentIndexRetentionDTO(revisionId: string): DocumentIndexRetentionDTO {
     return { revisionId }
   }
 }

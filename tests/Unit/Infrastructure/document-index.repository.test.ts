@@ -108,12 +108,13 @@ test('document-index candidate queries preserve cutoff and deterministic orderin
     documentIds: ['document-1', 'document-2'],
   })
 
-  for (const restoredDocumentIndexDTO of [...garbageCandidateIndexes, ...documentIndexes]) {
+  const testCases = [...garbageCandidateIndexes, ...documentIndexes]
+  testCases.forEach((restoredDocumentIndexDTO) => {
     assert.ok(restoredDocumentIndexDTO instanceof DocumentIndex)
     assert.deepEqual(ReadDocumentIndexAssembler.toDocumentIndexRecordDTO(restoredDocumentIndexDTO), {
       ...documentIndexModel,
     })
-  }
+  })
   assert.equal(garbageCandidateIndexes.length, 1)
   assert.equal(documentIndexes.length, 1)
 

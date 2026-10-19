@@ -28,6 +28,8 @@ services:
     env_file: .env
     environment:
       RAG_DATABASE_URL: postgres://rag:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@database:5432/agent_teams_rag
+      RAG_CHUNKING_TRANSPORT: http
+      RAG_EMBEDDING_TRANSPORT: http
       PORT: 30700
     command: ['node', 'dist/src/main.js']
     depends_on:
@@ -40,6 +42,8 @@ services:
     env_file: .env
     environment:
       RAG_DATABASE_URL: postgres://rag:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@database:5432/agent_teams_rag
+      RAG_CHUNKING_TRANSPORT: http
+      RAG_EMBEDDING_TRANSPORT: http
     command: ['node', 'dist/src/worker.js']
     depends_on:
       migrate:

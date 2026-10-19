@@ -1,4 +1,4 @@
-import type { DocumentIndexingDeliveryDto } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
 
 /** Document indexing was dispatched under the committed execution lease. */
 export class DocumentIndexingDispatchedEvent {
@@ -18,7 +18,7 @@ export class DocumentIndexingDispatchedEvent {
 
   readonly leaseExpiresAt: Date
 
-  constructor(claim: DocumentIndexingDeliveryDto) {
+  constructor(claim: DocumentIndexingDeliveryDTO) {
     this.jobId = claim.id
     this.knowledgeBaseId = claim.knowledgeBaseId
     this.documentId = claim.documentId

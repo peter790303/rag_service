@@ -1,8 +1,8 @@
 import { Body, Controller, Get, HttpStatus, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 
 import type { DocumentIndexRequestResult } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-request.dto.ts'
-import type { DocumentIndexingStatusDto } from '../../../Application/DocumentIndexes/DataTransferObjects/document-indexing-status.dto.ts'
-import type { RetryDocumentIndexingResultDto } from '../../../Application/DocumentIndexes/DataTransferObjects/retry-document-indexing-result.dto.ts'
+import type { DocumentIndexingStatusDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/document-indexing-status.dto.ts'
+import type { RetryDocumentIndexingResultDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/retry-document-indexing-result.dto.ts'
 import { DocumentIndexingRequestedEvent } from '../../../Application/DocumentIndexes/Events/document-indexing-requested.event.ts'
 import { DocumentIndexingRequestedListener } from '../../../Application/DocumentIndexes/Listeners/document-indexing-requested.listener.ts'
 import { ReadDocumentIndexingStatusListener } from '../../../Application/DocumentIndexes/Listeners/read-document-indexing-status.listener.ts'
@@ -36,7 +36,7 @@ export class DocumentIndexesController {
   async job(
     @Param('projectId') projectId: string,
     @Param('id', uuidParamPipe) id: string,
-  ): Promise<DocumentIndexingStatusDto> {
+  ): Promise<DocumentIndexingStatusDTO> {
     return DocumentIndexingStatusResource.toDocumentIndexingStatusResource(
       await this.readDocumentIndexingStatus.handle({ projectId, jobId: id }),
     )
@@ -47,7 +47,7 @@ export class DocumentIndexesController {
   async retry(
     @Param('projectId') projectId: string,
     @Param('id', uuidParamPipe) id: string,
-  ): Promise<RetryDocumentIndexingResultDto> {
+  ): Promise<RetryDocumentIndexingResultDTO> {
     return RetryDocumentIndexingResource.toRetryDocumentIndexingResource(
       await this.retryDocumentIndexing.handle({ projectId, failedJobId: id }),
     )

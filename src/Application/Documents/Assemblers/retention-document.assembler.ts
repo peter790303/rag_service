@@ -1,7 +1,9 @@
 import type { DateTime } from '../../../Domain/Document/ValueObjects/date-time.ts'
-import type { DocumentIndexRetentionDto } from '../../DocumentIndexes/DataTransferObjects/document-index-garbage.dto.ts'
-import type { MembershipRetentionDto } from '../../Memberships/DataTransferObjects/membership-retention.dto.ts'
-import type { InspectDocumentRetentionDto } from '../DataTransferObjects/document-retention-scope.dto.ts'
+import type { DocumentIndexRetentionDTO } from '../../DocumentIndexes/DataTransferObjects/document-index-garbage.dto.ts'
+import type { InspectDocumentRelationRetentionDTO } from '../../DocumentRelations/DataTransferObjects/inspect-document-relation-retention.dto.ts'
+import type { InspectDocumentRevisionRetentionDTO } from '../../DocumentRevisions/DataTransferObjects/inspect-document-revision-retention.dto.ts'
+import type { KnowledgeBaseDocumentRetentionDTO } from '../../KnowledgeBaseDocuments/DataTransferObjects/knowledge-base-document-retention.dto.ts'
+import type { InspectDocumentRetentionDTO } from '../DataTransferObjects/document-retention-scope.dto.ts'
 import type {
   DocumentIdQueryObject,
   MarkDocumentUnreferencedQueryObject,
@@ -12,17 +14,27 @@ export class RetentionDocumentAssembler {
     return { documentId }
   }
 
-  static toInspectDocumentRetentionDTO(documentId: string): InspectDocumentRetentionDto {
+  static toInspectDocumentRetentionDTO(documentId: string): InspectDocumentRetentionDTO {
     return { documentId }
   }
 
-  static toMembershipRetentionDTO(inspectDocumentRetentionDTO: InspectDocumentRetentionDto): MembershipRetentionDto {
+  static toInspectDocumentRevisionRetentionDTO(documentId: string): InspectDocumentRevisionRetentionDTO {
+    return { documentId }
+  }
+
+  static toInspectDocumentRelationRetentionDTO(documentId: string): InspectDocumentRelationRetentionDTO {
+    return { documentId }
+  }
+
+  static toKnowledgeBaseDocumentRetentionDTO(
+    inspectDocumentRetentionDTO: InspectDocumentRetentionDTO,
+  ): KnowledgeBaseDocumentRetentionDTO {
     return { documentId: inspectDocumentRetentionDTO.documentId }
   }
 
   static toDocumentIndexRetentionDTO(
-    inspectDocumentRetentionDTO: InspectDocumentRetentionDto,
-  ): DocumentIndexRetentionDto {
+    inspectDocumentRetentionDTO: InspectDocumentRetentionDTO,
+  ): DocumentIndexRetentionDTO {
     return { documentId: inspectDocumentRetentionDTO.documentId }
   }
 

@@ -1,8 +1,8 @@
 import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
-import type { RetrievalDocumentIndexDto } from '../DataTransferObjects/retrieval-document-index.dto.ts'
+import type { RetrievalDocumentIndexDTO } from '../DataTransferObjects/retrieval-document-index.dto.ts'
 
 export class RetrievalDocumentIndexAssembler {
-  static toRetrievalDocumentIndexDTO(restoredDocumentIndexDTO: DocumentIndex): RetrievalDocumentIndexDto {
+  static toRetrievalDocumentIndexDTO(restoredDocumentIndexDTO: DocumentIndex): RetrievalDocumentIndexDTO {
     return {
       id: restoredDocumentIndexDTO.id,
       documentId: restoredDocumentIndexDTO.documentId,

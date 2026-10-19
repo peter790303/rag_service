@@ -5,7 +5,6 @@ import { In } from 'typeorm'
 import type { Repository } from 'typeorm'
 
 import { ChunkRepository as ChunkRepositoryContract } from '../../../Application/Chunks/Contracts/chunk.repository.ts'
-import { LexicalRankingUnavailableException } from '../../../Application/Chunks/Exceptions/lexical-ranking-unavailable.exception.ts'
 import type {
   ChunkVectorSimilarityQueryObject,
   ChunkLexicalSearchQueryObject,
@@ -14,11 +13,12 @@ import type {
   ChunkRetrievalCandidatesQueryObject,
   ChunkIndexOrdinalsQueryObject,
 } from '../../../Application/Chunks/QueryObjects/chunk.query-object.ts'
-import type { SaveChunksQueryObject } from '../../../Application/Chunks/QueryObjects/save-chunks.query-object.ts'
+import type { InsertChunksQueryObject } from '../../../Application/Chunks/QueryObjects/insert-chunks.query-object.ts'
 import type { Chunk } from '../../../Domain/Chunk/chunk.ts'
 import { RETRIEVAL_READONLY_DATA_SOURCE } from '../../Providers/retrieval-readonly-data-source.options.ts'
+import { ChunkInsertAdapter } from '../Adapters/chunk-insert.adapter.ts'
 import { ChunkSearchResultAdapter } from '../Adapters/chunk-search-result.adapter.ts'
-import type { ChunkSemanticQueryRowDto } from '../Adapters/chunk-search-result.adapter.ts'
+import type { ChunkLexicalQueryRowDTO, ChunkSemanticQueryRowDTO } from '../Adapters/chunk-search-result.adapter.ts'
 import { LexicalSearchQueryAdapter } from '../Adapters/lexical-search-query.adapter.ts'
 import { ReadTransactionDataSourceMismatchException } from '../Exceptions/read-transaction-data-source-mismatch.exception.ts'
 import { ReadTransactionNotActiveException } from '../Exceptions/read-transaction-not-active.exception.ts'
@@ -42,15 +42,11 @@ export class ChunkRepository extends ChunkRepositoryContract {
     return this.persistenceTransaction.manager.getRepository(ChunkModel)
   }
 
-  async saveChunks(saveChunksQO: SaveChunksQueryObject): Promise<void> {
-    if (!saveChunksQO.chunks.length) return
+  async insertChunks(insertChunksQO: InsertChunksQueryObject): Promise<void> {
+    if (!insertChunksQO.chunks.length) return
 
-    await this.chunkModelRepository.save(
-      saveChunksQO.chunks.map((chunk) => ({
-        ...chunk,
-        searchVector: this.lexicalSearchQueryAdapter.format(chunk.content).searchText,
-      })),
-    )
+    const chunkInsertPayloads = ChunkInsertAdapter.toInsertPayloads(insertChunksQO)
+    await this.chunkModelRepository.insert(chunkInsertPayloads)
   }
 
   async findByDocumentIndexId(chunkIndexQO: ChunkIndexQueryObject): Promise<Chunk[]> {
@@ -119,7 +115,39 @@ export class ChunkRepository extends ChunkRepositoryContract {
 
     if (!lexicalQuery.terms.length) return []
 
-    throw new LexicalRankingUnavailableException()
+    const manager = this.persistenceTransaction.manager
+
+    if (manager.connection !== this.retrievalDataSource) {
+      throw new ReadTransactionDataSourceMismatchException()
+    }
+
+    if (!manager.queryRunner?.isTransactionActive) {
+      throw new ReadTransactionNotActiveException()
+    }
+
+    const chunkMetadata = this.chunkModelRepository.metadata
+    const escapedTableName = this.retrievalDataSource.driver.escape(chunkMetadata.tableName)
+    const tablePath = chunkMetadata.schema
+      ? `${this.retrievalDataSource.driver.escape(chunkMetadata.schema)}.${escapedTableName}`
+      : escapedTableName
+    // User-authorized SQL exception: RAG Hybrid lexical matching and relevance ranking only.
+    // TypeORM's native find API cannot express PostgreSQL matching, dynamic ts_rank ordering, and DB limit together.
+    // Keep scope, rank, tie-break, and TopK in this query: [exception](/Users/xiang/Documents/Worker/BackEnd/Rag-Service/CODING_STANDARDS.md#rag-hybrid-全文匹配與相關度排名).
+    const lexicalCandidateChunks = await manager.query<ChunkLexicalQueryRowDTO[]>(
+      `SELECT id, document_index_id AS "documentIndexId", ordinal,
+        heading_path AS "headingPath", content, token_count AS "tokenCount",
+        embedding, search_vector AS "searchVector", block_start AS "blockStart", block_end AS "blockEnd",
+        created_at AS "createdAt",
+        ts_rank(search_vector, plainto_tsquery('simple', $1)) AS "lexicalScore"
+      FROM ${tablePath}
+      WHERE document_index_id = ANY($2::uuid[])
+        AND search_vector @@ plainto_tsquery('simple', $1)
+      ORDER BY "lexicalScore" DESC, id ASC
+      LIMIT $3`,
+      [lexicalQuery.searchText, chunkLexicalSearchQO.documentIndexIds, chunkLexicalSearchQO.limit],
+    )
+
+    return ChunkSearchResultAdapter.toLexicallyMatchedChunks(lexicalCandidateChunks, chunkLexicalSearchQO.queryText)
   }
 
   async findByDocumentIndexIdsOrderByVectorCosineDistanceAscAndIdAsc(
@@ -149,8 +177,8 @@ export class ChunkRepository extends ChunkRepositoryContract {
       : escapedTableName
     // ORM 例外：僅限向量相似度查詢。已安裝 TypeORM 原生 API 無法完整表達
     // 動態向量距離投影、排序與資料庫端 limit；具備等效原生 API 並驗證後即移除 SQL。
-    // 範圍與退出條件：[向量查詢例外](../../../../../../Documents/Worker/BackEnd/Rag-Service/CODING_STANDARDS.md#向量查詢例外)。
-    const semanticCandidateChunks = await manager.query<ChunkSemanticQueryRowDto[]>(
+    // 範圍與退出條件：[向量查詢例外](../../../../../../Documents/Worker/BackEnd/Rag-Service/CODING_STANDARDS.md#向量相似度)。
+    const semanticCandidateChunks = await manager.query<ChunkSemanticQueryRowDTO[]>(
       `SELECT id, document_index_id AS "documentIndexId", ordinal,
         heading_path AS "headingPath", content, token_count AS "tokenCount",
         embedding, search_vector AS "searchVector", block_start AS "blockStart", block_end AS "blockEnd",
@@ -161,7 +189,7 @@ export class ChunkRepository extends ChunkRepositoryContract {
       ORDER BY "candidateDistance" ASC, id ASC
       LIMIT $3`,
       [
-        JSON.stringify(chunkVectorSimilarityQO.queryVector),
+        ChunkSearchResultAdapter.toVectorParameter(chunkVectorSimilarityQO.queryVector),
         chunkVectorSimilarityQO.documentIndexIds,
         chunkVectorSimilarityQO.limit,
       ],

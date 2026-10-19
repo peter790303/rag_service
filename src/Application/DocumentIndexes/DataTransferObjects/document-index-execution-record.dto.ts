@@ -1,6 +1,6 @@
 import type { DocumentIndexExecutionStatus } from '../Helpers/document-index-execution-lifecycle.helper.ts'
 
-export type DocumentIndexExecutionRecordDto = {
+export type DocumentIndexExecutionRecordDTO = {
   id: string
   knowledgeBaseId: string
   documentId: string

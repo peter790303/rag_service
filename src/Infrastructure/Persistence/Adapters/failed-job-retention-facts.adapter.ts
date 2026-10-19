@@ -1,11 +1,11 @@
-import type { ExpiredDocumentIndexFailureDto } from '../../../Application/DocumentIndexes/DataTransferObjects/expired-document-index-failure.dto.ts'
+import type { ExpiredDocumentIndexFailureDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/expired-document-index-failure.dto.ts'
 import type { FailedJobModel } from '../Models/failed-job.model.ts'
 
 type FailedJobRetentionProjection = Pick<FailedJobModel, 'id' | 'documentId' | 'failedAt'>
 
 /** Projects the failed-job columns required by the retention port. */
 export class FailedJobRetentionFactsAdapter {
-  static toGarbageFailedJobCandidate(failedJobModel: FailedJobRetentionProjection): ExpiredDocumentIndexFailureDto {
+  static toGarbageFailedJobCandidate(failedJobModel: FailedJobRetentionProjection): ExpiredDocumentIndexFailureDTO {
     return {
       failedJobId: failedJobModel.id,
       documentId: failedJobModel.documentId,
@@ -15,13 +15,13 @@ export class FailedJobRetentionFactsAdapter {
 
   static toGarbageFailedJobCandidates(
     failedJobModels: readonly FailedJobRetentionProjection[],
-  ): ExpiredDocumentIndexFailureDto[] {
+  ): ExpiredDocumentIndexFailureDTO[] {
     return failedJobModels.map((failedJobModel) => this.toGarbageFailedJobCandidate(failedJobModel))
   }
 
   static toNullableGarbageFailedJobCandidate(
     failedJobModel: FailedJobRetentionProjection | null,
-  ): ExpiredDocumentIndexFailureDto | null {
+  ): ExpiredDocumentIndexFailureDTO | null {
     if (failedJobModel === null) return null
 
     return this.toGarbageFailedJobCandidate(failedJobModel)

@@ -1,4 +1,4 @@
-export type HybridRetrieveDto = {
+export type HybridRetrieveDTO = {
   projectId: string
   queryText: string
   queryVector?: number[]

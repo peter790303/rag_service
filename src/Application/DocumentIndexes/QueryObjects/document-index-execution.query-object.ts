@@ -1,4 +1,4 @@
-import type { DocumentIndexExecutionVerificationDto } from '../DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../DataTransferObjects/document-index-execution-verification.dto.ts'
 import type { DocumentIndexExecutionStatus } from '../Helpers/document-index-execution-lifecycle.helper.ts'
 
 export type DocumentIndexExecutionDocumentQueryObject = {
@@ -18,7 +18,7 @@ export type DocumentIndexExecutionGenerationQueryObject = {
   readonly generation: string
 }
 
-export type DocumentIndexExecutionMembershipQueryObject = {
+export type DocumentIndexExecutionKnowledgeBaseDocumentQueryObject = {
   readonly knowledgeBaseId: string
   readonly documentId: string
 }
@@ -28,7 +28,7 @@ export type DocumentIndexExecutionsForIndexQueryObject = {
   readonly lock?: boolean
 }
 
-export type DocumentIndexExecutionsForMembershipQueryObject = {
+export type DocumentIndexExecutionsForKnowledgeBaseDocumentQueryObject = {
   readonly knowledgeBaseId: string
   readonly documentId: string
   readonly lock?: boolean
@@ -80,6 +80,7 @@ export type RunningDocumentIndexExecutionSiblingsQueryObject = {
 }
 
 interface NewDocumentIndexExecutionFields {
+  readonly id: string
   readonly knowledgeBaseId: string
   readonly documentId: string
   readonly documentIndexId: string
@@ -101,7 +102,7 @@ export type EnqueueDocumentIndexingRetryQueryObject = NewDocumentIndexExecutionF
 
 export type EnqueueDocumentIndexExecutionQueryObject = NewDocumentIndexExecutionFields
 
-export interface SaveDocumentIndexExecutionQueryObject extends NewDocumentIndexExecutionFields {
+export interface UpdateDocumentIndexExecutionQueryObject extends NewDocumentIndexExecutionFields {
   readonly id: string
   readonly createdAt: Date
   readonly updatedAt: Date
@@ -117,7 +118,7 @@ export interface DocumentIndexExecutionClaimFields {
   readonly reservedAt: Date
   readonly leaseToken: string
   readonly leaseExpiresAt: Date
-  readonly executionVerification: DocumentIndexExecutionVerificationDto
+  readonly executionVerification: DocumentIndexExecutionVerificationDTO
 }
 
 export interface DocumentIndexExecutionRetryFields {
@@ -145,5 +146,5 @@ export interface RenewDocumentIndexExecutionLeaseQueryObject {
   readonly jobId: string
   readonly reservedAt: Date
   readonly leaseExpiresAt: Date
-  readonly executionVerification: DocumentIndexExecutionVerificationDto
+  readonly executionVerification: DocumentIndexExecutionVerificationDTO
 }

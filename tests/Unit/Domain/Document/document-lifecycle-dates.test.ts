@@ -8,7 +8,7 @@ import { DateTime } from '../../../../src/Domain/Document/ValueObjects/date-time
 import { DocumentIndex } from '../../../../src/Domain/DocumentIndex/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { DocumentRevision } from '../../../../src/Domain/DocumentRevision/document-revision.ts'
-import { Membership } from '../../../../src/Domain/Membership/membership.ts'
+import { KnowledgeBaseDocument } from '../../../../src/Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
 
 const timestamp = new DateTime(new Date('2026-10-16T20:34:56.789Z'), { timeZone: 'Asia/Taipei' })
 
@@ -44,8 +44,8 @@ function createIndex(): DocumentIndex {
   })
 }
 
-function createMembership(): Membership {
-  return new Membership({
+function createKnowledgeBaseDocument(): KnowledgeBaseDocument {
+  return new KnowledgeBaseDocument({
     knowledgeBaseId: 'knowledge-base-1',
     documentId: 'document-1',
     requestedGeneration: '0',
@@ -59,7 +59,7 @@ function createMembership(): Membership {
 test('all nine lifecycle fields hold the same date value type and retain explicit display options', () => {
   const document = createDocument()
   const index = createIndex()
-  const membership = createMembership()
+  const knowledgeBaseDocument = createKnowledgeBaseDocument()
   const revision = new DocumentRevision({
     id: 'revision-1',
     documentId: 'document-1',
@@ -91,7 +91,7 @@ test('all nine lifecycle fields hold the same date value type and retain explici
     index.readyAt,
     index.unreferencedSince,
     chunk.createdAt,
-    membership.updatedAt,
+    knowledgeBaseDocument.updatedAt,
   ]
 
   dates.forEach((date) => {
@@ -101,13 +101,13 @@ test('all nine lifecycle fields hold the same date value type and retain explici
   })
 })
 
-test('index and membership transitions accept immutable date values without changing earlier Entities', () => {
+test('index and knowledgeBaseDocument transitions accept immutable date values without changing earlier Entities', () => {
   const index = createIndex()
-  const membership = createMembership()
+  const knowledgeBaseDocument = createKnowledgeBaseDocument()
   const nextTime = new DateTime(new Date(timestamp.epochMilliseconds + 1))
   const ready = index.markReady(nextTime)
   const retained = ready.markUnreferenced(nextTime)
-  const configured = membership.configure({ isEntry: false }, nextTime)
+  const configured = knowledgeBaseDocument.configure({ isEntry: false }, nextTime)
   const requested = configured.requestIndex({ generation: '1', activeDocumentIndexId: 'index-2' }, nextTime)
   const activated = requested.activateIndex('index-3', nextTime)
   const detached = activated.detachIndex(nextTime)
@@ -119,8 +119,8 @@ test('index and membership transitions accept immutable date values without chan
   assert.equal(index.unreferencedSince?.equals(timestamp), true)
   assert.equal(detached.updatedAt.equals(nextTime), true)
   assert.equal(detached.activeDocumentIndexId, null)
-  assert.equal(membership.updatedAt.equals(timestamp), true)
-  assert.equal(membership.isEntry, true)
+  assert.equal(knowledgeBaseDocument.updatedAt.equals(timestamp), true)
+  assert.equal(knowledgeBaseDocument.isEntry, true)
 })
 
 test('document rejects invalid retention input even when a previous retention time already exists', () => {

@@ -8,6 +8,6 @@ export type DocumentIndexingRetryTarget = {
   sourceType: string
   revisionId: string
   pipelineHash: string
-  membership: { requestedGeneration: string; activeDocumentIndexId: string | null }
+  knowledgeBaseDocument: { requestedGeneration: string; activeDocumentIndexId: string | null }
   activeJobId: null
 }

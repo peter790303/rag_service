@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import type { DocumentIndexingClaimDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
 import { DocumentIndexingDispatchedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-dispatched.event.ts'
 import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Application/Documents/Events/document-garbage-collection-requested.event.ts'
@@ -10,7 +10,7 @@ import { KnowledgeMaintenanceWorker } from '../../../src/Interfaces/Console/Work
 
 const config = { workerPollMs: 5, gcPollMs: 5 } satisfies Pick<KnowledgeServiceConfig, 'workerPollMs' | 'gcPollMs'>
 const createGarbageCollectionListenerFixture = { handle: async () => undefined }
-const createClaimedJobFixture = (): DocumentIndexingClaimDto => ({
+const createClaimedJobFixture = (): DocumentIndexingClaimDTO => ({
   id: 'job',
   knowledgeBaseId: 'knowledge-base',
   documentId: 'document',
@@ -55,7 +55,7 @@ test('does not emit an event for an empty durable queue', async () => {
 })
 
 test('waits for the committed claim before delivering an event and prevents overlapping claims', async () => {
-  const claimResult = createDeferredJobPromise<DocumentIndexingClaimDto>()
+  const claimResult = createDeferredJobPromise<DocumentIndexingClaimDTO>()
   const events: DocumentIndexingDispatchedEvent[] = []
   let claims = 0
   const worker = new KnowledgeMaintenanceWorker(
@@ -188,6 +188,8 @@ test('waits for garbage collection event handling before completing delivery', a
 test('continues polling after rejected background executions', { timeout: 1000 }, async () => {
   let indexExecutions = 0
   let garbageCollections = 0
+  const indexPollingContinued = createDeferredJobPromise<void>()
+  const garbageCollectionContinued = createDeferredJobPromise<void>()
   const worker = new KnowledgeMaintenanceWorker(
     {
       handle: async (event) => {
@@ -195,6 +197,8 @@ test('continues polling after rejected background executions', { timeout: 1000 }
         garbageCollections += 1
 
         if (garbageCollections === 1) throw new Error('database unavailable')
+
+        garbageCollectionContinued.resolve()
 
         return undefined
       },
@@ -205,6 +209,8 @@ test('continues polling after rejected background executions', { timeout: 1000 }
 
         if (indexExecutions === 1) throw new Error('database unavailable')
 
+        indexPollingContinued.resolve()
+
         return createClaimedJobFixture()
       },
     },
@@ -213,9 +219,15 @@ test('continues polling after rejected background executions', { timeout: 1000 }
   )
 
   worker.onModuleInit()
+  const pollingDeadline = setTimeout(() => {
+    indexPollingContinued.resolve()
+    garbageCollectionContinued.resolve()
+  }, 800)
+
   try {
-    await new Promise((resolve) => setTimeout(resolve, 30))
+    await Promise.all([indexPollingContinued.promise, garbageCollectionContinued.promise])
   } finally {
+    clearTimeout(pollingDeadline)
     worker.onModuleDestroy()
   }
 

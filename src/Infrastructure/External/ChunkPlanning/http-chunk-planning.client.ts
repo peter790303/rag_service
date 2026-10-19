@@ -8,15 +8,13 @@ import { ChunkPlanningProvider } from '../../../Application/Chunks/Contracts/chu
 import type { MarkdownChunkPlan } from '../../../Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
 import { ChunkPlanningUnavailableException } from '../../../Application/Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
 
-const EXTERNAL_REQUEST_TIMEOUT_MS = 30_000
-
 @Injectable()
 export class HttpChunkPlanningClient extends ChunkPlanningProvider {
   constructor(
     @Inject(KNOWLEDGE_SERVICE_CONFIG)
     private readonly chunkPlanningConfig: Pick<
       KnowledgeServiceConfig,
-      'chunkingModel' | 'chunkingApiUrl' | 'chunkingApiKey'
+      'chunkingModel' | 'chunkingApiUrl' | 'chunkingApiKey' | 'externalRequestTimeoutMs'
     >,
   ) {
     super()
@@ -26,19 +24,19 @@ export class HttpChunkPlanningClient extends ChunkPlanningProvider {
     return this.chunkPlanningConfig.chunkingModel
   }
 
-  async plan(source: string): Promise<MarkdownChunkPlan> {
+  async plan(source: string, signal?: AbortSignal): Promise<MarkdownChunkPlan> {
     const sourceScan = MarkdownSourceAdapter.scan(source)
 
     if (!sourceScan.blocks.length) return { chunks: [], relations: [] }
 
     const requestBody = createChunkPlanningRequestBody(this.modelId, sourceScan.blocks)
-    const response = await this.postPlanRequest(requestBody)
+    const response = await this.postPlanRequest(requestBody, signal)
     const responseBody = await this.readResponseBody(response)
 
     return mapChunkPlanningResponse(responseBody, source, sourceScan)
   }
 
-  private async postPlanRequest(body: string): Promise<Response> {
+  private async postPlanRequest(body: string, signal?: AbortSignal): Promise<Response> {
     let response: Response
 
     try {
@@ -51,7 +49,9 @@ export class HttpChunkPlanningClient extends ChunkPlanningProvider {
             : {}),
         },
         body,
-        signal: AbortSignal.timeout(EXTERNAL_REQUEST_TIMEOUT_MS),
+        signal: signal
+          ? AbortSignal.any([AbortSignal.timeout(this.chunkPlanningConfig.externalRequestTimeoutMs), signal])
+          : AbortSignal.timeout(this.chunkPlanningConfig.externalRequestTimeoutMs),
       })
     } catch (cause) {
       throw new ChunkPlanningUnavailableException({ cause })

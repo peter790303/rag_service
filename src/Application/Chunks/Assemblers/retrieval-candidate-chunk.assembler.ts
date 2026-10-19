@@ -1,7 +1,7 @@
 import type { Chunk } from '../../../Domain/Chunk/chunk.ts'
-import type { FindLexicalChunkCandidatesDto } from '../DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
-import type { FindRetrievalChunkCandidatesDto } from '../DataTransferObjects/find-retrieval-chunk-candidates.dto.ts'
-import type { RetrievalCandidateChunkMatchDto } from '../DataTransferObjects/retrieval-candidate-chunk-match.dto.ts'
+import type { FindLexicalChunkCandidatesDTO } from '../DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
+import type { FindRetrievalChunkCandidatesDTO } from '../DataTransferObjects/find-retrieval-chunk-candidates.dto.ts'
+import type { RetrievalCandidateChunkMatchDTO } from '../DataTransferObjects/retrieval-candidate-chunk-match.dto.ts'
 import type {
   ChunkLexicalSearchQueryObject,
   ChunkVectorSimilarityQueryObject,
@@ -12,7 +12,7 @@ export class RetrievalCandidateChunkAssembler {
     selectedCandidateChunks: readonly Chunk[],
     semanticCandidateChunks: readonly Chunk[],
     lexicalCandidateChunks: readonly Chunk[],
-  ): RetrievalCandidateChunkMatchDto[] {
+  ): RetrievalCandidateChunkMatchDTO[] {
     const semanticRanksByChunkId = semanticCandidateChunks.reduce(
       (semanticRanksByChunkId, semanticCandidateChunk, offset) => {
         if (!semanticRanksByChunkId.has(semanticCandidateChunk.id)) {
@@ -34,7 +34,7 @@ export class RetrievalCandidateChunkAssembler {
 
         return lexicalMatchesByChunkId
       },
-      new Map<string, NonNullable<RetrievalCandidateChunkMatchDto['lexicalMatch']>>(),
+      new Map<string, NonNullable<RetrievalCandidateChunkMatchDTO['lexicalMatch']>>(),
     )
 
     return selectedCandidateChunks.map((selectedCandidateChunk) => ({
@@ -45,8 +45,8 @@ export class RetrievalCandidateChunkAssembler {
   }
 
   static toFindLexicalChunkCandidatesDTO(
-    findRetrievalChunkCandidatesDTO: FindRetrievalChunkCandidatesDto,
-  ): FindLexicalChunkCandidatesDto {
+    findRetrievalChunkCandidatesDTO: FindRetrievalChunkCandidatesDTO,
+  ): FindLexicalChunkCandidatesDTO {
     return {
       documentIndexIds: findRetrievalChunkCandidatesDTO.documentIndexIds,
       queryText: findRetrievalChunkCandidatesDTO.queryText,
@@ -55,7 +55,7 @@ export class RetrievalCandidateChunkAssembler {
   }
 
   static toChunkLexicalSearchQueryObject(
-    findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDto,
+    findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDTO,
   ): ChunkLexicalSearchQueryObject {
     return {
       documentIndexIds: findLexicalChunkCandidatesDTO.documentIndexIds,
@@ -65,7 +65,7 @@ export class RetrievalCandidateChunkAssembler {
   }
 
   static toChunkVectorSimilarityQueryObject(
-    findRetrievalChunkCandidatesDTO: FindRetrievalChunkCandidatesDto,
+    findRetrievalChunkCandidatesDTO: FindRetrievalChunkCandidatesDTO,
   ): ChunkVectorSimilarityQueryObject {
     return {
       documentIndexIds: findRetrievalChunkCandidatesDTO.documentIndexIds,

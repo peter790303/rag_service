@@ -3,8 +3,8 @@ import type { Repository } from 'typeorm'
 import { In, IsNull, LessThanOrEqual, Not, type FindOptionsWhere } from 'typeorm'
 
 import { DocumentIndexExecutionQueue } from '../../../Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
-import type { DocumentIndexExecutionFactsDto } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-facts.dto.ts'
-import type { DocumentIndexExecutionRecordDto } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionFactsDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-facts.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
 import type {
   ExpiredDocumentIndexExecutionQueryObject,
@@ -16,14 +16,14 @@ import type {
   RunningDocumentIndexExecutionSiblingsQueryObject,
   EnqueueDocumentIndexingRetryQueryObject,
   EnqueueDocumentIndexExecutionQueryObject,
-  SaveDocumentIndexExecutionQueryObject,
+  UpdateDocumentIndexExecutionQueryObject,
   RemoveDocumentIndexExecutionsQueryObject,
   RenewDocumentIndexExecutionLeaseQueryObject,
   RescheduleDocumentIndexExecutionQueryObject,
 } from '../../../Application/DocumentIndexes/QueryObjects/document-index-execution.query-object.ts'
 import type {
   DocumentIndexExecutionDocumentQueryObject,
-  DocumentIndexExecutionMembershipQueryObject,
+  DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
   DocumentIndexExecutionGenerationQueryObject,
   DocumentIndexExecutionIdQueryObject,
   DocumentIndexExecutionInProjectQueryObject,
@@ -31,7 +31,7 @@ import type {
   DocumentIndexExecutionRetrySourceQueryObject,
   DocumentIndexExecutionTargetQueryObject,
   DocumentIndexExecutionsForIndexQueryObject,
-  DocumentIndexExecutionsForMembershipQueryObject,
+  DocumentIndexExecutionsForKnowledgeBaseDocumentQueryObject,
 } from '../../../Application/DocumentIndexes/QueryObjects/document-index-execution.query-object.ts'
 import { JobRecordAdapter } from '../Adapters/job-record.adapter.ts'
 import { JobWriteAdapter } from '../Adapters/job-write.adapter.ts'
@@ -57,7 +57,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
 
   async findByKnowledgeBaseIdAndDocumentIdAndDocumentIndexIdAndGeneration(
     jobTargetQO: DocumentIndexExecutionTargetQueryObject,
-  ): Promise<DocumentIndexExecutionRecordDto | null> {
+  ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { knowledgeBaseId, documentId, documentIndexId, generation } = jobTargetQO
 
     return JobRecordAdapter.toNullableRecord(
@@ -72,7 +72,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
 
   async findByKnowledgeBaseIdAndDocumentIdAndGeneration(
     jobGenerationQO: DocumentIndexExecutionGenerationQueryObject,
-  ): Promise<DocumentIndexExecutionRecordDto | null> {
+  ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { knowledgeBaseId, documentId, generation } = jobGenerationQO
 
     return JobRecordAdapter.toNullableRecord(
@@ -80,7 +80,9 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async lockMembershipExecution(jobDocumentTargetQO: DocumentIndexExecutionMembershipQueryObject) {
+  async lockKnowledgeBaseDocumentExecution(
+    jobDocumentTargetQO: DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
+  ) {
     const { knowledgeBaseId, documentId } = jobDocumentTargetQO
 
     return JobRecordAdapter.toNullableRecord(
@@ -91,18 +93,20 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async findMembershipExecution(jobDocumentTargetQO: DocumentIndexExecutionMembershipQueryObject) {
+  async findKnowledgeBaseDocumentExecution(
+    jobDocumentTargetQO: DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
+  ) {
     const { knowledgeBaseId, documentId } = jobDocumentTargetQO
 
     return JobRecordAdapter.toNullableRecord(await this.jobModelRepository.findOneBy({ knowledgeBaseId, documentId }))
   }
 
-  async enqueueRetry(createRetryJobQO: EnqueueDocumentIndexingRetryQueryObject) {
-    return JobRecordAdapter.toRecord(await this.jobModelRepository.save(structuredClone(createRetryJobQO)))
+  async enqueueRetry(createRetryJobQO: EnqueueDocumentIndexingRetryQueryObject): Promise<void> {
+    await this.jobModelRepository.insert(JobWriteAdapter.toJobPersistence(createRetryJobQO))
   }
 
   async removeByKnowledgeBaseIdAndDocumentId(
-    jobDocumentTargetQO: DocumentIndexExecutionMembershipQueryObject,
+    jobDocumentTargetQO: DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
   ): Promise<void> {
     const { knowledgeBaseId, documentId } = jobDocumentTargetQO
 
@@ -126,7 +130,9 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     await this.jobModelRepository.delete({ id: In(removeJobsQO.jobIds) })
   }
 
-  async findMembershipExecutions(jobsForTargetQO: DocumentIndexExecutionsForMembershipQueryObject) {
+  async findKnowledgeBaseDocumentExecutions(
+    jobsForTargetQO: DocumentIndexExecutionsForKnowledgeBaseDocumentQueryObject,
+  ) {
     const { knowledgeBaseId, documentId, lock } = jobsForTargetQO
 
     return JobRecordAdapter.toRecords(
@@ -143,8 +149,8 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     return JobRecordAdapter.toNullableRecord(await this.jobModelRepository.findOneBy({ documentIndexId }))
   }
 
-  async enqueue(saveQueuedJobQO: EnqueueDocumentIndexExecutionQueryObject): Promise<DocumentIndexExecutionRecordDto> {
-    return JobRecordAdapter.toRecord(await this.jobModelRepository.save(structuredClone(saveQueuedJobQO)))
+  async enqueue(saveQueuedJobQO: EnqueueDocumentIndexExecutionQueryObject): Promise<void> {
+    await this.jobModelRepository.insert(JobWriteAdapter.toJobPersistence(saveQueuedJobQO))
   }
 
   async releaseExecution(jobIdQO: DocumentIndexExecutionIdQueryObject): Promise<void> {
@@ -153,7 +159,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     await this.jobModelRepository.delete({ id: jobId })
   }
 
-  async lockExecution(jobIdQO: DocumentIndexExecutionIdQueryObject): Promise<DocumentIndexExecutionRecordDto | null> {
+  async lockExecution(jobIdQO: DocumentIndexExecutionIdQueryObject): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { jobId } = jobIdQO
 
     return JobRecordAdapter.toNullableRecord(
@@ -164,13 +170,13 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async save(saveJobQO: SaveDocumentIndexExecutionQueryObject): Promise<DocumentIndexExecutionRecordDto> {
-    return JobRecordAdapter.toRecord(await this.jobModelRepository.save(structuredClone(saveJobQO)))
+  async update(updateJobQO: UpdateDocumentIndexExecutionQueryObject): Promise<void> {
+    await this.jobModelRepository.update({ id: updateJobQO.id }, JobWriteAdapter.toJobPersistence(updateJobQO))
   }
 
   async findExecutionInProject(
     jobInProjectQO: DocumentIndexExecutionInProjectQueryObject,
-  ): Promise<DocumentIndexExecutionRecordDto | null> {
+  ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { projectId, id } = jobInProjectQO
 
     return JobRecordAdapter.toNullableRecord(
@@ -211,7 +217,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
 
   async findExpiredExecutions(
     expiredJobsQO: ExpiredDocumentIndexExecutionsQueryObject,
-  ): Promise<DocumentIndexExecutionRecordDto[]> {
+  ): Promise<DocumentIndexExecutionRecordDTO[]> {
     const { now } = expiredJobsQO
 
     return JobRecordAdapter.toRecords(
@@ -227,7 +233,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
 
   async lockExpiredExecution(
     expiredJobQO: ExpiredDocumentIndexExecutionQueryObject,
-  ): Promise<DocumentIndexExecutionRecordDto | null> {
+  ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { jobId, now } = expiredJobQO
 
     return JobRecordAdapter.toNullableRecord(
@@ -252,7 +258,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
 
   async findOldestAvailableExecution(
     queuedJobSnapshotQO: OldestAvailableDocumentIndexExecutionQueryObject,
-  ): Promise<DocumentIndexExecutionRecordDto | null> {
+  ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { availableAt, excludedDocumentIndexIds } = queuedJobSnapshotQO
 
     const where: FindOptionsWhere<JobModel> = {
@@ -271,7 +277,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
 
   async lockAvailableExecution(
     queuedJobQO: AvailableDocumentIndexExecutionQueryObject,
-  ): Promise<DocumentIndexExecutionRecordDto | null> {
+  ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { jobId, availableAt } = queuedJobQO
 
     return JobRecordAdapter.toNullableRecord(
@@ -284,15 +290,15 @@ export class JobRepository extends DocumentIndexExecutionQueue {
 
   async findSiblingExecutions(
     runningJobSiblingsQO: RunningDocumentIndexExecutionSiblingsQueryObject,
-  ): Promise<DocumentIndexExecutionFactsDto[]> {
+  ): Promise<DocumentIndexExecutionFactsDTO[]> {
     const { documentIndexId, jobId } = runningJobSiblingsQO
 
-    const executionFacts: DocumentIndexExecutionFactsDto[] = await this.jobModelRepository.find({
+    const executionFacts: Pick<JobModel, keyof DocumentIndexExecutionFactsDTO>[] = await this.jobModelRepository.find({
       where: { documentIndexId, status: DOCUMENT_INDEX_EXECUTION_STATUS.RUNNING, id: Not(jobId) },
       select: { id: true, status: true, attempts: true, executionVerification: true },
     })
 
-    return executionFacts.map((facts) => JobRecordAdapter.toExecutionFacts(facts))
+    return executionFacts.map((executionFact) => JobRecordAdapter.toExecutionFacts(executionFact))
   }
 
   async transitionExecution(updateJobStatusQO: TransitionDocumentIndexExecutionQueryObject): Promise<boolean> {

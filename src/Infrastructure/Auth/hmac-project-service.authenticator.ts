@@ -4,7 +4,7 @@ import { Inject, Injectable } from '@nestjs/common'
 
 import { KNOWLEDGE_SERVICE_CONFIG, type KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
 import { ServiceAuthenticator } from '../../Application/KnowledgeBases/Contracts/service-authenticator.ts'
-import { type ServiceAuthCredentialsDto } from '../../Application/KnowledgeBases/DataTransferObjects/service-auth-credentials.dto.ts'
+import { type ServiceAuthCredentialsDTO } from '../../Application/KnowledgeBases/DataTransferObjects/service-auth-credentials.dto.ts'
 
 const MAX_CLOCK_SKEW_MS = 300_000
 
@@ -14,7 +14,7 @@ export class HmacProjectServiceAuthenticator extends ServiceAuthenticator {
     super()
   }
 
-  authenticate(credentials: ServiceAuthCredentialsDto): boolean {
+  authenticate(credentials: ServiceAuthCredentialsDTO): boolean {
     const timestamp = Number(credentials.issuedAt)
 
     if (

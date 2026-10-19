@@ -63,12 +63,11 @@ const mapExternalStarts = (starts: unknown[], sourceBlocks: readonly MarkdownSou
 }
 
 /** Copies exact source spans and link evidence for validated model block positions. */
-export const mapChunkPlanningResponse = (
-  responseBody: unknown,
+export const mapChunkPlanningContent = (
+  content: string,
   source: string,
   sourceScan: MarkdownSourceScan,
 ): MarkdownChunkPlan => {
-  const content = readCompletionContent(responseBody)
   const plannedBoundaries = parsePlanningContent(content)
   const externalStarts = readExternalStarts(plannedBoundaries)
 
@@ -79,3 +78,9 @@ export const mapChunkPlanningResponse = (
     relations: MarkdownDocumentLinksAdapter.toRelations(sourceScan.relationBlocks),
   }
 }
+
+export const mapChunkPlanningResponse = (
+  responseBody: unknown,
+  source: string,
+  sourceScan: MarkdownSourceScan,
+): MarkdownChunkPlan => mapChunkPlanningContent(readCompletionContent(responseBody), source, sourceScan)

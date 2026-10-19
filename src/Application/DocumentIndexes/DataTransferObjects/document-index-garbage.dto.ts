@@ -1,15 +1,10 @@
-import type { DocumentIndexRecordDto } from './document-index-record.dto.ts'
-import type { ExpiredDocumentIndexFailureDto } from './expired-document-index-failure.dto.ts'
-import type { DocumentGarbageCollectionScopeDto } from '../../Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
+import type { DocumentIndex } from '../../../Domain/DocumentIndex/document-index.ts'
+import type { DocumentGarbageCollectionScopeDTO } from '../../Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
 
-export type DocumentIndexGarbagePlanDto = {
-  failedJobs: readonly ExpiredDocumentIndexFailureDto[]
-  indexes: readonly DocumentIndexRecordDto[]
+export type CollectDocumentIndexGarbageDTO = {
+  scope: DocumentGarbageCollectionScopeDTO
+  candidates: readonly DocumentIndex[]
 }
-export type CollectDocumentIndexGarbageDto = {
-  scope: DocumentGarbageCollectionScopeDto
-  plan: DocumentIndexGarbagePlanDto
-}
-export type DocumentIndexRetentionDto = { documentId: string } | { revisionId: string }
-export type StartDocumentIndexPruningRetentionDto = { documentIndexIds: readonly string[]; now: Date }
-export type PlanDocumentIndexGarbageDto = { retentionCutoff: Date }
+export type DocumentIndexRetentionDTO = { documentId: string } | { revisionId: string }
+export type StartDocumentIndexPruningRetentionDTO = { documentIndexIds: readonly string[]; now: Date }
+export type PlanDocumentIndexGarbageDTO = { retentionCutoff: Date }

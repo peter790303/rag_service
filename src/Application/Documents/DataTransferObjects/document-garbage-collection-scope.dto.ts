@@ -1,9 +1,4 @@
-export type DocumentGarbageCollectionScopeDto = {
+export type DocumentGarbageCollectionScopeDTO = {
   retentionCutoff: Date
   lockedDocumentIds: readonly string[]
-}
-
-export type DocumentGarbageCollectionResultDto = {
-  deleted: number
-  changedDocumentIds: readonly string[]
 }

@@ -13,7 +13,7 @@ import { HybridKnowledgeRetrievalResource } from '../../../src/Interfaces/Http/R
 test('retrieve rejects supplied query vectors without a matching embedding model identity', async () => {
   const snapshot = {
     ...emptyRetrievalSnapshotFixture,
-    memberships: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
+    knowledgeBaseDocuments: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
     indexes: [
       {
         id: 'index',
@@ -51,7 +51,7 @@ test('retrieve rejects supplied query vectors without a matching embedding model
 test('retrieve accepts a supplied vector when its model matches the active index', async () => {
   const snapshot = {
     ...emptyRetrievalSnapshotFixture,
-    memberships: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
+    knowledgeBaseDocuments: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
     indexes: [
       {
         id: 'index',
@@ -84,7 +84,7 @@ test('retrieve accepts a supplied vector when its model matches the active index
 test('retrieve rejects active indexes created with a different lexical profile', async () => {
   const snapshot = {
     ...emptyRetrievalSnapshotFixture,
-    memberships: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
+    knowledgeBaseDocuments: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
     indexes: [
       {
         id: 'index',
@@ -113,7 +113,7 @@ test('retrieve rejects active indexes created with a different lexical profile',
 test('retrieve rejects query vectors whose dimensions differ from the active index', async () => {
   const snapshot = {
     ...emptyRetrievalSnapshotFixture,
-    memberships: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
+    knowledgeBaseDocuments: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
     indexes: [
       {
         id: 'index',
@@ -146,7 +146,7 @@ test('document-scoped retrieval keeps candidates scoped while including project-
   ]
   const snapshot = {
     knowledgeBaseId: 'kb',
-    memberships: documentRecords.map((documentRecord) => ({
+    knowledgeBaseDocuments: documentRecords.map((documentRecord) => ({
       documentId: documentRecord.id,
       activeDocumentIndexId: `${documentRecord.id}-index`,
       isEntry: false,
@@ -212,7 +212,7 @@ test('document-scoped retrieval keeps candidates scoped while including project-
 test('includeNonEffective retrieves ready non-active indexes and marks their matches ineffective', async () => {
   const snapshot = {
     knowledgeBaseId: 'kb',
-    memberships: [
+    knowledgeBaseDocuments: [
       { documentId: 'doc', activeDocumentIndexId: 'active-index', isEntry: false, alwaysIncludeFullContent: false },
     ],
     documents: [{ id: 'doc', sourcePath: 'guide.md', sourceType: 'repository' }],
@@ -270,7 +270,7 @@ test('includeNonEffective retrieves ready non-active indexes and marks their mat
 test('required document retrieval does not append historical index chunks as mandatory context', async () => {
   const snapshot = {
     knowledgeBaseId: 'kb',
-    memberships: [
+    knowledgeBaseDocuments: [
       {
         documentId: 'doc',
         activeDocumentIndexId: 'active-index',

@@ -2,23 +2,27 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { test } from 'node:test'
 
+import type { DataSource } from 'typeorm'
+
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
 import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
+import { DocumentIndexExecutionClaimConflictException } from '../../../src/Application/DocumentIndexes/Exceptions/document-index-execution-claim-conflict.exception.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
 import {
   DocumentIndexExecutionLifecycle as RagJobEntity,
   DOCUMENT_INDEX_EXECUTION_STATUS,
 } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
 import { DispatchDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/dispatch-document-indexing.listener.ts'
-import { DocumentIndexChunkReplacementRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-index-chunk-replacement-requested.listener.ts'
 import { DocumentIndexedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexed.listener.ts'
 import { DocumentIndexingFailedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-failed.listener.ts'
+import { AuthorizeDocumentIndexChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/authorize-document-index-chunk-replacement.use-case.ts'
 import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import { ActivateMembershipIndexUseCase } from '../../../src/Application/Memberships/UseCases/activate-membership-index.use-case.ts'
-import { CompleteMembershipIndexingUseCase } from '../../../src/Application/Memberships/UseCases/complete-membership-indexing.use-case.ts'
-import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
+import { ActivateKnowledgeBaseDocumentIndexUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/activate-knowledge-base-document-index.use-case.ts'
+import { CompleteKnowledgeBaseDocumentIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/complete-knowledge-base-document-indexing.use-case.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
+import { GetIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/get-indexing-knowledge-base.use-case.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { LexicalSearchQueryAdapter } from '../../../src/Infrastructure/Persistence/Adapters/lexical-search-query.adapter.ts'
 import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
@@ -27,17 +31,18 @@ import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/M
 import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
 import { FailedJobModel } from '../../../src/Infrastructure/Persistence/Models/failed-job.model.ts'
 import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentMembershipModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document-membership.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
 import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
 import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
+import { DocumentIndexSuccessReceiptRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index-success-receipt.repository.ts'
 import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
 import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
 import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-revision.repository.ts'
 import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
 import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
 import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentMembershipRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document-membership.repository.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
 import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
 import { HybridKnowledgeRetrievalResource } from '../../../src/Interfaces/Http/Resources/hybrid-knowledge-retrieval.resource.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
@@ -52,13 +57,20 @@ const config: KnowledgeServiceConfig = {
   databaseSchema: 'public',
   embeddingModel: 'integration-test-model',
   embeddingDimensions: 384,
+  embeddingTransport: 'http',
+  embeddingRevision: '',
+  embeddingCacheDir: '/unused',
   embeddingApiUrl: 'https://unused.invalid',
+  chunkingTransport: 'http',
+  chunkingCliPath: 'codex',
+  chunkingCliMaxOutputBytes: 4194304,
   chunkingModel: 'integration-test-chunker',
   chunkingApiUrl: 'https://unused.invalid',
   workerPollMs: 1000,
   gcPollMs: 60000,
   gcRetentionMs: 86400000,
   workerLeaseSeconds: 30,
+  externalRequestTimeoutMs: 30000,
   serviceAuthSecret: 'integration-test-secret',
 }
 
@@ -70,7 +82,7 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     const documentModelRepository = dataSource.getRepository(DocumentModel)
     const documentRevisionModelRepository = dataSource.getRepository(DocumentRevisionModel)
     const documentIndexModelRepository = dataSource.getRepository(DocumentIndexModel)
-    const membershipModelRepository = dataSource.getRepository(KnowledgeBaseDocumentMembershipModel)
+    const knowledgeBaseDocumentModelRepository = dataSource.getRepository(KnowledgeBaseDocumentModel)
     const jobModelRepository = dataSource.getRepository(JobModel)
     const testKey = randomUUID()
     const base = await knowledgeBaseModelRepository.save(
@@ -119,8 +131,8 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
         pipelineHash: 'c'.repeat(64),
       }),
     )
-    await membershipModelRepository.save(
-      membershipModelRepository.create({
+    await knowledgeBaseDocumentModelRepository.save(
+      knowledgeBaseDocumentModelRepository.create({
         knowledgeBaseId: base.id,
         documentId: document.id,
         activeDocumentIndexId: null,
@@ -157,9 +169,9 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
         projectName: `claim-active-${testKey}`,
       }),
     ])
-    await membershipModelRepository.save(
+    await knowledgeBaseDocumentModelRepository.save(
       ineligibleKnowledgeBases.map((ineligibleKnowledgeBase) =>
-        membershipModelRepository.create({
+        knowledgeBaseDocumentModelRepository.create({
           knowledgeBaseId: ineligibleKnowledgeBase.id,
           documentId: document.id,
           activeDocumentIndexId: null,
@@ -209,12 +221,12 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       const documentIndexRepository = new DocumentIndexRepository(persistenceTransaction)
       const failedJobRepository = new FailedJobRepository(persistenceTransaction)
       const jobRepository = new JobRepository(persistenceTransaction)
-      const membershipRepository = new KnowledgeBaseDocumentMembershipRepository(persistenceTransaction)
+      const knowledgeBaseDocumentRepository = new KnowledgeBaseDocumentRepository(persistenceTransaction)
 
       return new DocumentIndexPersistenceFixture(
         persistenceTransaction,
         jobRepository,
-        membershipRepository,
+        knowledgeBaseDocumentRepository,
         documentIndexRepository,
         new KnowledgeBaseRepository(persistenceTransaction),
         new DocumentRepository(persistenceTransaction),
@@ -225,18 +237,26 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       )
     }
     const lifecycleStore = createWorker(true)
-    const createClaimNext = () => {
+    const createClaimNext = (failReceiptSave = false) => {
       const store = createWorker()
 
       return new DispatchDocumentIndexingListener(
         store.persistenceTransaction,
         new ReserveDocumentForIndexingUseCase(store.documentRepository),
-        new ReserveMembershipForIndexingUseCase(store.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(store.knowledgeBaseDocumentRepository),
         store.documentIndexRepository,
         store.jobRepository,
         store.failedJobRepository,
         config.workerLeaseSeconds,
-        new ActivateMembershipIndexUseCase(store.membershipRepository),
+        new ActivateKnowledgeBaseDocumentIndexUseCase(store.knowledgeBaseDocumentRepository),
+        new GetIndexingKnowledgeBaseUseCase(store.knowledgeBaseRepository),
+        failReceiptSave
+          ? Object.assign(new DocumentIndexSuccessReceiptRepository(store.persistenceTransaction), {
+              archiveSuccess: async () => {
+                throw new Error('receipt save failed')
+              },
+            })
+          : new DocumentIndexSuccessReceiptRepository(store.persistenceTransaction),
       )
     }
     const claimed = await Promise.all([createClaimNext().handle(), createClaimNext().handle()])
@@ -259,7 +279,7 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       const currentJob = claimed[0]!
       assert.ok(await lifecycleStore.documentRepository.lockByDocumentId({ documentId: currentJob.documentId }))
       assert.ok(
-        await lifecycleStore.membershipRepository.lockByKnowledgeBaseIdAndDocumentId({
+        await lifecycleStore.knowledgeBaseDocumentRepository.lockByKnowledgeBaseIdAndDocumentId({
           knowledgeBaseId: currentJob.knowledgeBaseId,
           documentId: currentJob.documentId,
         }),
@@ -341,10 +361,12 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       new DocumentIndexedListener(
         lifecycleStore.persistenceTransaction,
         new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
-        new CompleteMembershipIndexingUseCase(lifecycleStore.membershipRepository),
+        new CompleteKnowledgeBaseDocumentIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new GetIndexingKnowledgeBaseUseCase(lifecycleStore.knowledgeBaseRepository),
+        new DocumentIndexSuccessReceiptRepository(lifecycleStore.persistenceTransaction),
       ).handle({ jobDelivery: claimed[0]!, completedAt: new Date() }),
       InvalidDocumentIndexExecutionLeaseException,
     )
@@ -352,7 +374,7 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       new DocumentIndexingFailedListener(
         lifecycleStore.persistenceTransaction,
         new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
         lifecycleStore.failedJobRepository,
@@ -382,9 +404,9 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await assert.rejects(
       new ReplaceIndexChunkUseCase(
         lifecycleStore.persistenceTransaction,
-        new DocumentIndexChunkReplacementRequestedListener(
+        new AuthorizeDocumentIndexChunkReplacementUseCase(
           new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-          new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
           lifecycleStore.jobRepository,
           lifecycleStore.documentIndexRepository,
         ),
@@ -406,16 +428,16 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     const vectors = plan.chunks.map((_, ordinal) =>
       Array.from({ length: config.embeddingDimensions }, (_, dimension) => (dimension === ordinal ? 1 : 0)),
     )
-    await membershipModelRepository.update(
+    await knowledgeBaseDocumentModelRepository.update(
       { knowledgeBaseId: base.id, documentId: document.id },
       { requestedGeneration: '2' },
     )
     await assert.rejects(
       new ReplaceIndexChunkUseCase(
         lifecycleStore.persistenceTransaction,
-        new DocumentIndexChunkReplacementRequestedListener(
+        new AuthorizeDocumentIndexChunkReplacementUseCase(
           new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-          new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
           lifecycleStore.jobRepository,
           lifecycleStore.documentIndexRepository,
         ),
@@ -433,10 +455,12 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       new DocumentIndexedListener(
         lifecycleStore.persistenceTransaction,
         new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
-        new CompleteMembershipIndexingUseCase(lifecycleStore.membershipRepository),
+        new CompleteKnowledgeBaseDocumentIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new GetIndexingKnowledgeBaseUseCase(lifecycleStore.knowledgeBaseRepository),
+        new DocumentIndexSuccessReceiptRepository(lifecycleStore.persistenceTransaction),
       ).handle({ jobDelivery: recovered!, completedAt: new Date() }),
       InvalidDocumentIndexExecutionLeaseException,
     )
@@ -444,7 +468,7 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       new DocumentIndexingFailedListener(
         lifecycleStore.persistenceTransaction,
         new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
         lifecycleStore.failedJobRepository,
@@ -461,7 +485,7 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     )
     assert.equal(await dataSource.getRepository(ChunkModel).countBy({ documentIndexId: index.id }), 0)
     assert.equal((await jobModelRepository.findOneByOrFail({ id: job.id })).attempts, 2)
-    await membershipModelRepository.update(
+    await knowledgeBaseDocumentModelRepository.update(
       { knowledgeBaseId: base.id, documentId: document.id },
       { requestedGeneration: '1' },
     )
@@ -478,9 +502,9 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await assert.rejects(
       new ReplaceIndexChunkUseCase(
         lifecycleStore.persistenceTransaction,
-        new DocumentIndexChunkReplacementRequestedListener(
+        new AuthorizeDocumentIndexChunkReplacementUseCase(
           new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-          new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
           lifecycleStore.jobRepository,
           lifecycleStore.documentIndexRepository,
         ),
@@ -498,10 +522,12 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       new DocumentIndexedListener(
         lifecycleStore.persistenceTransaction,
         new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
-        new CompleteMembershipIndexingUseCase(lifecycleStore.membershipRepository),
+        new CompleteKnowledgeBaseDocumentIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new GetIndexingKnowledgeBaseUseCase(lifecycleStore.knowledgeBaseRepository),
+        new DocumentIndexSuccessReceiptRepository(lifecycleStore.persistenceTransaction),
       ).handle({ jobDelivery: recovered!, completedAt: new Date(Date.now() - 2000) }),
       InvalidDocumentIndexExecutionLeaseException,
     )
@@ -509,7 +535,7 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       new DocumentIndexingFailedListener(
         lifecycleStore.persistenceTransaction,
         new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
         lifecycleStore.failedJobRepository,
@@ -539,7 +565,7 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       new DocumentIndexingFailedListener(
         lifecycleStore.persistenceTransaction,
         new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
         failingJobs,
         lifecycleStore.documentIndexRepository,
         lifecycleStore.failedJobRepository,
@@ -566,9 +592,9 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     const planSavedAt = new Date()
     await new ReplaceIndexChunkUseCase(
       lifecycleStore.persistenceTransaction,
-      new DocumentIndexChunkReplacementRequestedListener(
+      new AuthorizeDocumentIndexChunkReplacementUseCase(
         new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
       ),
@@ -583,15 +609,29 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await new DocumentIndexedListener(
       lifecycleStore.persistenceTransaction,
       new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-      new ReserveMembershipForIndexingUseCase(lifecycleStore.membershipRepository),
+      new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
       lifecycleStore.jobRepository,
       lifecycleStore.documentIndexRepository,
-      new CompleteMembershipIndexingUseCase(lifecycleStore.membershipRepository),
+      new CompleteKnowledgeBaseDocumentIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+      new GetIndexingKnowledgeBaseUseCase(lifecycleStore.knowledgeBaseRepository),
+      new DocumentIndexSuccessReceiptRepository(lifecycleStore.persistenceTransaction),
     ).handle({ jobDelivery: recovered!, completedAt: new Date() })
     await jobModelRepository.update(ineligibleJobs[0]!.id, { availableAt: new Date(Date.now() - 1000) })
     await documentIndexModelRepository.update(index.id, {
       unreferencedSince: new Date(Date.now() - config.gcRetentionMs - 1000),
     })
+    await assert.rejects(createClaimNext(true).handle(), { message: 'receipt save failed' })
+    assert.ok(await jobModelRepository.findOneBy({ id: ineligibleJobs[0]!.id }))
+    assert.equal(
+      (
+        await knowledgeBaseDocumentModelRepository.findOneByOrFail({
+          knowledgeBaseId: ineligibleKnowledgeBases[0]!.id,
+          documentId: document.id,
+        })
+      ).activeDocumentIndexId,
+      null,
+      'a receipt failure must roll back shared index activation',
+    )
     assert.equal(await createClaimNext().handle(), null, 'ready shared indexes should activate without rebuilding')
     assert.equal(
       (await documentIndexModelRepository.findOneByOrFail({ id: index.id })).unreferencedSince,
@@ -599,11 +639,28 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       'claiming a ready shared index must clear its stale unreferenced marker',
     )
     assert.equal(await jobModelRepository.findOneBy({ id: ineligibleJobs[0]!.id }), null)
+    const reusedReceipt = await new DocumentIndexSuccessReceiptRepository(
+      lifecycleStore.persistenceTransaction,
+    ).findSuccessByProjectIdAndJobId({
+      projectId: ineligibleKnowledgeBases[0]!.projectId,
+      jobId: ineligibleJobs[0]!.id,
+    })
+    assert.ok(reusedReceipt, 'the issued shared-index job must remain queryable after deletion')
+    assert.equal(reusedReceipt.documentIndexId, index.id)
+    assert.equal(reusedReceipt.knowledgeBaseId, ineligibleKnowledgeBases[0]!.id)
+    assert.equal(reusedReceipt.generation, '1')
+    assert.equal(reusedReceipt.attempts, 0)
+    assert.equal(reusedReceipt.executionVerification, null, 'reuse does not attest provider execution')
+
     assert.equal(await jobModelRepository.findOneBy({ id: job.id }), null)
     assert.equal((await documentIndexModelRepository.findOneByOrFail({ id: index.id })).status, 'ready')
     assert.equal(
-      (await membershipModelRepository.findOneByOrFail({ knowledgeBaseId: base.id, documentId: document.id }))
-        .activeDocumentIndexId,
+      (
+        await knowledgeBaseDocumentModelRepository.findOneByOrFail({
+          knowledgeBaseId: base.id,
+          documentId: document.id,
+        })
+      ).activeDocumentIndexId,
       index.id,
     )
     const retrievalSnapshot = await lifecycleStore.loadSnapshot(
@@ -686,15 +743,15 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     })
 
     await documentIndexModelRepository.update(index.id, { status: DocumentIndexStatusEnum.BUILDING, readyAt: null })
-    await membershipModelRepository.update(
+    await knowledgeBaseDocumentModelRepository.update(
       { knowledgeBaseId: base.id, documentId: document.id },
       { requestedGeneration: '2' },
     )
-    await membershipModelRepository.update(
+    await knowledgeBaseDocumentModelRepository.update(
       { knowledgeBaseId: ineligibleKnowledgeBases[0]!.id, documentId: document.id },
       { requestedGeneration: '2' },
     )
-    await membershipModelRepository.update(
+    await knowledgeBaseDocumentModelRepository.update(
       { knowledgeBaseId: ineligibleKnowledgeBases[1]!.id, documentId: document.id },
       { requestedGeneration: '2' },
     )
@@ -767,3 +824,218 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await cleanup()
   }
 })
+
+async function createReadyIndexReuseFixture(dataSource: DataSource) {
+  const testKey = randomUUID()
+  const base = {
+    id: randomUUID(),
+    projectId: `ready-reuse-${testKey}`,
+    projectName: `ready-reuse-${testKey}`,
+  } satisfies Partial<KnowledgeBaseModel>
+  await dataSource.getRepository(KnowledgeBaseModel).insert(base)
+  const document = {
+    id: randomUUID(),
+    sourceType: 'repository',
+    sourceKey: testKey,
+    sourcePath: `${testKey}.md`,
+    unreferencedSince: null,
+  } satisfies Partial<DocumentModel>
+  await dataSource.getRepository(DocumentModel).insert(document)
+  const revision = {
+    id: randomUUID(),
+    documentId: document.id,
+    contentSha256: 'a'.repeat(64),
+    title: 'shared READY reuse',
+    content: 'shared READY reuse',
+  } satisfies Partial<DocumentRevisionModel>
+  await dataSource.getRepository(DocumentRevisionModel).insert(revision)
+  const unreferencedSince = new Date('2026-01-01T00:00:00.000Z')
+  const index = {
+    id: randomUUID(),
+    documentId: document.id,
+    revisionId: revision.id,
+    pipelineHash: 'b'.repeat(64),
+    chunkingModel: 'test',
+    chunkingProfile: 'test',
+    embeddingModel: config.embeddingModel,
+    embeddingDimensions: config.embeddingDimensions,
+    embeddingProfile: 'test',
+    lexicalProfile: lexicalFormatter.format('shared READY reuse').profileVersion,
+    relationProfile: 'test',
+    status: DocumentIndexStatusEnum.READY,
+    readyAt: unreferencedSince,
+    unreferencedSince,
+  } satisfies Partial<DocumentIndexModel>
+  await dataSource.getRepository(DocumentIndexModel).insert(index)
+  const membership = {
+    knowledgeBaseId: base.id,
+    documentId: document.id,
+    activeDocumentIndexId: null,
+    requestedGeneration: '2',
+    isEntry: false,
+    alwaysIncludeFullContent: false,
+  } satisfies Partial<KnowledgeBaseDocumentModel>
+  await dataSource.getRepository(KnowledgeBaseDocumentModel).insert(membership)
+  const job = {
+    id: randomUUID(),
+    knowledgeBaseId: base.id,
+    documentId: document.id,
+    documentIndexId: index.id,
+    generation: '2',
+    status: DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED,
+    attempts: 2,
+    availableAt: new Date(Date.now() - 1000),
+    reservedAt: null,
+    leaseToken: null,
+    leaseExpiresAt: null,
+    idempotencyKey: null,
+    retryOfFailedJobId: null,
+    payload: {},
+    executionState: null,
+    executionVerification: null,
+  } satisfies Partial<JobModel>
+  await dataSource.getRepository(JobModel).insert(job)
+  const persistenceTransaction = new PersistenceTransaction(dataSource)
+  const jobRepository = new JobRepository(persistenceTransaction)
+  const successReceiptRepository = new DocumentIndexSuccessReceiptRepository(persistenceTransaction)
+  const knowledgeBaseDocumentRepository = new KnowledgeBaseDocumentRepository(persistenceTransaction)
+  const dispatcher = new DispatchDocumentIndexingListener(
+    persistenceTransaction,
+    new ReserveDocumentForIndexingUseCase(new DocumentRepository(persistenceTransaction)),
+    new ReserveKnowledgeBaseDocumentForIndexingUseCase(knowledgeBaseDocumentRepository),
+    new DocumentIndexRepository(persistenceTransaction),
+    jobRepository,
+    new FailedJobRepository(persistenceTransaction),
+    config.workerLeaseSeconds,
+    new ActivateKnowledgeBaseDocumentIndexUseCase(knowledgeBaseDocumentRepository),
+    new GetIndexingKnowledgeBaseUseCase(new KnowledgeBaseRepository(persistenceTransaction)),
+    successReceiptRepository,
+  )
+
+  return {
+    base,
+    document,
+    index,
+    membership,
+    job,
+    persistenceTransaction,
+    jobRepository,
+    successReceiptRepository,
+    dispatcher,
+  }
+}
+
+test(
+  'shared READY activation preserves nonzero job attempts in its success receipt',
+  { skip: !process.env.RAG_DATABASE_URL },
+  async () => {
+    const { dataSource, cleanup } = await createPersistenceTestDatabase()
+
+    try {
+      const fixture = await createReadyIndexReuseFixture(dataSource)
+      assert.equal(await fixture.dispatcher.handle(), null)
+
+      const receipt = await fixture.successReceiptRepository.findSuccessByProjectIdAndJobId({
+        projectId: fixture.base.projectId,
+        jobId: fixture.job.id,
+      })
+      assert.ok(receipt)
+      assert.equal(receipt.projectId, fixture.base.projectId)
+      assert.equal(receipt.jobId, fixture.job.id)
+      assert.equal(receipt.knowledgeBaseId, fixture.base.id)
+      assert.equal(receipt.documentId, fixture.document.id)
+      assert.equal(receipt.documentIndexId, fixture.index.id)
+      assert.equal(receipt.generation, fixture.job.generation)
+      assert.equal(receipt.attempts, 2)
+      assert.equal(receipt.executionVerification, null)
+      assert.equal(await dataSource.getRepository(JobModel).findOneBy({ id: fixture.job.id }), null)
+      const membership = await dataSource.getRepository(KnowledgeBaseDocumentModel).findOneByOrFail({
+        knowledgeBaseId: fixture.base.id,
+        documentId: fixture.document.id,
+      })
+      assert.equal(membership.activeDocumentIndexId, fixture.index.id)
+      assert.equal(membership.requestedGeneration, fixture.job.generation)
+      assert.equal(
+        (await dataSource.getRepository(DocumentIndexModel).findOneByOrFail({ id: fixture.index.id }))
+          .unreferencedSince,
+        null,
+      )
+    } finally {
+      await cleanup()
+    }
+  },
+)
+
+test(
+  'shared READY activation rolls back a saved receipt when queued-job CAS deletion fails',
+  { skip: !process.env.RAG_DATABASE_URL },
+  async () => {
+    const { dataSource, cleanup } = await createPersistenceTestDatabase()
+
+    try {
+      const fixture = await createReadyIndexReuseFixture(dataSource)
+      const originalJob = await dataSource.getRepository(JobModel).findOneByOrFail({ id: fixture.job.id })
+      const originalMembership = await dataSource.getRepository(KnowledgeBaseDocumentModel).findOneByOrFail({
+        knowledgeBaseId: fixture.base.id,
+        documentId: fixture.document.id,
+      })
+      const originalIndex = await dataSource.getRepository(DocumentIndexModel).findOneByOrFail({ id: fixture.index.id })
+      let observedSavedReceipt = false
+      Object.assign(fixture.jobRepository, {
+        releaseQueuedExecution: async () => {
+          const receipt = await fixture.successReceiptRepository.findSuccessByProjectIdAndJobId({
+            projectId: fixture.base.projectId,
+            jobId: fixture.job.id,
+          })
+          assert.ok(receipt, 'the real receipt must be saved before the CAS failure')
+          assert.equal(receipt.attempts, 2)
+          assert.equal(receipt.executionVerification, null)
+          const manager = fixture.persistenceTransaction.manager
+          const activatedMembership = await manager.getRepository(KnowledgeBaseDocumentModel).findOneByOrFail({
+            knowledgeBaseId: fixture.base.id,
+            documentId: fixture.document.id,
+          })
+          assert.equal(activatedMembership.activeDocumentIndexId, fixture.index.id)
+          assert.equal(
+            (await manager.getRepository(DocumentIndexModel).findOneByOrFail({ id: fixture.index.id }))
+              .unreferencedSince,
+            null,
+          )
+          observedSavedReceipt = true
+          // Force a real conditional-delete miss after archiveSuccess has written in this transaction.
+          const deletion = await manager.getRepository(JobModel).delete({
+            id: fixture.job.id,
+            status: DOCUMENT_INDEX_EXECUTION_STATUS.RUNNING,
+          })
+          assert.equal(deletion.affected, 0)
+
+          return false
+        },
+      })
+
+      await assert.rejects(fixture.dispatcher.handle(), DocumentIndexExecutionClaimConflictException)
+      assert.equal(observedSavedReceipt, true)
+      assert.equal(
+        await fixture.successReceiptRepository.findSuccessByProjectIdAndJobId({
+          projectId: fixture.base.projectId,
+          jobId: fixture.job.id,
+        }),
+        null,
+      )
+      assert.deepEqual(await dataSource.getRepository(JobModel).findOneByOrFail({ id: fixture.job.id }), originalJob)
+      assert.deepEqual(
+        await dataSource.getRepository(KnowledgeBaseDocumentModel).findOneByOrFail({
+          knowledgeBaseId: fixture.base.id,
+          documentId: fixture.document.id,
+        }),
+        originalMembership,
+      )
+      assert.deepEqual(
+        await dataSource.getRepository(DocumentIndexModel).findOneByOrFail({ id: fixture.index.id }),
+        originalIndex,
+      )
+    } finally {
+      await cleanup()
+    }
+  },
+)

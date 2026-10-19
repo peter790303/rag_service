@@ -18,7 +18,7 @@ export interface CreateKnowledgeBaseQueryObject {
   readonly projectName: string
 }
 
-export interface SaveKnowledgeBaseQueryObject {
+export interface UpdateKnowledgeBaseQueryObject {
   readonly updatedAt: Date
   readonly knowledgeBaseId: string
   readonly projectId: string

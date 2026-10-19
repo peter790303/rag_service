@@ -22,7 +22,7 @@ export type DocumentIndexingRetryContext = {
     currentTitle: string | null
     targetRevision: { id: string; contentSha256: string; content: string } | null
   } | null
-  membership: { activeDocumentIndexId: string | null; requestedGeneration: string } | null
+  knowledgeBaseDocument: { activeDocumentIndexId: string | null; requestedGeneration: string } | null
   documentIndex: {
     id: string
     documentRevisionId: string

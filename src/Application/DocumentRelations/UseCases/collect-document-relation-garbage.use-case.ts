@@ -1,25 +1,22 @@
 import type { DocumentRelation } from '../../../Domain/DocumentRelation/document-relation.ts'
-import { InvalidDocumentRelationStateException } from '../../../Domain/DocumentRelation/Exceptions/invalid-document-relation-state.exception.ts'
 import { GarbageDocumentRelationAssembler } from '../Assemblers/garbage-document-relation.assembler.ts'
 import type { CollectDocumentRelationGarbageUseCaseContract } from '../Contracts/collect-document-relation-garbage.use-case.contract.ts'
 import type { DocumentRelationRepository } from '../Contracts/document-relation.repository.ts'
-import type { CollectDocumentRelationGarbageDto } from '../DataTransferObjects/document-relation-garbage.dto.ts'
-import { InvalidDocumentRelationInputException } from '../Exceptions/invalid-document-relation-input.exception.ts'
+import type { CollectDocumentRelationGarbageDTO } from '../DataTransferObjects/document-relation-garbage.dto.ts'
+import { DocumentRelationInputGuard } from '../Guards/document-relation-input.guard.ts'
 
 export class CollectDocumentRelationGarbageUseCase implements CollectDocumentRelationGarbageUseCaseContract {
   constructor(private readonly documentRelationRepository: DocumentRelationRepository) {}
 
   async execute(
-    collectDocumentRelationGarbageDTO: CollectDocumentRelationGarbageDto,
+    collectDocumentRelationGarbageDTO: CollectDocumentRelationGarbageDTO,
   ): Promise<DocumentRelation[] | null> {
-    if (
-      typeof collectDocumentRelationGarbageDTO?.sourceIndexId !== 'string' ||
-      !collectDocumentRelationGarbageDTO.sourceIndexId.trim()
+    DocumentRelationInputGuard.assertObject(collectDocumentRelationGarbageDTO)
+    DocumentRelationInputGuard.assertIdentifier(collectDocumentRelationGarbageDTO.sourceIndexId, 'sourceIndexId')
+    DocumentRelationInputGuard.assertIdentifierList(
+      collectDocumentRelationGarbageDTO.lockedDocumentIds,
+      'lockedDocumentIds',
     )
-      throw new InvalidDocumentRelationStateException('sourceIndexId')
-
-    if (!Array.isArray(collectDocumentRelationGarbageDTO.lockedDocumentIds))
-      throw new InvalidDocumentRelationInputException('lockedDocumentIds')
 
     const relations = await this.documentRelationRepository.findBySourceIndexIdsOrderByIdAsc(
       GarbageDocumentRelationAssembler.toCollectionDocumentRelationSourceIndexesQueryObject(

@@ -47,19 +47,19 @@ test('renaming preserves creation time and project ownership remains a Domain in
     createdAt: new Date(0),
     updatedAt: new Date(0),
   })
-  const save = context.mock.fn(async () => undefined)
+  const update = context.mock.fn(async () => undefined)
   const useCase = new EnsureIndexingKnowledgeBaseUseCase({
     lockByKnowledgeBaseId: async () => knowledgeBase,
-    save,
+    update,
   } as unknown as KnowledgeBaseRepository)
   await useCase.execute(input)
-  assert.deepEqual(save.mock.calls[0]?.arguments, [{ ...input, updatedAt: knowledgeBase.updatedAt }])
+  assert.deepEqual(update.mock.calls[0]?.arguments, [{ ...input, updatedAt: knowledgeBase.updatedAt }])
   assert.equal(knowledgeBase.createdAt.getTime(), 0)
   await useCase.execute(input)
-  assert.equal(save.mock.callCount(), 1)
+  assert.equal(update.mock.callCount(), 1)
   await assert.rejects(
     useCase.execute({ ...input, projectId: 'another-project' }),
     KnowledgeBaseProjectMismatchException,
   )
-  assert.equal(save.mock.callCount(), 1)
+  assert.equal(update.mock.callCount(), 1)
 })

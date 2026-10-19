@@ -14,14 +14,17 @@ const selectScope = RetrieveKnowledgeBaseContentUseCase.prototype['selectScope']
   RetrieveKnowledgeBaseContentUseCase.prototype,
 )
 const selectKnowledgeBaseRetrievalScope = (
-  facts: Omit<Parameters<typeof selectScope>[0], 'memberships' | 'documents' | 'indexes' | 'revisions'> &
-    Pick<Parameters<typeof createRetrievalSnapshotFixture>[0], 'memberships' | 'documents' | 'indexes' | 'revisions'>,
+  facts: Omit<Parameters<typeof selectScope>[0], 'knowledgeBaseDocuments' | 'documents' | 'indexes' | 'revisions'> &
+    Pick<
+      Parameters<typeof createRetrievalSnapshotFixture>[0],
+      'knowledgeBaseDocuments' | 'documents' | 'indexes' | 'revisions'
+    >,
 ) => {
   const snapshot = createRetrievalSnapshotFixture({ ...facts, chunks: [], relations: [] })
 
   return selectScope({
     ...facts,
-    memberships: snapshot.memberships,
+    knowledgeBaseDocuments: snapshot.knowledgeBaseDocuments,
     documents: snapshot.documents,
     indexes: snapshot.indexes,
     revisions: snapshot.revisions,
@@ -39,7 +42,7 @@ test('single-document retrieval with includeNonEffective excludes ready indexes 
     documentReference: 'requested.md',
     includeNonEffective: true,
     knowledgeBaseId: 'knowledge-base',
-    memberships: [
+    knowledgeBaseDocuments: [
       { documentId: 'requested-document', activeDocumentIndexId: 'requested-active', alwaysIncludeFullContent: false },
       { documentId: 'other-document', activeDocumentIndexId: 'other-active', alwaysIncludeFullContent: false },
     ],
@@ -93,7 +96,7 @@ const createRetrievalScopeFactsFixture = () => ({
   documentReference: 'requested.md',
   includeNonEffective: false,
   knowledgeBaseId: 'knowledge-base',
-  memberships: [
+  knowledgeBaseDocuments: [
     { documentId: 'requested', activeDocumentIndexId: 'requested-index', alwaysIncludeFullContent: false },
     { documentId: 'other', activeDocumentIndexId: 'other-index', alwaysIncludeFullContent: false },
   ],
@@ -114,11 +117,12 @@ const createRetrievalScopeFactsFixture = () => ({
 })
 
 test('every selected pipeline profile is checked before querying candidates', () => {
-  for (const profile of Object.keys(retrievalProfileFixtures) as (keyof typeof retrievalProfileFixtures)[]) {
+  const testCases = Object.keys(retrievalProfileFixtures) as (keyof typeof retrievalProfileFixtures)[]
+  testCases.forEach((profile) => {
     const facts = createRetrievalScopeFactsFixture()
     facts.indexes[0]![profile] = 'incompatible'
     assert.throws(() => selectKnowledgeBaseRetrievalScope(facts), KnowledgeEmbeddingUnavailableException, profile)
-  }
+  })
 })
 
 test('graph targets are restricted to active indexes with all matching pipeline facts', () => {
@@ -132,12 +136,12 @@ test('graph targets are restricted to active indexes with all matching pipeline 
 
 test('a missing required full-content revision fails even outside a document reference', () => {
   const facts = createRetrievalScopeFactsFixture()
-  facts.memberships[1]!.alwaysIncludeFullContent = true
+  facts.knowledgeBaseDocuments[1]!.alwaysIncludeFullContent = true
   facts.revisions = facts.revisions.filter((revision) => revision.id !== 'other-revision')
   assert.throws(() => selectKnowledgeBaseRetrievalScope(facts), KnowledgeIndexPendingException)
 })
 
-test('unknown and ambiguous requested paths fail explicitly inside the project membership scope', () => {
+test('unknown and ambiguous requested paths fail explicitly inside the project knowledgeBaseDocument scope', () => {
   const facts = createRetrievalScopeFactsFixture()
   facts.documentReference = 'missing.md'
   assert.throws(() => selectKnowledgeBaseRetrievalScope(facts), KnowledgeRetrievalIncompleteException)
@@ -154,6 +158,6 @@ test('nonfinite query vectors fail before querying pgvector', () => {
 
 test('an active index pointer cannot retrieve another project document', () => {
   const facts = createRetrievalScopeFactsFixture()
-  facts.memberships[0]!.activeDocumentIndexId = 'other-index'
+  facts.knowledgeBaseDocuments[0]!.activeDocumentIndexId = 'other-index'
   assert.throws(() => selectKnowledgeBaseRetrievalScope(facts), KnowledgeIndexPendingException)
 })

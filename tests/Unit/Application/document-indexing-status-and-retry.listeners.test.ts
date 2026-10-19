@@ -7,11 +7,12 @@ import {
   createJobRecordFixture,
   createRepositoryStub,
   createRestoredDocumentIndexFixture,
-  createRestoredMembershipFixture,
+  createRestoredKnowledgeBaseDocumentFixture,
 } from './document-index-lifecycle.fixture.ts'
 import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
-import type { DocumentIndexExecutionRecordDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexFailureRecordDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-failure-record.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexFailureRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-failure-record.dto.ts'
+import type { DocumentIndexSuccessReceiptDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-success-receipt.dto.ts'
 import type { DocumentIndexingRetryContext } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-retry-context.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
 import { DocumentIndexingTargetStateEnum } from '../../../src/Application/DocumentIndexes/Enums/document-indexing-target-state.enum.ts'
@@ -31,11 +32,11 @@ import { GetDocumentRevisionForIndexRetryUseCase } from '../../../src/Applicatio
 import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
 import { GetDocumentForIndexRetryUseCase } from '../../../src/Application/Documents/UseCases/get-document-for-index-retry.use-case.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
+import { GetKnowledgeBaseDocumentIndexingStateUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/get-knowledge-base-document-indexing-state.use-case.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
 import type { KnowledgeBaseRepository } from '../../../src/Application/KnowledgeBases/Contracts/knowledge-base.repository.ts'
 import { GetIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/get-indexing-knowledge-base.use-case.ts'
-import type { MembershipRepository } from '../../../src/Application/Memberships/Contracts/membership.repository.ts'
-import { GetMembershipIndexingStateUseCase } from '../../../src/Application/Memberships/UseCases/get-membership-indexing-state.use-case.ts'
-import { ReserveMembershipForIndexingUseCase } from '../../../src/Application/Memberships/UseCases/reserve-membership-for-indexing.use-case.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
 import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
@@ -89,7 +90,7 @@ const createRetryJobContextFixture = (): DocumentIndexingRetryContext => ({
     currentTitle: 'Knowledge',
     targetRevision: { id: 'revision', contentSha256, content: latestContent },
   },
-  membership: { activeDocumentIndexId: 'old-index', requestedGeneration: '3' },
+  knowledgeBaseDocument: { activeDocumentIndexId: 'old-index', requestedGeneration: '3' },
   documentIndex: {
     id: 'document-index',
     documentRevisionId: 'revision',
@@ -100,8 +101,8 @@ const createRetryJobContextFixture = (): DocumentIndexingRetryContext => ({
   activeJob: null,
 })
 
-type StatusActiveJob = DocumentIndexExecutionRecordDto
-type StatusFailedJob = DocumentIndexFailureRecordDto
+type StatusActiveJob = DocumentIndexExecutionRecordDTO
+type StatusFailedJob = DocumentIndexFailureRecordDTO
 const fixtureTimestamp = new Date('2026-01-01T00:00:00.000Z')
 
 const createStatusActiveJob = (overrides: Partial<StatusActiveJob> = {}): StatusActiveJob => ({
@@ -142,13 +143,29 @@ const createStatusFailedJob = (): StatusFailedJob => ({
   errorMessage: 'Planner unavailable',
 })
 
+const createStatusSuccessReceipt = (
+  overrides: Partial<DocumentIndexSuccessReceiptDTO> = {},
+): DocumentIndexSuccessReceiptDTO => ({
+  jobId: 'successful-job',
+  projectId: 'project-id',
+  knowledgeBaseId: 'knowledge-base',
+  documentId: 'document',
+  documentIndexId: 'requested-index',
+  generation: '3',
+  attempts: 1,
+  executionVerification: null,
+  completedAt: fixtureTimestamp,
+  ...overrides,
+})
+
 const createStatusScenario = (
   activeJob: StatusActiveJob | null,
   failedJob: StatusFailedJob | null,
-  membership: { activeDocumentIndexId: string | null; requestedGeneration: string } | null = {
+  knowledgeBaseDocument: { activeDocumentIndexId: string | null; requestedGeneration: string } | null = {
     activeDocumentIndexId: 'active-index',
     requestedGeneration: '3',
   },
+  successReceipt: DocumentIndexSuccessReceiptDTO | null = null,
 ) => {
   type Dependencies = ConstructorParameters<typeof ReadDocumentIndexingStatusListener>
   const queries: unknown[] = []
@@ -159,13 +176,17 @@ const createStatusScenario = (
       return activeJob
     },
   })
-  const membershipRepository = createRepositoryStub<MembershipRepository>({
-    findByKnowledgeBaseIdAndDocumentId: async (membershipSourceQO: unknown) => {
-      queries.push(['membership', membershipSourceQO])
+  const knowledgeBaseDocumentRepository = createRepositoryStub<KnowledgeBaseDocumentRepository>({
+    findByKnowledgeBaseIdAndDocumentId: async (knowledgeBaseDocumentSourceQO: unknown) => {
+      queries.push(['knowledgeBaseDocument', knowledgeBaseDocumentSourceQO])
 
-      return membership === null
+      return knowledgeBaseDocument === null
         ? null
-        : createRestoredMembershipFixture({ knowledgeBaseId: 'knowledge-base', documentId: 'document', ...membership })
+        : createRestoredKnowledgeBaseDocumentFixture({
+            knowledgeBaseId: 'knowledge-base',
+            documentId: 'document',
+            ...knowledgeBaseDocument,
+          })
     },
   })
   const documentIndexRepository = createRepositoryStub<Dependencies[2]>({
@@ -189,28 +210,35 @@ const createStatusScenario = (
       return failedJob
     },
   })
+  const successReceiptRepository = createRepositoryStub<Dependencies[4]>({
+    findSuccessByProjectIdAndJobId: async (successByProjectIdAndJobIdQO: unknown) => {
+      queries.push(['success-receipt', successByProjectIdAndJobIdQO])
+
+      return successReceipt
+    },
+  })
 
   return {
     queries,
     useCase: new ReadDocumentIndexingStatusListener(
       jobRepository,
-      new GetMembershipIndexingStateUseCase(membershipRepository),
+      new GetKnowledgeBaseDocumentIndexingStateUseCase(knowledgeBaseDocumentRepository),
       documentIndexRepository,
       failedJobRepository,
+      successReceiptRepository,
     ),
   }
 }
 
-test('job status prefers the active job and reads its membership and indexes through model ports', async () => {
+test('job status prefers the active job and reads its knowledgeBaseDocument and indexes through model ports', async () => {
   const { useCase, queries } = createStatusScenario(createStatusActiveJob(), createStatusFailedJob())
 
   const status = await useCase.handle({ projectId: 'project-id', jobId: 'active-job' })
 
   assert.deepEqual(queries, [
     ['active-job', { projectId: 'project-id', id: 'active-job' }],
-    ['membership', { knowledgeBaseId: 'knowledge-base', documentId: 'document' }],
+    ['knowledgeBaseDocument', { knowledgeBaseId: 'knowledge-base', documentId: 'document' }],
     ['document-index', { documentIndexId: 'active-index' }],
-    ['document-index', { documentIndexId: 'requested-index' }],
   ])
   assert.deepEqual(status.activeIndex, {
     id: 'active-index',
@@ -242,8 +270,7 @@ test('job status falls back to the failed job only after the active job is absen
   assert.deepEqual(queries, [
     ['active-job', { projectId: 'project-id', id: 'failed-job' }],
     ['failed-job', { projectId: 'project-id', idOrJobId: 'failed-job' }],
-    ['membership', { knowledgeBaseId: 'knowledge-base', documentId: 'document' }],
-    ['document-index', { documentIndexId: 'requested-index' }],
+    ['knowledgeBaseDocument', { knowledgeBaseId: 'knowledge-base', documentId: 'document' }],
   ])
   assert.equal(status.activeIndex, null)
   assert.deepEqual(status.requestedTarget, {
@@ -259,14 +286,38 @@ test('job status falls back to the failed job only after the active job is absen
   })
 })
 
-test('job status reports a missing persisted job before reading its membership or indexes', async () => {
+test('job status reports a missing persisted job before reading its knowledgeBaseDocument or indexes', async () => {
   const { useCase, queries } = createStatusScenario(null, null)
 
   await assert.rejects(useCase.handle({ projectId: 'project-id', jobId: 'missing' }), DocumentIndexingNotFoundException)
   assert.deepEqual(queries, [
     ['active-job', { projectId: 'project-id', id: 'missing' }],
     ['failed-job', { projectId: 'project-id', idOrJobId: 'missing' }],
+    ['success-receipt', { projectId: 'project-id', jobId: 'missing' }],
   ])
+})
+
+test('job status restores READY from a project-scoped receipt after the queue and target index are gone', async () => {
+  const projectId = 'env-smoke-20261018-dc8d4592'
+  const { useCase, queries } = createStatusScenario(
+    null,
+    null,
+    { activeDocumentIndexId: null, requestedGeneration: '3' },
+    createStatusSuccessReceipt({ projectId }),
+  )
+
+  const status = await useCase.handle({ projectId, jobId: 'successful-job' })
+
+  assert.deepEqual(queries, [
+    ['active-job', { projectId, id: 'successful-job' }],
+    ['failed-job', { projectId, idOrJobId: 'successful-job' }],
+    ['success-receipt', { projectId, jobId: 'successful-job' }],
+    ['knowledgeBaseDocument', { knowledgeBaseId: 'knowledge-base', documentId: 'document' }],
+  ])
+  assert.equal(status.activeIndex, null)
+  assert.equal(status.requestedTarget?.state, DocumentIndexingTargetStateEnum.READY)
+  assert.equal(status.requestedTarget?.jobId, 'successful-job')
+  assert.equal(status.requestedTarget?.indexId, 'requested-index')
 })
 
 test('job status preserves queued and superseded target decisions in the use case', async () => {
@@ -275,6 +326,12 @@ test('job status preserves queued and superseded target decisions in the use cas
     activeDocumentIndexId: null,
     requestedGeneration: '4',
   })
+  const successfulButSuperseded = createStatusScenario(
+    null,
+    null,
+    { activeDocumentIndexId: null, requestedGeneration: '4' },
+    createStatusSuccessReceipt(),
+  )
   const detached = createStatusScenario(null, createStatusFailedJob(), null)
 
   assert.equal(
@@ -287,6 +344,11 @@ test('job status preserves queued and superseded target decisions in the use cas
   )
   assert.equal(
     (await detached.useCase.handle({ projectId: 'project-id', jobId: 'failed-job' })).requestedTarget?.state,
+    DocumentIndexingTargetStateEnum.SUPERSEDED,
+  )
+  assert.equal(
+    (await successfulButSuperseded.useCase.handle({ projectId: 'project-id', jobId: 'successful-job' })).requestedTarget
+      ?.state,
     DocumentIndexingTargetStateEnum.SUPERSEDED,
   )
 })
@@ -323,7 +385,7 @@ const createRetryJobScenario = (
   options: {
     lockedContext?: () => DocumentIndexingRetryContext | null
     documentLocked?: boolean
-    membershipLocked?: boolean
+    knowledgeBaseDocumentLocked?: boolean
     failedJobLocked?: boolean
     insertionError?: Error
   } = {},
@@ -345,14 +407,14 @@ const createRetryJobScenario = (
   }
   const documentRecord = () =>
     current?.document === null || current?.document === undefined ? null : createDocumentFixture(current.document)
-  const membershipRecord = () => {
-    if (current?.membership === null || current?.membership === undefined) return null
+  const knowledgeBaseDocumentRecord = () => {
+    if (current?.knowledgeBaseDocument === null || current?.knowledgeBaseDocument === undefined) return null
 
-    return createRestoredMembershipFixture({
+    return createRestoredKnowledgeBaseDocumentFixture({
       knowledgeBaseId: 'knowledge-base',
       documentId: 'document',
-      ...current.membership,
-      requestedGeneration: String(current.membership.requestedGeneration),
+      ...current.knowledgeBaseDocument,
+      requestedGeneration: String(current.knowledgeBaseDocument.requestedGeneration),
     })
   }
   const persistenceTransaction = {
@@ -387,13 +449,16 @@ const createRetryJobScenario = (
       return options.documentLocked === false ? null : documentRecord()
     },
   })
-  const membershipRepository = createRepositoryStub<MembershipRepository>({
-    findByKnowledgeBaseIdAndDocumentId: async () => membershipRecord(),
-    lockByKnowledgeBaseIdAndDocumentId: async (membershipSourceQO: { knowledgeBaseId: string; documentId: string }) => {
-      assert.deepEqual(membershipSourceQO, { knowledgeBaseId: 'knowledge-base', documentId: 'document' })
-      events.push('lock-membership')
+  const knowledgeBaseDocumentRepository = createRepositoryStub<KnowledgeBaseDocumentRepository>({
+    findByKnowledgeBaseIdAndDocumentId: async () => knowledgeBaseDocumentRecord(),
+    lockByKnowledgeBaseIdAndDocumentId: async (knowledgeBaseDocumentSourceQO: {
+      knowledgeBaseId: string
+      documentId: string
+    }) => {
+      assert.deepEqual(knowledgeBaseDocumentSourceQO, { knowledgeBaseId: 'knowledge-base', documentId: 'document' })
+      events.push('lock-knowledgeBaseDocument')
 
-      return options.membershipLocked === false ? null : membershipRecord()
+      return options.knowledgeBaseDocumentLocked === false ? null : knowledgeBaseDocumentRecord()
     },
   })
   const documentRevisionRepository = createRepositoryStub<DocumentRevisionRepository>({
@@ -423,7 +488,7 @@ const createRetryJobScenario = (
     },
   })
   const jobRepository = createRepositoryStub<Dependencies[6]>({
-    findMembershipExecution: async () =>
+    findKnowledgeBaseDocumentExecution: async () =>
       current?.activeJob === null || current?.activeJob === undefined
         ? null
         : createJobRecordFixture(current.activeJob),
@@ -433,8 +498,6 @@ const createRetryJobScenario = (
       if (options.insertionError !== undefined) throw options.insertionError
 
       queuedJobs.push(createRetryJobQO)
-
-      return createJobRecordFixture({ id: 'new-job', ...createRetryJobQO })
     },
   })
   const failedJobRepository = createRepositoryStub<Dependencies[7]>({
@@ -470,7 +533,7 @@ const createRetryJobScenario = (
     persistenceTransaction,
     new GetIndexingKnowledgeBaseUseCase(knowledgeBaseRepository),
     new GetDocumentForIndexRetryUseCase(documentRepository),
-    new GetMembershipIndexingStateUseCase(membershipRepository),
+    new GetKnowledgeBaseDocumentIndexingStateUseCase(knowledgeBaseDocumentRepository),
     new GetDocumentRevisionForIndexRetryUseCase(documentRevisionRepository),
     documentIndexRepository,
     jobRepository,
@@ -484,7 +547,7 @@ const createRetryJobScenario = (
     createKnowledgeServiceConfigFixture({ embeddingDimensions, chunkingModel: 'test-chunker' }),
     writeRequestDocumentIndexesAssembler,
     new ReserveDocumentForIndexingUseCase(documentRepository),
-    new ReserveMembershipForIndexingUseCase(membershipRepository),
+    new ReserveKnowledgeBaseDocumentForIndexingUseCase(knowledgeBaseDocumentRepository),
   )
 
   return { useCase, events, queuedJobs }
@@ -507,8 +570,10 @@ test('manual retry locks and compares the current target before queuing and mark
   const originalExecutionState = structuredClone(context.failedJob.retryPayload.executionState)
   const retry = createRetryJobScenario(context)
 
-  assert.deepEqual(await retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' }), {
-    jobId: 'new-job',
+  const result = await retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' })
+  assert.match(result.jobId ?? '', /^[0-9a-f-]{36}$/)
+  assert.deepEqual(result, {
+    jobId: retry.queuedJobs[0]?.id,
     failedJobId: 'failed-job',
     status: DocumentIndexingTargetStateEnum.QUEUED,
     retryOfFailedJobId: 'failed-job',
@@ -519,7 +584,7 @@ test('manual retry locks and compares the current target before queuing and mark
     'transaction',
     'read-context',
     'lock-document',
-    'lock-membership',
+    'lock-knowledgeBaseDocument',
     'lock-failed-job',
     'read-context',
     'create-job',
@@ -531,6 +596,7 @@ test('manual retry locks and compares the current target before queuing and mark
   if (queued === undefined) throw new Error('Expected a queued retry')
 
   assert.deepEqual(queued, {
+    id: result.jobId,
     knowledgeBaseId: 'knowledge-base',
     documentId: 'document',
     documentIndexId: 'document-index',
@@ -553,50 +619,56 @@ test('manual retry locks and compares the current target before queuing and mark
 })
 
 test('manual retry preserves empty context and a payload property as source metadata', async (t) => {
-  for (const input of [{}, { payload: 'source metadata', source: 'original-request' }]) {
-    await t.test(JSON.stringify(input), async () => {
-      const context = createRetryJobContextFixture()
-      context.failedJob.retryPayload.input = input
+  const testCases = [{}, { payload: 'source metadata', source: 'original-request' }]
+  await Promise.all(
+    testCases.map((input) =>
+      t.test(JSON.stringify(input), async () => {
+        const context = createRetryJobContextFixture()
+        context.failedJob.retryPayload.input = input
 
-      if (context.documentIndex === null) throw new Error('Expected an index')
+        if (context.documentIndex === null) throw new Error('Expected an index')
 
-      context.documentIndex.pipelineHash = createHash('sha256')
-        .update(
-          writeRequestDocumentIndexesAssembler.serializeDocumentIndexPipelineHashInput({
-            contentSha256,
-            embeddingModel,
-            embeddingDimensions,
-            chunkingModel: 'test-chunker',
-            context: input,
-          }),
-        )
-        .digest('hex')
-      const retry = createRetryJobScenario(context)
+        context.documentIndex.pipelineHash = createHash('sha256')
+          .update(
+            writeRequestDocumentIndexesAssembler.serializeDocumentIndexPipelineHashInput({
+              contentSha256,
+              embeddingModel,
+              embeddingDimensions,
+              chunkingModel: 'test-chunker',
+              context: input,
+            }),
+          )
+          .digest('hex')
+        const retry = createRetryJobScenario(context)
 
-      await retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' })
+        await retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' })
 
-      assert.deepEqual(retry.queuedJobs[0]?.payload, input)
-      assert.equal(retry.queuedJobs[0]?.executionState, null)
-    })
-  }
+        assert.deepEqual(retry.queuedJobs[0]?.payload, input)
+        assert.equal(retry.queuedJobs[0]?.executionState, null)
+      }),
+    ),
+  )
 })
 
 test('manual retry rejects invalid archived context before the mutation transaction', async (t) => {
-  for (const input of [null, [], 'invalid', 1, false, undefined]) {
-    await t.test(JSON.stringify(input) ?? 'undefined', async () => {
-      const context = createRetryJobContextFixture()
-      context.failedJob.retryPayload.input = input as unknown as Record<string, unknown>
-      const retry = createRetryJobScenario(context)
+  const testCases = [null, [], 'invalid', 1, false, undefined]
+  await Promise.all(
+    testCases.map((input) =>
+      t.test(JSON.stringify(input) ?? 'undefined', async () => {
+        const context = createRetryJobContextFixture()
+        context.failedJob.retryPayload.input = input as unknown as Record<string, unknown>
+        const retry = createRetryJobScenario(context)
 
-      await assert.rejects(retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' }), {
-        name: InvalidIndexRetrySourceContextException.name,
-        code: 'INVALID_INDEX_RETRY_SOURCE_CONTEXT',
-      })
-      assert.deepEqual(retry.events, ['transaction', 'read-context'])
-      assert.deepEqual(retry.queuedJobs, [])
-      assert.equal(context.failedJob.retriedAt, null)
-    })
-  }
+        await assert.rejects(retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' }), {
+          name: InvalidIndexRetrySourceContextException.name,
+          code: 'INVALID_INDEX_RETRY_SOURCE_CONTEXT',
+        })
+        assert.deepEqual(retry.events, ['transaction', 'read-context'])
+        assert.deepEqual(retry.queuedJobs, [])
+        assert.equal(context.failedJob.retriedAt, null)
+      }),
+    ),
+  )
 })
 
 test('manual retry rejects stale, active, consumed and nonterminal targets before mutation', async (t) => {
@@ -635,7 +707,7 @@ test('manual retry rejects stale, active, consumed and nonterminal targets befor
       exception: StaleDocumentIndexingFailureException,
       code: 'STALE_DOCUMENT_INDEXING_FAILURE',
       change: (context) => {
-        if (context.membership !== null) context.membership.requestedGeneration = '4'
+        if (context.knowledgeBaseDocument !== null) context.knowledgeBaseDocument.requestedGeneration = '4'
       },
     },
     {
@@ -665,28 +737,31 @@ test('manual retry rejects stale, active, consumed and nonterminal targets befor
     },
   ]
 
-  for (const { name, change, exception, code } of cases) {
-    await t.test(name, async () => {
-      const context = createRetryJobContextFixture()
-      change(context)
-      const originalRetriedAt = context.failedJob.retriedAt
-      const retry = createRetryJobScenario(context)
+  const testCases = cases
+  await Promise.all(
+    testCases.map(({ name, change, exception, code }) =>
+      t.test(name, async () => {
+        const context = createRetryJobContextFixture()
+        change(context)
+        const originalRetriedAt = context.failedJob.retriedAt
+        const retry = createRetryJobScenario(context)
 
-      await assert.rejects(
-        retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' }),
-        (error: unknown) => {
-          assert.ok(error instanceof exception)
-          assert.equal(error.name, exception.name)
-          assert.equal((error as Error & { code: string }).code, code)
+        await assert.rejects(
+          retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' }),
+          (error: unknown) => {
+            assert.ok(error instanceof exception)
+            assert.equal(error.name, exception.name)
+            assert.equal((error as Error & { code: string }).code, code)
 
-          return true
-        },
-      )
-      assert.deepEqual(retry.events, ['transaction', 'read-context'])
-      assert.deepEqual(retry.queuedJobs, [])
-      assert.equal(context.failedJob.retriedAt, originalRetriedAt)
-    })
-  }
+            return true
+          },
+        )
+        assert.deepEqual(retry.events, ['transaction', 'read-context'])
+        assert.deepEqual(retry.queuedJobs, [])
+        assert.equal(context.failedJob.retriedAt, originalRetriedAt)
+      }),
+    ),
+  )
 })
 
 test('manual retry hides a failure in another project before locking', async () => {
@@ -716,15 +791,15 @@ test('manual retry compares fresh facts under all locks before any insert', asyn
       },
     },
     {
-      name: 'membership moved',
+      name: 'knowledgeBaseDocument moved',
       change: (context) => {
-        if (context.membership !== null) context.membership.activeDocumentIndexId = 'changed'
+        if (context.knowledgeBaseDocument !== null) context.knowledgeBaseDocument.activeDocumentIndexId = 'changed'
       },
     },
     {
       name: 'requested generation moved',
       change: (context) => {
-        if (context.membership !== null) context.membership.requestedGeneration = '4'
+        if (context.knowledgeBaseDocument !== null) context.knowledgeBaseDocument.requestedGeneration = '4'
       },
     },
     {
@@ -755,50 +830,56 @@ test('manual retry compares fresh facts under all locks before any insert', asyn
     },
   ]
 
-  for (const { name, change } of cases) {
-    await t.test(name, async () => {
-      const current = createRetryJobContextFixture()
-      change(current)
-      const retry = createRetryJobScenario(createRetryJobContextFixture(), { lockedContext: () => current })
+  const testCases = cases
+  await Promise.all(
+    testCases.map(({ name, change }) =>
+      t.test(name, async () => {
+        const current = createRetryJobContextFixture()
+        change(current)
+        const retry = createRetryJobScenario(createRetryJobContextFixture(), { lockedContext: () => current })
 
-      await assert.rejects(
-        retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' }),
-        (error: unknown) => {
-          assert.ok(error instanceof IndexRetrySourceChangedException)
-          assert.equal(error.code, 'INDEX_RETRY_SOURCE_CHANGED')
+        await assert.rejects(
+          retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' }),
+          (error: unknown) => {
+            assert.ok(error instanceof IndexRetrySourceChangedException)
+            assert.equal(error.code, 'INDEX_RETRY_SOURCE_CHANGED')
 
-          return true
-        },
-      )
-      assert.ok(retry.events.includes('lock-failed-job'))
-      assert.equal(retry.events.filter((event) => event === 'read-context').length, 3)
-      assert.equal(retry.events.includes('create-job'), false)
-      assert.equal(retry.events.includes('mark-retried'), false)
-      assert.deepEqual(retry.queuedJobs, [])
-    })
-  }
+            return true
+          },
+        )
+        assert.ok(retry.events.includes('lock-failed-job'))
+        assert.equal(retry.events.filter((event) => event === 'read-context').length, 3)
+        assert.equal(retry.events.includes('create-job'), false)
+        assert.equal(retry.events.includes('mark-retried'), false)
+        assert.deepEqual(retry.queuedJobs, [])
+      }),
+    ),
+  )
 })
 
 test('manual retry treats deleted lock targets and failures as conflicts without insertion', async (t) => {
-  for (const options of [
+  const testCases = [
     { documentLocked: false },
-    { membershipLocked: false },
+    { knowledgeBaseDocumentLocked: false },
     { failedJobLocked: false },
     { lockedContext: () => null },
-  ]) {
-    await t.test(JSON.stringify(options), async () => {
-      const retry = createRetryJobScenario(createRetryJobContextFixture(), options)
-      const missingFailure = options.failedJobLocked === false || options.lockedContext !== undefined
+  ]
+  await Promise.all(
+    testCases.map((options) =>
+      t.test(JSON.stringify(options), async () => {
+        const retry = createRetryJobScenario(createRetryJobContextFixture(), options)
+        const missingFailure = options.failedJobLocked === false || options.lockedContext !== undefined
 
-      await assert.rejects(
-        retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' }),
-        missingFailure ? DocumentIndexingNotFoundException : IndexRetrySourceChangedException,
-      )
-      assert.equal(retry.events.includes('create-job'), false)
+        await assert.rejects(
+          retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' }),
+          missingFailure ? DocumentIndexingNotFoundException : IndexRetrySourceChangedException,
+        )
+        assert.equal(retry.events.includes('create-job'), false)
 
-      if (options.documentLocked === false) assert.equal(retry.events.includes('lock-membership'), false)
-    })
-  }
+        if (options.documentLocked === false) assert.equal(retry.events.includes('lock-knowledgeBaseDocument'), false)
+      }),
+    ),
+  )
 })
 
 test('manual retry propagates insertion failure without consuming the failure', async () => {

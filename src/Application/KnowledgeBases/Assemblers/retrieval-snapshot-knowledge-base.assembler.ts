@@ -5,7 +5,7 @@ export class RetrievalSnapshotKnowledgeBaseAssembler {
     return { ...snapshot, chunks }
   }
 
-  static toRetrievalSnapshot(facts: Omit<RetrievalSnapshot, 'chunks' | 'lexicalCandidateChunkIds'>): RetrievalSnapshot {
-    return { ...facts, chunks: [], lexicalCandidateChunkIds: [] }
+  static toRetrievalSnapshot(facts: Omit<RetrievalSnapshot, 'chunks'>): RetrievalSnapshot {
+    return { ...facts, chunks: [] }
   }
 }

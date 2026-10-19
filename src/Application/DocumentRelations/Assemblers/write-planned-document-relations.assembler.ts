@@ -1,10 +1,10 @@
 import type { DocumentRelation } from '../../../Domain/DocumentRelation/document-relation.ts'
-import type { SavePlannedDocumentRelationsQueryObject } from '../QueryObjects/document-relation.query-object.ts'
+import type { InsertPlannedDocumentRelationsQueryObject } from '../QueryObjects/document-relation.query-object.ts'
 
 export class WritePlannedDocumentRelationsAssembler {
-  static toSavePlannedDocumentRelationsQueryObject(
+  static toInsertPlannedDocumentRelationsQueryObject(
     documentRelations: readonly DocumentRelation[],
-  ): SavePlannedDocumentRelationsQueryObject {
+  ): InsertPlannedDocumentRelationsQueryObject {
     return {
       relations: documentRelations.map((relation) => ({
         id: relation.id,

@@ -11,6 +11,8 @@ import { KnowledgeServiceConfigModule } from './knowledge-service-config.module.
 import { PersistenceModule } from './persistence.module.ts'
 import { type KnowledgeServiceConfig, KNOWLEDGE_SERVICE_CONFIG } from '../../../config/knowledge-service.config.ts'
 import { CollectDocumentIndexGarbageUseCaseContract } from '../../Application/DocumentIndexes/Contracts/collect-document-index-garbage.use-case.contract.ts'
+import { DocumentIndexExecutionQueue } from '../../Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
+import { DocumentIndexFailureArchive } from '../../Application/DocumentIndexes/Contracts/document-index-failure.archive.ts'
 import { PlanDocumentIndexGarbageUseCaseContract } from '../../Application/DocumentIndexes/Contracts/plan-document-index-garbage.use-case.contract.ts'
 import { PlanDocumentRelationGarbageUseCaseContract } from '../../Application/DocumentRelations/Contracts/plan-document-relation-garbage.use-case.contract.ts'
 import { CollectDocumentRevisionGarbageUseCaseContract } from '../../Application/DocumentRevisions/Contracts/collect-document-revision-garbage.use-case.contract.ts'
@@ -47,6 +49,8 @@ import { PersistenceTransaction as PersistenceTransactionContract } from '../../
         lockDocumentParents: LockDocumentRetentionParentsUseCase,
         documentRetention: InspectDocumentRetentionUseCase,
         serviceConfig: Pick<KnowledgeServiceConfig, 'gcRetentionMs'>,
+        documentIndexExecutionQueue: DocumentIndexExecutionQueue,
+        documentIndexFailureArchive: DocumentIndexFailureArchive,
       ) =>
         new DocumentGarbageCollectionRequestedListener(
           persistenceTransaction,
@@ -59,6 +63,8 @@ import { PersistenceTransaction as PersistenceTransactionContract } from '../../
           lockDocumentParents,
           documentRetention,
           serviceConfig,
+          documentIndexExecutionQueue,
+          documentIndexFailureArchive,
         ),
       inject: [
         PersistenceTransactionContract,
@@ -71,6 +77,8 @@ import { PersistenceTransaction as PersistenceTransactionContract } from '../../
         LockDocumentRetentionParentsUseCase,
         InspectDocumentRetentionUseCase,
         KNOWLEDGE_SERVICE_CONFIG,
+        DocumentIndexExecutionQueue,
+        DocumentIndexFailureArchive,
       ],
     },
   ],

@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import { DataSource, EntityManager } from 'typeorm'
 
 import type { DocumentIndexExecutionQueue } from '../../../src/Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
-import type { DocumentIndexingDeliveryDto } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
 import { DocumentIndexingDispatchedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-dispatched.event.ts'
 import type { DocumentIndexingFailedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-failed.event.ts'
 import { ProcessDocumentIndexListener } from '../../../src/Application/DocumentIndexes/Listeners/process-document-index.listener.ts'
@@ -21,7 +21,7 @@ import {
   createDocumentIndexRecordFixture,
   createJobRecordFixture,
   createRepositoryStub,
-  createRestoredMembershipFixture,
+  createRestoredKnowledgeBaseDocumentFixture,
 } from '../Application/document-index-lifecycle.fixture.ts'
 
 const createRevisionModel = (content: string): DocumentRevisionModel =>
@@ -39,7 +39,7 @@ const createIndexContentProcessing = () => {
   const dataSource = new DataSource({ type: 'postgres', url: 'postgresql://unused@localhost/unused' })
   const persistenceTransaction = new PersistenceTransaction(dataSource)
   const loadDocumentRevision = new LoadDocumentRevisionUseCase(new DocumentRevisionRepository(persistenceTransaction))
-  const job: DocumentIndexingDeliveryDto = {
+  const job: DocumentIndexingDeliveryDTO = {
     id: 'job',
     knowledgeBaseId: 'kb',
     documentId: 'document',
@@ -59,7 +59,7 @@ const createIndexContentProcessing = () => {
       runReadOnlySnapshot: async () => assert.fail('index processing must not open a retrieval snapshot'),
     },
     { execute: async () => createDocumentFixture() },
-    { execute: async () => createRestoredMembershipFixture() },
+    { execute: async () => createRestoredKnowledgeBaseDocumentFixture() },
     createRepositoryStub<DocumentIndexExecutionQueue>({
       lockExecution: async () => createJobRecordFixture(job),
       renewLease: async () => undefined,

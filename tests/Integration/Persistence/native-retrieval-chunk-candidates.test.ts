@@ -4,8 +4,11 @@ import { test } from 'node:test'
 
 import type { DataSource, EntityManager } from 'typeorm'
 
-import type { FindLexicalChunkCandidatesDto } from '../../../src/Application/Chunks/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
-import type { ChunkVectorSimilarityQueryObject } from '../../../src/Application/Chunks/QueryObjects/chunk.query-object.ts'
+import type { FindLexicalChunkCandidatesDTO } from '../../../src/Application/Chunks/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
+import type {
+  ChunkLexicalSearchQueryObject,
+  ChunkVectorSimilarityQueryObject,
+} from '../../../src/Application/Chunks/QueryObjects/chunk.query-object.ts'
 import { FindLexicalChunkCandidatesUseCase } from '../../../src/Application/Chunks/UseCases/find-lexical-chunk-candidates.use-case.ts'
 import { Chunk } from '../../../src/Domain/Chunk/chunk.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
@@ -140,12 +143,19 @@ const createCandidateFixture = async () => {
 }
 
 test(
-  'repository writes preserve the persisted lexical representation of the previous formatter path',
+  'repository writes persist repeated lexical terms with their source token positions',
   { skip: !process.env.RAG_DATABASE_URL },
   async () => {
-    const { dataSource, cleanup, chunkRepository, scopeA, scopeB } = await createCandidateFixture()
+    const { dataSource, cleanup, persistenceTransaction, chunkRepository, scopeA, scopeB } =
+      await createCandidateFixture()
     const formatter = new LexicalSearchQueryAdapter()
-    const contents = ['Architecture BOUNDARIES architecture', '繁體中文 Hybrid 檢索', '，。！？ --']
+    const contents = [
+      'Architecture BOUNDARIES architecture',
+      'Architecture                 architecture',
+      'Architecture boundaries',
+      '繁體中文 Hybrid 檢索',
+      '，。！？ --',
+    ]
     const chunks = contents.map((content, index) => ({
       id: createChunkIdFixture(100 + index),
       documentIndexId: scopeA,
@@ -169,11 +179,11 @@ test(
             10 + index,
             createEmbeddingVectorFixture(1, 0),
             content,
-            formatter.format(content).searchText,
+            formatter.formatSearchVector(formatter.format(content).terms),
           ),
         ),
       )
-      await chunkRepository.saveChunks({ chunks })
+      await chunkRepository.insertChunks({ chunks })
       const baseline = await Promise.all(
         baselineChunks.map((chunk) => dataSource.getRepository(ChunkModel).findOneByOrFail({ id: chunk.id })),
       )
@@ -189,8 +199,107 @@ test(
         stored.map((chunk) => chunk.searchVector),
         baseline.map((chunk) => chunk.searchVector),
       )
+      assert.equal(stored[0]?.searchVector, "'architecture':1,3 'boundaries':2")
+      assert.equal(stored[1]?.searchVector, "'architecture':1,2")
       assert.ok(stored.every((chunk) => chunk.searchVector !== null))
       assert.ok(chunks.every((chunk) => !Object.hasOwn(chunk, 'searchVector')))
+
+      const lexicalResult = await persistenceTransaction.runReadOnlySnapshot(async () => {
+        const manager = persistenceTransaction.manager
+        assert.ok(manager.queryRunner?.isTransactionActive)
+        const lexicalQueryObject: ChunkLexicalSearchQueryObject = {
+          documentIndexIds: [scopeA],
+          queryText: 'architecture',
+          limit: 3,
+        }
+
+        return persistenceTransaction.bind(manager, () =>
+          chunkRepository.findByDocumentIndexIdsOrderByLexicalScoreDescAndIdAsc(lexicalQueryObject),
+        )
+      })
+
+      assert.deepEqual(
+        lexicalResult.map((chunk) => chunk.id),
+        [createChunkIdFixture(100), createChunkIdFixture(101), createChunkIdFixture(102)],
+      )
+      assert.equal(
+        lexicalResult[0]?.requireLexicalSearchScoreFor('architecture'),
+        lexicalResult[1]?.requireLexicalSearchScoreFor('architecture'),
+        'ts_rank reflects matching frequency here without rewarding proximity between occurrences',
+      )
+      assert.ok(
+        (lexicalResult[0]?.requireLexicalSearchScoreFor('architecture') ?? NaN) >
+          (lexicalResult[2]?.requireLexicalSearchScoreFor('architecture') ?? NaN),
+        'repeated source terms have greater ts_rank than a single occurrence',
+      )
+    } finally {
+      await cleanup()
+    }
+  },
+)
+
+test(
+  'native PostgreSQL tsvector persistence accepts escaped lexemes and enforces position and lexeme bounds',
+  { skip: !process.env.RAG_DATABASE_URL },
+  async () => {
+    const { dataSource, cleanup, scopeA } = await createCandidateFixture()
+    const formatter = new LexicalSearchQueryAdapter()
+
+    try {
+      const escapedVector = formatter.formatSearchVector(["o'reilly\\collection"])
+      const escapedChunk = await seedChunkFixture(
+        dataSource,
+        300,
+        scopeA,
+        30,
+        createEmbeddingVectorFixture(1, 0),
+        "o'reilly\\collection",
+        escapedVector,
+      )
+      const persistedEscapedChunk = await dataSource.getRepository(ChunkModel).findOneByOrFail({ id: escapedChunk.id })
+      assert.equal(persistedEscapedChunk.searchVector, escapedVector)
+
+      const positionLimitVector = formatter.formatSearchVector(Array<string>(257).fill('echo'))
+      const positionLimitChunk = await seedChunkFixture(
+        dataSource,
+        301,
+        scopeA,
+        31,
+        createEmbeddingVectorFixture(1, 0),
+        'echo '.repeat(257),
+        positionLimitVector,
+      )
+      const persistedPositionLimitChunk = await dataSource
+        .getRepository(ChunkModel)
+        .findOneByOrFail({ id: positionLimitChunk.id })
+      assert.equal(persistedPositionLimitChunk.searchVector, positionLimitVector)
+
+      const postgresSaturatedChunk = await seedChunkFixture(
+        dataSource,
+        302,
+        scopeA,
+        32,
+        createEmbeddingVectorFixture(1, 0),
+        'saturated',
+        "'saturated':16384",
+      )
+      const persistedSaturatedChunk = await dataSource
+        .getRepository(ChunkModel)
+        .findOneByOrFail({ id: postgresSaturatedChunk.id })
+      assert.equal(persistedSaturatedChunk.searchVector, "'saturated':16383")
+
+      const oversizedLexeme = 'x'.repeat(2048)
+      await assert.rejects(
+        seedChunkFixture(
+          dataSource,
+          303,
+          scopeA,
+          33,
+          createEmbeddingVectorFixture(1, 0),
+          oversizedLexeme,
+          `'${oversizedLexeme}':1`,
+        ),
+      )
     } finally {
       await cleanup()
     }
@@ -430,11 +539,22 @@ test(
       scopeB,
       outsideScope,
     } = await createCandidateFixture()
+    const chineseText = '繁體中文 Hybrid 檢索'
+    const lexicalFormatter = new LexicalSearchQueryAdapter()
     const lexicalCandidates = new FindLexicalChunkCandidatesUseCase(chunkRepository)
-    const lexicalIn = (manager: EntityManager, findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDto) =>
+    const lexicalIn = (manager: EntityManager, findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDTO) =>
       persistenceTransaction.bind(manager, () => lexicalCandidates.execute(findLexicalChunkCandidatesDTO))
 
     try {
+      await seedChunkFixture(
+        dataSource,
+        7,
+        scopeA,
+        10,
+        createEmbeddingVectorFixture(0, 1),
+        chineseText,
+        lexicalFormatter.formatSearchVector(lexicalFormatter.format(chineseText).terms),
+      )
       await persistenceTransaction.runReadOnlySnapshot(async () => {
         const runner = persistenceTransaction.manager.queryRunner
         assert.ok(runner)
@@ -451,8 +571,21 @@ test(
           const callsBefore = queryCalls.mock.callCount()
           assert.deepEqual(await lexicalIn(runner.manager, { ...lexicalInput, documentIndexIds: [] }), [])
           assert.deepEqual(await lexicalIn(runner.manager, { ...lexicalInput, queryText: '' }), [])
+          assert.deepEqual(await lexicalIn(runner.manager, { ...lexicalInput, queryText: '，。！？ --' }), [])
           assert.deepEqual(await lexicalIn(runner.manager, { ...lexicalInput, limit: 0 }), [])
           assert.equal(queryCalls.mock.callCount(), callsBefore)
+        })
+
+        await context.test('Chinese words use the persisted segmenter profile for matching', async () => {
+          const chineseResult = await lexicalIn(runner.manager, { ...lexicalInput, queryText: chineseText, limit: 1 })
+          const [matchedChineseChunk] = chineseResult
+
+          assert.ok(matchedChineseChunk instanceof Chunk)
+          assert.deepEqual(
+            chineseResult.map((chunk) => chunk.id),
+            [createChunkIdFixture(7)],
+          )
+          assert.ok(matchedChineseChunk.requireLexicalSearchScoreFor(chineseText) > 0)
         })
 
         const callsBeforeLexical = queryCalls.mock.callCount()

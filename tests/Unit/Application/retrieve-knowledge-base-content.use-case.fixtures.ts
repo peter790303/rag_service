@@ -1,7 +1,7 @@
 import {
   createDocumentFixture,
   createRepositoryStub,
-  createRestoredMembershipFixture,
+  createRestoredKnowledgeBaseDocumentFixture,
   createRestoredDocumentIndexFixture,
 } from './document-index-lifecycle.fixture.ts'
 import type { FindLexicalChunkCandidatesUseCaseContract } from '../../../src/Application/Chunks/Contracts/find-lexical-chunk-candidates.use-case.contract.ts'
@@ -16,9 +16,9 @@ import { LoadRetrievalDocumentIndexesUseCase } from '../../../src/Application/Do
 import { LoadRetrievalDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/load-retrieval-document-relations.use-case.ts'
 import { LoadRetrievalDocumentRevisionsUseCase } from '../../../src/Application/DocumentRevisions/UseCases/load-retrieval-document-revisions.use-case.ts'
 import { LoadRetrievalDocumentsUseCase } from '../../../src/Application/Documents/UseCases/load-retrieval-documents.use-case.ts'
+import { LoadRetrievalKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/load-retrieval-knowledge-base-documents.use-case.ts'
 import type { RetrievalSnapshot } from '../../../src/Application/KnowledgeBases/Types/retrieval-snapshot.ts'
 import type { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { LoadRetrievalMembershipsUseCase } from '../../../src/Application/Memberships/UseCases/load-retrieval-memberships.use-case.ts'
 import { Chunk, type ChunkState } from '../../../src/Domain/Chunk/chunk.ts'
 import type { DocumentState } from '../../../src/Domain/Document/document.ts'
 import type { DocumentIndexState } from '../../../src/Domain/DocumentIndex/document-index.ts'
@@ -26,7 +26,7 @@ import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums
 import { DocumentRelation, type DocumentRelationState } from '../../../src/Domain/DocumentRelation/document-relation.ts'
 import { DocumentRevision, type DocumentRevisionState } from '../../../src/Domain/DocumentRevision/document-revision.ts'
 import { KnowledgeBase } from '../../../src/Domain/KnowledgeBase/knowledge-base.ts'
-import type { MembershipState } from '../../../src/Domain/Membership/membership.ts'
+import type { KnowledgeBaseDocumentState } from '../../../src/Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
 
 export type RetrievalChunkFixture = Pick<ChunkState, 'id' | 'documentIndexId'> &
   Partial<Omit<ChunkState, 'id' | 'documentIndexId' | 'searchVector'>> & {
@@ -34,7 +34,7 @@ export type RetrievalChunkFixture = Pick<ChunkState, 'id' | 'documentIndexId'> &
   }
 export type RetrievalSnapshotFixture = {
   knowledgeBaseId: string | null
-  memberships: (Pick<MembershipState, 'documentId'> & Partial<MembershipState>)[]
+  knowledgeBaseDocuments: (Pick<KnowledgeBaseDocumentState, 'documentId'> & Partial<KnowledgeBaseDocumentState>)[]
   documents: (Pick<DocumentState, 'id'> & Partial<DocumentState>)[]
   chunks: RetrievalChunkFixture[]
   indexes: (Pick<DocumentIndexState, 'id' | 'documentId'> & Partial<DocumentIndexState>)[]
@@ -68,8 +68,8 @@ export const createRetrievalSnapshotFixture = (input: RetrievalSnapshotFixture):
           createdAt: new Date(0),
           updatedAt: new Date(0),
         }),
-  memberships: input.memberships.map((state) =>
-    createRestoredMembershipFixture({ knowledgeBaseId: input.knowledgeBaseId ?? 'kb', ...state }),
+  knowledgeBaseDocuments: input.knowledgeBaseDocuments.map((state) =>
+    createRestoredKnowledgeBaseDocumentFixture({ knowledgeBaseId: input.knowledgeBaseId ?? 'kb', ...state }),
   ),
   documents: input.documents.map((state) =>
     createDocumentFixture({
@@ -80,7 +80,6 @@ export const createRetrievalSnapshotFixture = (input: RetrievalSnapshotFixture):
     }),
   ),
   chunks: input.chunks.map(createRetrievalChunkFixture),
-  lexicalCandidateChunkIds: [],
   indexes: input.indexes.map((state) =>
     createRestoredDocumentIndexFixture({
       status: state.readyAt === null ? DocumentIndexStatusEnum.BUILDING : DocumentIndexStatusEnum.READY,
@@ -201,9 +200,9 @@ export const createRetrievalPersistenceFixture = (
     },
     {
       findByKnowledgeBaseIdOrderByDocumentIdAsc: async () => {
-        withinSnapshot('memberships')
+        withinSnapshot('knowledgeBaseDocuments')
 
-        return snapshot.memberships
+        return snapshot.knowledgeBaseDocuments
       },
     },
     {
@@ -277,9 +276,11 @@ export const createRetrievalPersistenceFixture = (
     repositories[0],
     createRepositoryStub<RetrievalConstructor[1]>(repositories[1]),
     traceOwner(
-      'memberships',
-      new LoadRetrievalMembershipsUseCase(
-        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalMembershipsUseCase>[0]>(repositories[2]),
+      'knowledgeBaseDocuments',
+      new LoadRetrievalKnowledgeBaseDocumentsUseCase(
+        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalKnowledgeBaseDocumentsUseCase>[0]>(
+          repositories[2],
+        ),
       ),
     ),
     traceOwner(
@@ -340,7 +341,7 @@ export const retrievalProfileFixtures = {
 
 export const emptyRetrievalSnapshotFixture = {
   knowledgeBaseId: 'kb',
-  memberships: [{ documentId: 'doc', activeDocumentIndexId: null }],
+  knowledgeBaseDocuments: [{ documentId: 'doc', activeDocumentIndexId: null }],
   documents: [{ id: 'doc', sourcePath: 'guide.md' }],
   chunks: [],
   indexes: [],

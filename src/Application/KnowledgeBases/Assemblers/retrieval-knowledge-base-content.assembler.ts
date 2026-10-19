@@ -7,12 +7,12 @@ import type {
 } from '../../../Domain/KnowledgeBase/ValueObjects/knowledge-base-retrieval.ts'
 import type { RankedCandidate } from '../Types/ranked-candidate.ts'
 import type { HybridChunkCandidate, RetrievalChunk } from '../Types/retrieval-chunk.ts'
-import type { RetrievalMembership, RetrievalSnapshot } from '../Types/retrieval-snapshot.ts'
+import type { RetrievalKnowledgeBaseDocument, RetrievalSnapshot } from '../Types/retrieval-snapshot.ts'
 
 export interface RetrievalKnowledgeBaseContentAssemblerInput {
   snapshot: RetrievalSnapshot
   chunkCountsByDocumentIndexId: Record<string, number>
-  requiredMembers: RetrievalMembership[]
+  requiredMembers: RetrievalKnowledgeBaseDocument[]
   rankedChunks: (RankedCandidate<RetrievalChunk> & { isEffective: boolean; isMandatoryContext: boolean })[]
   vectorRanked: HybridChunkCandidate[]
   lexicalRanked: HybridChunkCandidate[]
@@ -30,8 +30,11 @@ export class RetrievalKnowledgeBaseContentAssembler {
     const documentsById = new Map(facts.snapshot.documents.map((document) => [document.id, document]))
     const indexesById = new Map(facts.snapshot.indexes.map((index) => [index.id, index]))
     const revisionsById = new Map(facts.snapshot.revisions.map((revision) => [revision.id, revision]))
-    const membershipsByDocumentId = new Map(
-      facts.snapshot.memberships.map((membership) => [membership.documentId, membership]),
+    const knowledgeBaseDocumentsByDocumentId = new Map(
+      facts.snapshot.knowledgeBaseDocuments.map((knowledgeBaseDocument) => [
+        knowledgeBaseDocument.documentId,
+        knowledgeBaseDocument,
+      ]),
     )
     const semanticByChunkId = new Map(facts.vectorRanked.map((candidate) => [candidate.chunk.id, candidate]))
     const lexicalByChunkId = new Map(facts.lexicalRanked.map((candidate) => [candidate.chunk.id, candidate]))
@@ -49,7 +52,7 @@ export class RetrievalKnowledgeBaseContentAssembler {
         index,
         document: documentsById.get(index.documentId)!,
         revision: revisionsById.get(index.revisionId)!,
-        membership: membershipsByDocumentId.get(index.documentId)!,
+        knowledgeBaseDocument: knowledgeBaseDocumentsByDocumentId.get(index.documentId)!,
       }
     }
     const matches = facts.rankedChunks.map(

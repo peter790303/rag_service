@@ -3,22 +3,15 @@ import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
 import type { DocumentRevisionRepository } from '../../../src/Application/DocumentRevisions/Contracts/document-revision.repository.ts'
+import type { DocumentRevisionSourceSnapshotDTO } from '../../../src/Application/DocumentRevisions/DataTransferObjects/prepare-document-revision-for-index-request.dto.ts'
+import { InvalidDocumentRevisionIndexRequestInputException } from '../../../src/Application/DocumentRevisions/Exceptions/invalid-document-revision-index-request-input.exception.ts'
 import type { CreateDocumentRevisionQueryObject } from '../../../src/Application/DocumentRevisions/QueryObjects/document-revision.query-object.ts'
 import { PrepareDocumentRevisionForIndexRequestUseCase } from '../../../src/Application/DocumentRevisions/UseCases/prepare-document-revision-for-index-request.use-case.ts'
-import type { SourceDocumentDto } from '../../../src/Application/Documents/DataTransferObjects/source-document.dto.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
 import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
-import { InvalidDocumentRevisionContentException } from '../../../src/Domain/DocumentRevision/Exceptions/invalid-document-revision-content.exception.ts'
 import { InvalidDocumentRevisionHashException } from '../../../src/Domain/DocumentRevision/Exceptions/invalid-document-revision-hash.exception.ts'
 import { InvalidDocumentRevisionIdentityException } from '../../../src/Domain/DocumentRevision/Exceptions/invalid-document-revision-identity.exception.ts'
 
-const sourceDocument: SourceDocumentDto = {
-  knowledgeBaseId: 'kb-1',
-  projectId: 'project-1',
-  projectName: 'Project',
-  sourceType: DocumentSourceTypeEnum.REPOSITORY,
-  sourceKey: 'readme',
-  sourcePath: 'README.md',
+const sourceDocument: DocumentRevisionSourceSnapshotDTO = {
   content: '',
 }
 const validInput = { sourceDocument, documentId: 'document-1', contentSha256: 'a'.repeat(64) }
@@ -26,21 +19,36 @@ type PrepareRevisionInput = Parameters<PrepareDocumentRevisionForIndexRequestUse
 
 test('revision input omissions and invalid values fail before any repository call', async (context) => {
   const scenarios = [
-    { name: 'missing input', input: undefined, exception: InvalidDocumentRevisionContentException },
+    { name: 'missing input', input: undefined, exception: InvalidDocumentRevisionIndexRequestInputException },
     {
       name: 'missing source',
       input: { ...validInput, sourceDocument: undefined },
-      exception: InvalidDocumentRevisionContentException,
+      exception: InvalidDocumentRevisionIndexRequestInputException,
     },
     {
       name: 'missing document id',
       input: { ...validInput, documentId: undefined },
+      exception: InvalidDocumentRevisionIndexRequestInputException,
+    },
+    {
+      name: 'document id with invalid type',
+      input: { ...validInput, documentId: 42 },
+      exception: InvalidDocumentRevisionIndexRequestInputException,
+    },
+    {
+      name: 'empty document id violates the domain invariant',
+      input: { ...validInput, documentId: '' },
       exception: InvalidDocumentRevisionIdentityException,
     },
     {
       name: 'missing hash',
       input: { ...validInput, contentSha256: undefined },
-      exception: InvalidDocumentRevisionHashException,
+      exception: InvalidDocumentRevisionIndexRequestInputException,
+    },
+    {
+      name: 'hash with invalid type',
+      input: { ...validInput, contentSha256: 42 },
+      exception: InvalidDocumentRevisionIndexRequestInputException,
     },
     {
       name: 'invalid hash',
@@ -50,12 +58,17 @@ test('revision input omissions and invalid values fail before any repository cal
     {
       name: 'missing content',
       input: { ...validInput, sourceDocument: { ...sourceDocument, content: undefined } },
-      exception: InvalidDocumentRevisionContentException,
+      exception: InvalidDocumentRevisionIndexRequestInputException,
+    },
+    {
+      name: 'content with invalid type',
+      input: { ...validInput, sourceDocument: { ...sourceDocument, content: 42 } },
+      exception: InvalidDocumentRevisionIndexRequestInputException,
     },
     {
       name: 'invalid title',
       input: { ...validInput, sourceDocument: { ...sourceDocument, title: false } },
-      exception: InvalidDocumentRevisionContentException,
+      exception: InvalidDocumentRevisionIndexRequestInputException,
     },
   ]
 
@@ -84,8 +97,6 @@ test('revision creation supplies validated identity and timestamps while preserv
             findByDocumentIdAndContentSha256: async () => null,
             create: async (query) => {
               writes.push(query)
-
-              return new DocumentRevision(query)
             },
           }),
         )

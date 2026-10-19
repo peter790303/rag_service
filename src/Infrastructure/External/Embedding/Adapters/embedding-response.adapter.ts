@@ -12,7 +12,8 @@ const mapEmbeddingEntry = (value: unknown, dimensions: number): EmbeddingEntry =
 
   if (
     embedding.length !== dimensions ||
-    !embedding.every((component): component is number => typeof component === 'number' && Number.isFinite(component))
+    !embedding.every((component): component is number => typeof component === 'number' && Number.isFinite(component)) ||
+    !embedding.some((component) => component !== 0)
   ) {
     throw new KnowledgeEmbeddingUnavailableException()
   }

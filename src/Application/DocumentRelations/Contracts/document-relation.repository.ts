@@ -2,10 +2,10 @@ import type { DocumentRelation } from '../../../Domain/DocumentRelation/document
 import type { DocumentRelationSourceIndexQueryObject } from '../QueryObjects/document-relation.query-object.ts'
 import type { DocumentRelationSourceIndexesQueryObject } from '../QueryObjects/document-relation.query-object.ts'
 import type { DocumentRelationTargetDocumentQueryObject } from '../QueryObjects/document-relation.query-object.ts'
-import type { SavePlannedDocumentRelationsQueryObject } from '../QueryObjects/document-relation.query-object.ts'
+import type { InsertPlannedDocumentRelationsQueryObject } from '../QueryObjects/document-relation.query-object.ts'
 
 export abstract class DocumentRelationRepository {
-  abstract savePlanned(savePlannedDocumentRelationsQO: SavePlannedDocumentRelationsQueryObject): Promise<void>
+  abstract insertPlanned(insertPlannedDocumentRelationsQO: InsertPlannedDocumentRelationsQueryObject): Promise<void>
 
   abstract findBySourceIndexId(
     documentRelationSourceIndexQO: DocumentRelationSourceIndexQueryObject,
