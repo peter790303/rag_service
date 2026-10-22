@@ -1,5 +1,6 @@
 import { InvalidKnowledgeBaseStateException } from './Exceptions/invalid-knowledge-base-state.exception.ts'
 import { KnowledgeBaseProjectMismatchException } from './Exceptions/knowledge-base-project-mismatch.exception.ts'
+import { KnowledgeBaseGraph, type KnowledgeGraphState } from './ValueObjects/knowledge-base-graph.ts'
 import { KnowledgeBaseRetrieval, type KnowledgeBaseRetrievalState } from './ValueObjects/knowledge-base-retrieval.ts'
 
 export type KnowledgeBaseState = {
@@ -21,6 +22,8 @@ export class KnowledgeBase {
   private readonly sourceCreatedAt: Date
 
   private sourceUpdatedAt: Date
+
+  private currentGraph: KnowledgeBaseGraph | null = null
 
   private currentRetrieval: KnowledgeBaseRetrieval | null = null
 
@@ -58,6 +61,14 @@ export class KnowledgeBase {
 
   get retrieval(): KnowledgeBaseRetrieval | null {
     return this.currentRetrieval
+  }
+
+  get graph(): KnowledgeBaseGraph | null {
+    return this.currentGraph
+  }
+
+  recordGraph(graphState: KnowledgeGraphState): void {
+    this.currentGraph = new KnowledgeBaseGraph(graphState)
   }
 
   assertProject(projectId: string): void {

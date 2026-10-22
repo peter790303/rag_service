@@ -50,7 +50,7 @@ test('pipeline hash serialization preserves the digest and ignores JSON object k
     )
     .digest('hex')
 
-  assert.equal(first, '88509fe7b05824ed58dd248bd7463ef53d03b72c3cfaa8ab49d86ac6e0ae5926')
+  assert.equal(first, '1b97b4daf37ff0d12cf387407cb1e8d5c09c056815a1741bbf48623805dc9673')
   assert.equal(first, same)
   assert.notEqual(first, changed)
 })

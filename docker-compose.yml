@@ -2,13 +2,13 @@ services:
   database:
     image: pgvector/pgvector:pg17
     environment:
-      POSTGRES_USER: rag
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: agent_teams_rag
+      POSTGRES_USER: '${POSTGRES_USER}'
+      POSTGRES_PASSWORD: '${POSTGRES_PASSWORD}'
+      POSTGRES_DB: '${POSTGRES_DB}'
     ports:
       - '127.0.0.1:30684:5432'
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U rag -d agent_teams_rag']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
       interval: 5s
       timeout: 3s
       retries: 20
@@ -18,7 +18,7 @@ services:
     build: .
     env_file: .env
     environment:
-      RAG_DATABASE_URL: postgres://rag:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@database:5432/agent_teams_rag
+      RAG_DATABASE_URL: '${RAG_DATABASE_URL}'
     command: ['npm', 'run', 'migration:run']
     depends_on:
       database:
@@ -27,11 +27,25 @@ services:
     build: .
     env_file: .env
     environment:
-      RAG_DATABASE_URL: postgres://rag:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@database:5432/agent_teams_rag
-      RAG_CHUNKING_TRANSPORT: http
-      RAG_EMBEDDING_TRANSPORT: http
-      PORT: 30700
+      RAG_DATABASE_URL: '${RAG_DATABASE_URL}'
+      RAG_DB_SCHEMA: '${RAG_DB_SCHEMA}'
+      PORT: '${PORT}'
+      RAG_EMBEDDING_TRANSPORT: '${RAG_EMBEDDING_TRANSPORT}'
+      RAG_EMBEDDING_API_URL: '${RAG_EMBEDDING_API_URL}'
+      RAG_EMBEDDING_MODEL: '${RAG_EMBEDDING_MODEL}'
+      RAG_EMBEDDING_REVISION: '${RAG_EMBEDDING_REVISION}'
+      RAG_EMBEDDING_CACHE_DIR: '${RAG_EMBEDDING_CACHE_DIR}'
+      RAG_EMBEDDING_DIMENSIONS: '${RAG_EMBEDDING_DIMENSIONS}'
+      RAG_CHUNKING_TRANSPORT: '${RAG_CHUNKING_TRANSPORT}'
+      RAG_CHUNKING_API_URL: '${RAG_CHUNKING_API_URL}'
+      RAG_CHUNKING_MODEL: '${RAG_CHUNKING_MODEL}'
+      RAG_SERVICE_AUTH_SECRET: '${RAG_SERVICE_AUTH_SECRET}'
+      RAG_EXTERNAL_REQUEST_TIMEOUT_MS: '${RAG_EXTERNAL_REQUEST_TIMEOUT_MS}'
+      RAG_JOB_LEASE_SECONDS: '${RAG_JOB_LEASE_SECONDS}'
+      RAG_WORKER_POLL_MS: '${RAG_WORKER_POLL_MS}'
     command: ['node', 'dist/src/main.js']
+    volumes:
+      - '${RAG_EMBEDDING_CACHE_DIR}:${RAG_EMBEDDING_CACHE_DIR}:ro'
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -41,10 +55,24 @@ services:
     build: .
     env_file: .env
     environment:
-      RAG_DATABASE_URL: postgres://rag:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@database:5432/agent_teams_rag
-      RAG_CHUNKING_TRANSPORT: http
-      RAG_EMBEDDING_TRANSPORT: http
+      RAG_DATABASE_URL: '${RAG_DATABASE_URL}'
+      RAG_DB_SCHEMA: '${RAG_DB_SCHEMA}'
+      RAG_EMBEDDING_TRANSPORT: '${RAG_EMBEDDING_TRANSPORT}'
+      RAG_EMBEDDING_API_URL: '${RAG_EMBEDDING_API_URL}'
+      RAG_EMBEDDING_MODEL: '${RAG_EMBEDDING_MODEL}'
+      RAG_EMBEDDING_REVISION: '${RAG_EMBEDDING_REVISION}'
+      RAG_EMBEDDING_CACHE_DIR: '${RAG_EMBEDDING_CACHE_DIR}'
+      RAG_EMBEDDING_DIMENSIONS: '${RAG_EMBEDDING_DIMENSIONS}'
+      RAG_CHUNKING_TRANSPORT: '${RAG_CHUNKING_TRANSPORT}'
+      RAG_CHUNKING_API_URL: '${RAG_CHUNKING_API_URL}'
+      RAG_CHUNKING_MODEL: '${RAG_CHUNKING_MODEL}'
+      RAG_SERVICE_AUTH_SECRET: '${RAG_SERVICE_AUTH_SECRET}'
+      RAG_EXTERNAL_REQUEST_TIMEOUT_MS: '${RAG_EXTERNAL_REQUEST_TIMEOUT_MS}'
+      RAG_JOB_LEASE_SECONDS: '${RAG_JOB_LEASE_SECONDS}'
+      RAG_WORKER_POLL_MS: '${RAG_WORKER_POLL_MS}'
     command: ['node', 'dist/src/worker.js']
+    volumes:
+      - '${RAG_EMBEDDING_CACHE_DIR}:${RAG_EMBEDDING_CACHE_DIR}:ro'
     depends_on:
       migrate:
         condition: service_completed_successfully

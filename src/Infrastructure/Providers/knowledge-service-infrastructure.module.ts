@@ -15,6 +15,7 @@ import { KnowledgeBaseDocumentPruningModule } from './knowledge-base-document-pr
 import { KnowledgeBaseDocumentsModule } from './knowledge-base-documents.module.ts'
 import { KnowledgeBaseRetrievalModule } from './knowledge-base-retrieval.module.ts'
 import { KnowledgeBasesModule } from './knowledge-bases.module.ts'
+import { KnowledgeGraphModule } from './knowledge-graph.module.ts'
 import { KnowledgeServiceConfigModule } from './knowledge-service-config.module.ts'
 import { PersistenceModule } from './persistence.module.ts'
 import { ServiceAuthenticationModule } from './service-authentication.module.ts'
@@ -38,6 +39,7 @@ import { ServiceAuthenticationModule } from './service-authentication.module.ts'
     DocumentIndexProcessingModule,
     DocumentGarbageCollectionModule,
     KnowledgeBaseRetrievalModule,
+    KnowledgeGraphModule,
     KnowledgeBaseDocumentPruningModule,
   ],
   exports: [
@@ -58,6 +60,7 @@ import { ServiceAuthenticationModule } from './service-authentication.module.ts'
     DocumentIndexProcessingModule,
     DocumentGarbageCollectionModule,
     KnowledgeBaseRetrievalModule,
+    KnowledgeGraphModule,
     KnowledgeBaseDocumentPruningModule,
   ],
 })
