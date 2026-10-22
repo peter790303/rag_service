@@ -78,4 +78,12 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
 
     return knowledgeBase ? KnowledgeBaseFactory.toKnowledgeBase(knowledgeBase) : null
   }
+
+  async list(): Promise<readonly KnowledgeBase[]> {
+    const knowledgeBases = await this.knowledgeBaseModelRepository.find({
+      order: { projectName: 'ASC', projectId: 'ASC' },
+    })
+
+    return knowledgeBases.map((knowledgeBase) => KnowledgeBaseFactory.toKnowledgeBase(knowledgeBase))
+  }
 }

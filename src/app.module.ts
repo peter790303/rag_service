@@ -5,11 +5,13 @@ import { DocumentIndexesController } from './Interfaces/Http/Controllers/documen
 import { HealthController } from './Interfaces/Http/Controllers/health.controller.ts'
 import { KnowledgeBaseDocumentsController } from './Interfaces/Http/Controllers/knowledge-base-documents.controller.ts'
 import { KnowledgeBaseRetrievalController } from './Interfaces/Http/Controllers/knowledge-base-retrieval.controller.ts'
+import { KnowledgeGraphController } from './Interfaces/Http/Controllers/knowledge-graph.controller.ts'
 import { ProjectServiceAuthGuard } from './Interfaces/Http/Middleware/project-service-auth.guard.ts'
 
 @Module({
   imports: [KnowledgeServiceInfrastructureModule],
   controllers: [
+    KnowledgeGraphController,
     HealthController,
     DocumentIndexesController,
     KnowledgeBaseRetrievalController,

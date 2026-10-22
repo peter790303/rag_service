@@ -21,4 +21,6 @@ export abstract class KnowledgeBaseRepository {
   abstract findByKnowledgeBaseId(knowledgeBaseIdQO: KnowledgeBaseIdQueryObject): Promise<KnowledgeBase | null>
 
   abstract findByProjectId(knowledgeBaseProjectQO: KnowledgeBaseProjectQueryObject): Promise<KnowledgeBase | null>
+
+  abstract list(): Promise<readonly KnowledgeBase[]>
 }

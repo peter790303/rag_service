@@ -3,13 +3,17 @@ import { Module } from '@nestjs/common'
 import { PersistenceModule } from './persistence.module.ts'
 import { ChunkRepository as ChunkRepositoryContract } from '../../Application/Chunks/Contracts/chunk.repository.ts'
 import { CollectIndexChunkGarbageUseCaseContract } from '../../Application/Chunks/Contracts/collect-index-chunk-garbage.use-case.contract.ts'
+import { FindGraphChunkCandidatesUseCaseContract } from '../../Application/Chunks/Contracts/find-graph-chunk-candidates.use-case.contract.ts'
 import { FindLexicalChunkCandidatesUseCaseContract } from '../../Application/Chunks/Contracts/find-lexical-chunk-candidates.use-case.contract.ts'
 import { FindRetrievalChunkCandidatesUseCaseContract } from '../../Application/Chunks/Contracts/find-retrieval-chunk-candidates.use-case.contract.ts'
+import { LoadGraphChunksUseCaseContract } from '../../Application/Chunks/Contracts/load-graph-chunks.use-case.contract.ts'
 import { LoadRetrievalChunkContextUseCaseContract } from '../../Application/Chunks/Contracts/load-retrieval-chunk-context.use-case.contract.ts'
 import { LoadRetrievalIndexChunksUseCaseContract } from '../../Application/Chunks/Contracts/load-retrieval-index-chunks.use-case.contract.ts'
 import { CollectIndexChunkGarbageUseCase } from '../../Application/Chunks/UseCases/collect-index-chunk-garbage.use-case.ts'
+import { FindGraphChunkCandidatesUseCase } from '../../Application/Chunks/UseCases/find-graph-chunk-candidates.use-case.ts'
 import { FindLexicalChunkCandidatesUseCase } from '../../Application/Chunks/UseCases/find-lexical-chunk-candidates.use-case.ts'
 import { FindRetrievalChunkCandidatesUseCase } from '../../Application/Chunks/UseCases/find-retrieval-chunk-candidates.use-case.ts'
+import { LoadGraphChunksUseCase } from '../../Application/Chunks/UseCases/load-graph-chunks.use-case.ts'
 import { LoadRetrievalChunkContextUseCase } from '../../Application/Chunks/UseCases/load-retrieval-chunk-context.use-case.ts'
 import { LoadRetrievalIndexChunksUseCase } from '../../Application/Chunks/UseCases/load-retrieval-index-chunks.use-case.ts'
 import { ChunkRepository } from '../Persistence/Repositories/chunk.repository.ts'
@@ -18,6 +22,16 @@ import { ChunkRepository } from '../Persistence/Repositories/chunk.repository.ts
   imports: [PersistenceModule],
   providers: [
     ChunkRepository,
+    {
+      provide: LoadGraphChunksUseCaseContract,
+      useFactory: (repository: ChunkRepositoryContract) => new LoadGraphChunksUseCase(repository),
+      inject: [ChunkRepositoryContract],
+    },
+    {
+      provide: FindGraphChunkCandidatesUseCaseContract,
+      useFactory: (repository: ChunkRepositoryContract) => new FindGraphChunkCandidatesUseCase(repository),
+      inject: [ChunkRepositoryContract],
+    },
     {
       provide: CollectIndexChunkGarbageUseCase,
       useFactory: (chunkRepository: ChunkRepositoryContract) => new CollectIndexChunkGarbageUseCase(chunkRepository),
@@ -54,6 +68,8 @@ import { ChunkRepository } from '../Persistence/Repositories/chunk.repository.ts
     { provide: ChunkRepositoryContract, useExisting: ChunkRepository },
   ],
   exports: [
+    LoadGraphChunksUseCaseContract,
+    FindGraphChunkCandidatesUseCaseContract,
     ChunkRepositoryContract,
     CollectIndexChunkGarbageUseCaseContract,
     LoadRetrievalIndexChunksUseCaseContract,

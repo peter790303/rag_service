@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common'
 
 import { ServiceAuthenticator } from '../../../Application/KnowledgeBases/Contracts/service-authenticator.ts'
+import { KNOWLEDGE_GRAPH_CATALOG_SCOPE } from '../../../Application/KnowledgeBases/knowledge-graph-catalog-scope.ts'
 
 type ProjectServiceHttpRequest = {
   readonly body?: unknown
@@ -37,6 +38,14 @@ export class ProjectServiceAuthGuard implements CanActivate {
   }
 
   private projectIdFor(request: ProjectServiceHttpRequest): string {
+    const path = request.path.split('?')[0]
+
+    if (path === '/v1/knowledge-graph/projects') {
+      const headerProjectId = request.header('x-rag-project-id') ?? ''
+
+      return headerProjectId === KNOWLEDGE_GRAPH_CATALOG_SCOPE ? headerProjectId : ''
+    }
+
     const projectIds = [
       request.params.projectId,
       isRecord(request.body) ? request.body.projectId : undefined,
