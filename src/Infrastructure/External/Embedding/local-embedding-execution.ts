@@ -4,6 +4,7 @@ import { readLocalEmbeddingWorkerResult } from './Adapters/local-embedding-worke
 import { LocalEmbeddingExecutionException } from './Exceptions/local-embedding-execution.exception.ts'
 import { LocalEmbeddingRequestAbortedException } from './Exceptions/local-embedding-request-aborted.exception.ts'
 import { LocalEmbeddingRequestTimedOutException } from './Exceptions/local-embedding-request-timed-out.exception.ts'
+import { acquireLocalEmbeddingCapacity } from './local-embedding-capacity.ts'
 
 export interface LocalEmbeddingRequest {
   model: string
@@ -18,6 +19,27 @@ export const executeLocalEmbedding = async (
   timeoutMs: number,
   signal?: AbortSignal,
   workerUrl = new URL('./local-embedding.worker.js', import.meta.url),
+): Promise<unknown> => {
+  const deadline = performance.now() + timeoutMs
+  const release = await acquireLocalEmbeddingCapacity(timeoutMs, signal)
+  try {
+    const remainingMs = deadline - performance.now()
+
+    if (signal?.aborted) throw new LocalEmbeddingRequestAbortedException()
+
+    if (remainingMs <= 0) throw new LocalEmbeddingRequestTimedOutException()
+
+    return await executeWorker(request, remainingMs, signal, workerUrl)
+  } finally {
+    release()
+  }
+}
+
+const executeWorker = async (
+  request: LocalEmbeddingRequest,
+  timeoutMs: number,
+  signal: AbortSignal | undefined,
+  workerUrl: URL,
 ): Promise<unknown> => {
   if (signal?.aborted) throw new LocalEmbeddingRequestAbortedException()
 

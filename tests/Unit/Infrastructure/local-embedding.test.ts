@@ -18,11 +18,54 @@ import { LocalEmbeddingTokenWindowCapacityException } from '../../../src/Infrast
 import { LocalEmbeddingTokenizerUnsupportedException } from '../../../src/Infrastructure/External/Embedding/Exceptions/local-embedding-tokenizer-unsupported.exception.ts'
 import { LocalEmbeddingVectorMagnitudeException } from '../../../src/Infrastructure/External/Embedding/Exceptions/local-embedding-vector-magnitude.exception.ts'
 import { LocalEmbeddingWindowVectorsException } from '../../../src/Infrastructure/External/Embedding/Exceptions/local-embedding-window-vectors.exception.ts'
+import { acquireLocalEmbeddingCapacity } from '../../../src/Infrastructure/External/Embedding/local-embedding-capacity.ts'
 import { executeLocalEmbedding } from '../../../src/Infrastructure/External/Embedding/local-embedding-execution.ts'
 import { LocalEmbeddingClient } from '../../../src/Infrastructure/External/Embedding/local-embedding.client.ts'
 
 const request = { model: 'original/model', revision: 'pinned', cacheDir: '/unused', texts: ['first'] }
 const workerUrl = new URL('../../Support/local-embedding-worker.fixture.js', import.meta.url)
+
+test('queued inference expires or aborts without starting a worker and subsequent requests recover', async () => {
+  const release = await acquireLocalEmbeddingCapacity(5000)
+  const invalidWorkerUrl = new URL('https://invalid.example/worker.js')
+  const controller = new AbortController()
+  try {
+    const aborted = executeLocalEmbedding(request, 5000, controller.signal, invalidWorkerUrl)
+    const assertion = assert.rejects(aborted, LocalEmbeddingRequestAbortedException)
+    controller.abort()
+    await assertion
+    await assert.rejects(
+      executeLocalEmbedding(request, 20, undefined, invalidWorkerUrl),
+      LocalEmbeddingRequestTimedOutException,
+    )
+  } finally {
+    release()
+  }
+  assert.deepEqual(await executeLocalEmbedding(request, 5000, undefined, workerUrl), [[1, 0]])
+})
+
+test('embedding capacity admits one request at a time in arrival order', async () => {
+  const releaseFirst = await acquireLocalEmbeddingCapacity(5000)
+  const admitted: number[] = []
+  const second = acquireLocalEmbeddingCapacity(5000).then((release) => {
+    admitted.push(2)
+
+    return release
+  })
+  const third = acquireLocalEmbeddingCapacity(5000).then((release) => {
+    admitted.push(3)
+
+    return release
+  })
+  assert.deepEqual(admitted, [])
+  releaseFirst()
+  const releaseSecond = await second
+  assert.deepEqual(admitted, [2])
+  releaseSecond()
+  const releaseThird = await third
+  assert.deepEqual(admitted, [2, 3])
+  releaseThird()
+})
 
 test('inference workers do not inherit host entry-point flags or NODE_OPTIONS preloads', async () => {
   const executionUrl = new URL(
