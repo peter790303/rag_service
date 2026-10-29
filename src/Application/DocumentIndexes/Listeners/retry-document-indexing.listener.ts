@@ -32,6 +32,7 @@ import { IndexRetrySourceChangedException } from '../Exceptions/index-retry-sour
 import { IndexRetrySourceUnavailableException } from '../Exceptions/index-retry-source-unavailable.exception.ts'
 import { InvalidIndexRetrySourceContextException } from '../Exceptions/invalid-index-retry-source-context.exception.ts'
 import { StaleDocumentIndexingFailureException } from '../Exceptions/stale-document-indexing-failure.exception.ts'
+import type { UnretriedDocumentIndexFailureTargetQueryObject } from '../QueryObjects/document-index-failure.query-object.ts'
 
 const TRANSIENT_EXECUTION_FIELDS = new Set([
   'lastError',
@@ -155,6 +156,16 @@ export class RetryDocumentIndexingListener {
     private readonly reserveDocumentForIndexing: ReserveDocumentForIndexingUseCaseContract,
     private readonly reserveKnowledgeBaseDocumentForIndexing: ReserveKnowledgeBaseDocumentForIndexingUseCaseContract,
   ) {}
+
+  async retryCurrentTarget(
+    target: UnretriedDocumentIndexFailureTargetQueryObject & { readonly projectId: string },
+  ): Promise<RetryDocumentIndexingResultDTO> {
+    const failure = await this.documentIndexFailureArchive.findUnretriedTargetFailure(target)
+
+    if (failure === null) throw new DocumentIndexingFailureNotCurrentException()
+
+    return this.handle({ projectId: target.projectId, failedJobId: failure.id })
+  }
 
   async handle({ projectId, failedJobId }: RetryDocumentIndexingDTO): Promise<RetryDocumentIndexingResultDTO> {
     const retryContext = await this.transaction.run(() => this.readByFailedJobIdWithRetryContextProjection(failedJobId))

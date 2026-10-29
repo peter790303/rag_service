@@ -11,6 +11,7 @@ import { DocumentRelationsModule } from './document-relations.module.ts'
 import { DocumentRevisionsModule } from './document-revisions.module.ts'
 import { DocumentsModule } from './documents.module.ts'
 import { EmbeddingModule } from './embedding.module.ts'
+import { IndexManifestModule } from './index-manifest.module.ts'
 import { KnowledgeBaseDocumentPruningModule } from './knowledge-base-document-pruning.module.ts'
 import { KnowledgeBaseDocumentsModule } from './knowledge-base-documents.module.ts'
 import { KnowledgeBaseRetrievalModule } from './knowledge-base-retrieval.module.ts'
@@ -40,6 +41,7 @@ import { ServiceAuthenticationModule } from './service-authentication.module.ts'
     DocumentGarbageCollectionModule,
     KnowledgeBaseRetrievalModule,
     KnowledgeGraphModule,
+    IndexManifestModule,
     KnowledgeBaseDocumentPruningModule,
   ],
   exports: [
@@ -61,6 +63,7 @@ import { ServiceAuthenticationModule } from './service-authentication.module.ts'
     DocumentGarbageCollectionModule,
     KnowledgeBaseRetrievalModule,
     KnowledgeGraphModule,
+    IndexManifestModule,
     KnowledgeBaseDocumentPruningModule,
   ],
 })

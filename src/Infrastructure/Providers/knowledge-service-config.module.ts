@@ -4,7 +4,12 @@ import { loadKnowledgeServiceConfig, KNOWLEDGE_SERVICE_CONFIG } from '../../../c
 
 @Global()
 @Module({
-  providers: [{ provide: KNOWLEDGE_SERVICE_CONFIG, useFactory: () => loadKnowledgeServiceConfig() }],
+  providers: [
+    {
+      provide: KNOWLEDGE_SERVICE_CONFIG,
+      useFactory: () => loadKnowledgeServiceConfig(),
+    },
+  ],
   exports: [KNOWLEDGE_SERVICE_CONFIG],
 })
 export class KnowledgeServiceConfigModule {}

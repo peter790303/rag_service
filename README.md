@@ -39,3 +39,17 @@ API 接收請求與提供結果，背景程序處理索引工作及相關回收�
 呼叫端負責提供來源、選擇專案範圍，並決定如何使用取回的知識。
 對話管理、任務規劃與回答生成由使用此服務的應用程式負責。
 本服務提供知識上下文，不直接生成對話答案。
+
+## Obsidian 索引維護
+
+```bash
+npm run reset:database      # 保存匯入設定，清空 RAG 資料
+npm run import -- obsidian  # 匯入整個 vault，建立 chunks 與向量
+```
+
+- `.env` 設定 `OBSIDIAN_ROOT`（vault 絕對路徑）與 `RAG_DATABASE_URL`（容器內使用 `database`，host 使用 `127.0.0.1:30684`）。Compose 會掛載 `.env` 與 vault。
+- 匯入時需保持 worker 運作；使用 host Codex 切塊時，在 host 執行 `npm run start:host-cli`。Docker 連線需設定 `RAG_HOST_CLI_BIND_ADDRESS=0.0.0.0`，host 與 worker 共用至少 32 字元的 `RAG_HOST_CLI_SHARED_SECRET`。
+- 文件依最近的 `CONTEXT.md` 所在專案資料夾分組；未歸屬專案的文件放入 `Worker Obsidian`。清除舊分組請先 reset 再 import。
+- 匯入會分批等待索引完成，失敗以非零狀態結束。Reset 遇到執行中的索引工作會拒絕清除。
+- 匯入設定保存在 `.local/import-manifest.json`，不含文件內容；重建時讀取 vault 最新檔案。只匯入指定清單可用 `npm run import -- obsidian --manifest <path>`。
+- 修改程式後，host 先執行 `npm run build`；Docker 需重建並更新容器。

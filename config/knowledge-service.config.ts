@@ -24,6 +24,8 @@ export interface KnowledgeServiceConfig {
   chunkingModel: string
   chunkingApiUrl: string
   chunkingApiKey?: string
+  hostCliUrl?: string
+  hostCliSharedSecret?: string
   workerPollMs: number
   gcPollMs: number
   gcRetentionMs: number
@@ -127,6 +129,26 @@ export const loadKnowledgeServiceConfig = (env: NodeJS.ProcessEnv = process.env)
     }
   }
 
+  const hostCliUrl = env.RAG_HOST_CLI_URL?.trim() || ''
+  const hostCliSharedSecret = env.RAG_HOST_CLI_SHARED_SECRET?.trim() || ''
+
+  if (chunkingTransport === 'host-cli' && hostCliUrl) {
+    let parsedHostCliUrl: URL
+    try {
+      parsedHostCliUrl = new URL(hostCliUrl)
+    } catch {
+      invalidConfiguration('RAG_HOST_CLI_URL must be a valid URL')
+    }
+
+    if (!['http:', 'https:'].includes(parsedHostCliUrl.protocol))
+      invalidConfiguration('RAG_HOST_CLI_URL must use HTTP or HTTPS')
+
+    if (hostCliSharedSecret.length < 32)
+      invalidConfiguration(
+        'RAG_HOST_CLI_SHARED_SECRET must contain at least 32 characters when RAG_HOST_CLI_URL is set',
+      )
+  }
+
   const serviceAuthSecret = env.RAG_SERVICE_AUTH_SECRET?.trim() ?? ''
 
   if (serviceAuthSecret.length < 32) {
@@ -154,6 +176,8 @@ export const loadKnowledgeServiceConfig = (env: NodeJS.ProcessEnv = process.env)
     chunkingModel: env.RAG_CHUNKING_MODEL?.trim() || 'gpt-6.1-sol',
     chunkingApiUrl,
     ...(env.RAG_CHUNKING_API_KEY ? { chunkingApiKey: env.RAG_CHUNKING_API_KEY } : {}),
+    hostCliUrl,
+    ...(hostCliSharedSecret ? { hostCliSharedSecret } : {}),
     workerPollMs: positiveInteger('RAG_WORKER_POLL_MS', env.RAG_WORKER_POLL_MS, 1500),
     gcPollMs: positiveInteger('RAG_GC_POLL_MS', env.RAG_GC_POLL_MS, 60000),
     gcRetentionMs: positiveInteger('RAG_GC_RETENTION_MS', env.RAG_GC_RETENTION_MS, 86400000),

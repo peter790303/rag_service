@@ -5,8 +5,11 @@ import { test } from 'node:test'
 import { concatMap, firstValueFrom, from, toArray } from 'rxjs'
 
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
+import { ChunkPlanningProvider } from '../../../src/Application/Chunks/Contracts/chunk-planning-provider.ts'
+import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
 import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
 import { DocumentIndexingTargetStateEnum } from '../../../src/Application/DocumentIndexes/Enums/document-indexing-target-state.enum.ts'
+import { DocumentIndexingDispatchedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-dispatched.event.ts'
 import { DocumentIndexingRequestedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-requested.event.ts'
 import { DocumentIndexingFailureAlreadyRetriedException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-failure-already-retried.exception.ts'
 import { IndexRetrySourceChangedException } from '../../../src/Application/DocumentIndexes/Exceptions/index-retry-source-changed.exception.ts'
@@ -14,25 +17,35 @@ import { InvalidIndexRetrySourceContextException } from '../../../src/Applicatio
 import { StaleDocumentIndexingFailureException } from '../../../src/Application/DocumentIndexes/Exceptions/stale-document-indexing-failure.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
 import { DispatchDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/dispatch-document-indexing.listener.ts'
+import { DocumentIndexedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexed.listener.ts'
 import { DocumentIndexingFailedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-failed.listener.ts'
 import { DocumentIndexingRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-requested.listener.ts'
+import { ProcessDocumentIndexListener } from '../../../src/Application/DocumentIndexes/Listeners/process-document-index.listener.ts'
 import { RetryDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
+import { AuthorizeDocumentIndexChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/authorize-document-index-chunk-replacement.use-case.ts'
 import { StartDocumentIndexPruningRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/start-document-index-pruning-retention.use-case.ts'
+import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
 import type { GetDocumentRevisionForIndexRetryUseCaseContract } from '../../../src/Application/DocumentRevisions/Contracts/get-document-revision-for-index-retry.use-case.contract.ts'
 import { GetDocumentRevisionForIndexRetryUseCase } from '../../../src/Application/DocumentRevisions/UseCases/get-document-revision-for-index-retry.use-case.ts'
+import { LoadDocumentRevisionUseCase } from '../../../src/Application/DocumentRevisions/UseCases/load-document-revision.use-case.ts'
 import { PrepareDocumentRevisionForIndexRequestUseCase } from '../../../src/Application/DocumentRevisions/UseCases/prepare-document-revision-for-index-request.use-case.ts'
 import { GetDocumentForIndexRetryUseCase } from '../../../src/Application/Documents/UseCases/get-document-for-index-retry.use-case.ts'
 import { PrepareDocumentForIndexRequestUseCase } from '../../../src/Application/Documents/UseCases/prepare-document-for-index-request.use-case.ts'
 import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
 import { ActivateKnowledgeBaseDocumentIndexUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/activate-knowledge-base-document-index.use-case.ts'
+import { CompleteKnowledgeBaseDocumentIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/complete-knowledge-base-document-indexing.use-case.ts'
 import { GetKnowledgeBaseDocumentIndexingStateUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/get-knowledge-base-document-indexing-state.use-case.ts'
 import { InspectKnowledgeBaseDocumentRetentionUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/inspect-knowledge-base-document-retention.use-case.ts'
 import { PrepareKnowledgeBaseDocumentForIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prepare-knowledge-base-document-for-index-request.use-case.ts'
 import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
 import { SaveKnowledgeBaseDocumentIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/save-knowledge-base-document-index-request.use-case.ts'
+import { EmbeddingProvider } from '../../../src/Application/KnowledgeBases/Contracts/embedding-provider.ts'
 import { EnsureIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/ensure-indexing-knowledge-base.use-case.ts'
 import { GetIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/get-indexing-knowledge-base.use-case.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
+import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
+import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
+import { DocumentIndexSuccessReceiptModel } from '../../../src/Infrastructure/Persistence/Models/document-index-success-receipt.model.ts'
 import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
 import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
 import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
@@ -50,6 +63,7 @@ import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositor
 import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
 import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
+import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 const config: KnowledgeServiceConfig = {
@@ -205,7 +219,11 @@ const createArchivedRequest = async (
 
     return {
       cleanup,
+      persistenceFixture: documentIndexPersistenceFixture,
+      claimNext,
+      chunks: dataSource.getRepository(ChunkModel),
       documents: dataSource.getRepository(DocumentModel),
+      receipts: dataSource.getRepository(DocumentIndexSuccessReceiptModel),
       jobs: jobModelRepository,
       indexes: documentIndexModelRepository,
       revisions: documentRevisionModelRepository,
@@ -297,6 +315,98 @@ test(
         toArray(),
       ),
     )
+  },
+)
+
+test(
+  'manual retry runs through the process listener and persists chunks and vectors before READY',
+  { skip: !process.env.RAG_DATABASE_URL },
+  async () => {
+    const fixture = await createArchivedRequest({ source: 'repository' })
+
+    try {
+      const retry = await fixture.retry.handle({ projectId: fixture.projectId, failedJobId: fixture.archive.id })
+      assert.equal(retry.status, DocumentIndexingTargetStateEnum.QUEUED)
+      assert.ok(retry.jobId)
+
+      const claim = await fixture.claimNext.handle()
+      assert.ok(claim)
+      assert.equal(claim.id, retry.jobId)
+
+      const persistenceFixture = fixture.persistenceFixture
+      const reserveDocument = new ReserveDocumentForIndexingUseCase(persistenceFixture.documentRepository)
+      const reserveMembership = new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+        persistenceFixture.knowledgeBaseDocumentRepository,
+      )
+      const completeJob = new DocumentIndexedListener(
+        persistenceFixture.persistenceTransaction,
+        reserveDocument,
+        reserveMembership,
+        persistenceFixture.jobRepository,
+        persistenceFixture.documentIndexRepository,
+        new CompleteKnowledgeBaseDocumentIndexingUseCase(persistenceFixture.knowledgeBaseDocumentRepository),
+        new GetIndexingKnowledgeBaseUseCase(persistenceFixture.knowledgeBaseRepository),
+        new DocumentIndexSuccessReceiptRepository(persistenceFixture.persistenceTransaction),
+      )
+      const planner = {
+        modelId: config.chunkingModel,
+        plan: async (content: string) => createMarkdownChunkPlan(content),
+      } as ChunkPlanningProvider
+      const embeddings = {
+        modelId: config.embeddingModel,
+        embed: async (contents: string[]) =>
+          contents.map((_, ordinal) =>
+            Array.from({ length: config.embeddingDimensions }, (_unused, dimension) => (dimension === ordinal ? 1 : 0)),
+          ),
+      } as EmbeddingProvider
+      const process = new ProcessDocumentIndexListener(
+        persistenceFixture.persistenceTransaction,
+        reserveDocument,
+        reserveMembership,
+        persistenceFixture.jobRepository,
+        persistenceFixture.documentIndexRepository,
+        new ReplaceIndexChunkUseCase(
+          persistenceFixture.persistenceTransaction,
+          new AuthorizeDocumentIndexChunkReplacementUseCase(
+            reserveDocument,
+            reserveMembership,
+            persistenceFixture.jobRepository,
+            persistenceFixture.documentIndexRepository,
+          ),
+          persistenceFixture.chunkRepository,
+          new ReplacePlannedDocumentRelationsUseCase(persistenceFixture.documentRelationRepository),
+        ),
+        completeJob,
+        new DocumentIndexingFailedListener(
+          persistenceFixture.persistenceTransaction,
+          reserveDocument,
+          reserveMembership,
+          persistenceFixture.jobRepository,
+          persistenceFixture.documentIndexRepository,
+          persistenceFixture.failedJobRepository,
+        ),
+        embeddings,
+        planner,
+        config.workerLeaseSeconds,
+        new LoadDocumentRevisionUseCase(persistenceFixture.documentRevisionRepository),
+      )
+
+      await process.handle(new DocumentIndexingDispatchedEvent(claim))
+
+      const chunks = await fixture.chunks.findBy({ documentIndexId: fixture.originalJob.documentIndexId })
+      assert.ok(chunks.length > 0)
+      assert.ok(chunks.every((chunk) => chunk.embedding.length === config.embeddingDimensions))
+      assert.ok(chunks.every((chunk) => chunk.embedding.every(Number.isFinite)))
+
+      const index = await fixture.indexes.findOneByOrFail({ id: fixture.originalJob.documentIndexId })
+      assert.equal(index.status, DocumentIndexStatusEnum.READY)
+
+      const receipt = await fixture.receipts.findOneByOrFail({ jobId: retry.jobId })
+      assert.equal(receipt.documentIndexId, fixture.originalJob.documentIndexId)
+      assert.equal(await fixture.jobs.countBy({ id: retry.jobId }), 0)
+    } finally {
+      await fixture.cleanup()
+    }
   },
 )
 

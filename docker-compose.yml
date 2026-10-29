@@ -1,5 +1,6 @@
 services:
   database:
+    restart: always
     image: pgvector/pgvector:pg17
     environment:
       POSTGRES_USER: '${POSTGRES_USER}'
@@ -20,16 +21,20 @@ services:
     environment:
       RAG_DATABASE_URL: '${RAG_DATABASE_URL}'
     command: ['npm', 'run', 'migration:run']
+    volumes:
+      - ./.env:/app/.env:ro
     depends_on:
       database:
         condition: service_healthy
   api:
+    restart: always
     build: .
     env_file: .env
     environment:
       RAG_DATABASE_URL: '${RAG_DATABASE_URL}'
       RAG_DB_SCHEMA: '${RAG_DB_SCHEMA}'
       PORT: '${PORT}'
+      OBSIDIAN_ROOT: '${OBSIDIAN_ROOT:-/Users/xiang/Documents/Worker}'
       RAG_EMBEDDING_TRANSPORT: '${RAG_EMBEDDING_TRANSPORT}'
       RAG_EMBEDDING_API_URL: '${RAG_EMBEDDING_API_URL}'
       RAG_EMBEDDING_MODEL: '${RAG_EMBEDDING_MODEL}'
@@ -45,13 +50,16 @@ services:
       RAG_WORKER_POLL_MS: '${RAG_WORKER_POLL_MS}'
     command: ['node', 'dist/src/main.js']
     volumes:
+      - ./.env:/app/.env:ro
       - '${RAG_EMBEDDING_CACHE_DIR}:${RAG_EMBEDDING_CACHE_DIR}:ro'
+      - '${OBSIDIAN_ROOT:-/Users/xiang/Documents/Worker}:${OBSIDIAN_ROOT:-/Users/xiang/Documents/Worker}:ro'
     depends_on:
       migrate:
         condition: service_completed_successfully
     ports:
       - '127.0.0.1:30682:30700'
   worker:
+    restart: always
     build: .
     env_file: .env
     environment:
@@ -64,6 +72,8 @@ services:
       RAG_EMBEDDING_CACHE_DIR: '${RAG_EMBEDDING_CACHE_DIR}'
       RAG_EMBEDDING_DIMENSIONS: '${RAG_EMBEDDING_DIMENSIONS}'
       RAG_CHUNKING_TRANSPORT: '${RAG_CHUNKING_TRANSPORT}'
+      RAG_HOST_CLI_URL: 'http://host.docker.internal:${RAG_HOST_CLI_PORT:-30701}/internal/chunk-planning'
+      RAG_HOST_CLI_SHARED_SECRET: '${RAG_HOST_CLI_SHARED_SECRET}'
       RAG_CHUNKING_API_URL: '${RAG_CHUNKING_API_URL}'
       RAG_CHUNKING_MODEL: '${RAG_CHUNKING_MODEL}'
       RAG_SERVICE_AUTH_SECRET: '${RAG_SERVICE_AUTH_SECRET}'
@@ -72,6 +82,7 @@ services:
       RAG_WORKER_POLL_MS: '${RAG_WORKER_POLL_MS}'
     command: ['node', 'dist/src/worker.js']
     volumes:
+      - ./.env:/app/.env:ro
       - '${RAG_EMBEDDING_CACHE_DIR}:${RAG_EMBEDDING_CACHE_DIR}:ro'
     depends_on:
       migrate:

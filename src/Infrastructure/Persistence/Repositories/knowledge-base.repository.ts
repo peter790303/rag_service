@@ -43,6 +43,25 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
     })
   }
 
+  async createIfAbsent(createKnowledgeBaseQO: CreateKnowledgeBaseQueryObject): Promise<boolean> {
+    const insertResult = await this.knowledgeBaseModelRepository
+      .createQueryBuilder()
+      .insert()
+      .into(KnowledgeBaseModel)
+      .values({
+        id: createKnowledgeBaseQO.knowledgeBaseId,
+        projectId: createKnowledgeBaseQO.projectId,
+        projectName: createKnowledgeBaseQO.projectName,
+        createdAt: createKnowledgeBaseQO.createdAt,
+        updatedAt: createKnowledgeBaseQO.updatedAt,
+      })
+      .orIgnore()
+      .returning('id')
+      .execute()
+
+    return insertResult.raw.length > 0
+  }
+
   async update(updateKnowledgeBaseQO: UpdateKnowledgeBaseQueryObject): Promise<void> {
     await this.knowledgeBaseModelRepository.update(
       { id: updateKnowledgeBaseQO.knowledgeBaseId },
