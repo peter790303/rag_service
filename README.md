@@ -49,7 +49,7 @@ npm run import -- obsidian  # 匯入整個 vault，建立 chunks 與向量
 
 - `.env` 設定 `OBSIDIAN_ROOT`（vault 絕對路徑）與 `RAG_DATABASE_URL`（容器內使用 `database`，host 使用 `127.0.0.1:30684`）。Compose 會掛載 `.env` 與 vault。
 - 匯入時需保持 worker 運作；使用 host Codex 切塊時，在 host 執行 `npm run start:host-cli`。Docker 連線需設定 `RAG_HOST_CLI_BIND_ADDRESS=0.0.0.0`，host 與 worker 共用至少 32 字元的 `RAG_HOST_CLI_SHARED_SECRET`。
-- 文件依最近的 `CONTEXT.md` 所在專案資料夾分組；未歸屬專案的文件放入 `Worker Obsidian`。清除舊分組請先 reset 再 import。
+- 文件依最近的 `CONTEXT.md` 所在專案資料夾分組；有 YAML frontmatter `project` 時直接作為 `project_id`，缺少時沿用路徑隔離的 fallback。不同資料夾重複宣告相同 `project` 會停止匯入，避免把專案混在一起。未歸屬專案的文件放入 `Worker Obsidian`。清除舊分組請先 reset 再 import。
 - 匯入會分批等待索引完成，失敗以非零狀態結束。Reset 遇到執行中的索引工作會拒絕清除。
 - 匯入設定保存在 `.local/import-manifest.json`，不含文件內容；重建時讀取 vault 最新檔案。只匯入指定清單可用 `npm run import -- obsidian --manifest <path>`。
 - 修改程式後，host 先執行 `npm run build`；Docker 需重建並更新容器。

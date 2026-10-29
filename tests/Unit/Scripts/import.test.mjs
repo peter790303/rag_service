@@ -184,6 +184,79 @@ test('Obsidian discovery groups files by nearest CONTEXT.md and falls back outsi
   }
 })
 
+test('CONTEXT.md project frontmatter defines the canonical project identity', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rag-obsidian-project-id-'))
+  try {
+    await mkdir(join(root, 'BackEnd', 'Agent-Teams-Web'), { recursive: true })
+    await mkdir(join(root, 'BackEnd', 'CodingPipeline'), { recursive: true })
+    await writeFile(
+      join(root, 'BackEnd', 'Agent-Teams-Web', 'CONTEXT.md'),
+      '---\nproject: agent-teams-web\n---\n# Agent Teams Web\n',
+    )
+    await writeFile(
+      join(root, 'BackEnd', 'CodingPipeline', 'CONTEXT.md'),
+      '---\nproject: CodingPipeline\n---\n# CodingPipeline\n',
+    )
+    await writeFile(join(root, 'BackEnd', 'Agent-Teams-Web', 'guide.md'), '# Guide')
+    await writeFile(join(root, 'BackEnd', 'CodingPipeline', 'guide.md'), '# Guide')
+    await writeFile(join(root, 'unassigned.md'), '# Unassigned')
+
+    const entries = await discoverMarkdownEntries({ vaultPath: root })
+    const byPath = new Map(entries.map((entry) => [entry.sourcePath, entry]))
+
+    assert.equal(byPath.get('BackEnd/Agent-Teams-Web/guide.md').projectId, 'agent-teams-web')
+    assert.equal(byPath.get('BackEnd/Agent-Teams-Web/guide.md').projectName, 'Agent-Teams-Web')
+    assert.equal(byPath.get('BackEnd/CodingPipeline/guide.md').projectId, 'CodingPipeline')
+    assert.notEqual(
+      byPath.get('BackEnd/Agent-Teams-Web/guide.md').knowledgeBaseId,
+      byPath.get('BackEnd/CodingPipeline/guide.md').knowledgeBaseId,
+    )
+    assert.equal(byPath.get('unassigned.md').projectId, 'worker/obsidian-worker')
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('duplicate CONTEXT.md project ids across directories fail closed', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rag-obsidian-project-collision-'))
+  try {
+    await mkdir(join(root, 'one'), { recursive: true })
+    await mkdir(join(root, 'two'), { recursive: true })
+    await writeFile(join(root, 'one', 'CONTEXT.md'), '---\nproject: shared-id\n---\n')
+    await writeFile(join(root, 'two', 'CONTEXT.md'), '---\nproject: shared-id\n---\n')
+    await writeFile(join(root, 'one', 'page.md'), '# one')
+    await writeFile(join(root, 'two', 'page.md'), '# two')
+
+    await assert.rejects(discoverMarkdownEntries({ vaultPath: root }), /Duplicate CONTEXT.md project id/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('blank CONTEXT.md project metadata fails closed', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rag-obsidian-empty-project-'))
+  try {
+    await writeFile(join(root, 'CONTEXT.md'), '---\nproject: " "\n---\n')
+    await writeFile(join(root, 'page.md'), '# Page')
+
+    await assert.rejects(discoverMarkdownEntries({ vaultPath: root }), /CONTEXT.md project must be a non-empty string/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('malformed CONTEXT.md frontmatter fails closed', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'rag-obsidian-malformed-frontmatter-'))
+  try {
+    await writeFile(join(root, 'CONTEXT.md'), '---\nproject: unfinished\n')
+    await writeFile(join(root, 'page.md'), '# Page')
+
+    await assert.rejects(discoverMarkdownEntries({ vaultPath: root }), /Invalid YAML frontmatter in CONTEXT.md/)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
 test('Obsidian discovery supports configured fallback identity', async () => {
   const root = await mkdtemp(join(tmpdir(), 'rag-obsidian-discovery-'))
   try {
@@ -256,6 +329,78 @@ test('discovered grouping replaces matching fallback identity, preserves metadat
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+test('discovery reuses an existing knowledge base id by canonical project id', () => {
+  const projectEntry = {
+    sourceType: 'obsidian',
+    projectId: 'agent-teams-web',
+    projectName: 'Agent-Teams-Web',
+    knowledgeBaseId: '7acf1dff-663e-5455-9f85-31bc2110d26c',
+    sourceKey: '/vault',
+    sourcePath: 'BackEnd/Agent-Teams-Web/CONTEXT.md',
+    title: 'CONTEXT',
+    isEntry: false,
+    alwaysIncludeFullContent: false,
+  }
+  const updatedProjectEntry = { ...projectEntry, knowledgeBaseId: 'derived-id' }
+  const newProjectFile = {
+    ...projectEntry,
+    sourcePath: 'BackEnd/Agent-Teams-Web/new.md',
+    knowledgeBaseId: 'derived-id',
+  }
+  const otherProject = {
+    ...newProjectFile,
+    projectId: 'another-project',
+    knowledgeBaseId: 'another-derived-id',
+  }
+
+  const merged = mergeDiscoveredEntries([projectEntry], [updatedProjectEntry, newProjectFile, otherProject])
+
+  assert.equal(
+    merged.find((entry) => entry.sourcePath === projectEntry.sourcePath).knowledgeBaseId,
+    projectEntry.knowledgeBaseId,
+  )
+  assert.equal(
+    merged.find((entry) => entry.sourcePath === newProjectFile.sourcePath).knowledgeBaseId,
+    projectEntry.knowledgeBaseId,
+  )
+  assert.equal(merged.find((entry) => entry.projectId === 'another-project').knowledgeBaseId, 'another-derived-id')
+})
+
+test('reassigned sources use the destination project knowledge base id', () => {
+  const existingSource = {
+    sourceType: 'obsidian',
+    projectId: 'old-project',
+    projectName: 'Old project',
+    knowledgeBaseId: 'old-project-id',
+    sourceKey: '/vault',
+    sourcePath: 'BackEnd/Agent-Teams-Web/new.md',
+    title: 'New document',
+    isEntry: false,
+    alwaysIncludeFullContent: false,
+  }
+  const existingDestinationProject = {
+    ...existingSource,
+    projectId: 'agent-teams-web',
+    projectName: 'Agent-Teams-Web',
+    knowledgeBaseId: 'destination-custom-id',
+    sourcePath: 'BackEnd/Agent-Teams-Web/CONTEXT.md',
+  }
+  const discoveredSource = {
+    ...existingSource,
+    projectId: 'agent-teams-web',
+    projectName: 'Agent-Teams-Web',
+    knowledgeBaseId: 'new-derived-id',
+  }
+
+  const merged = mergeDiscoveredEntries([existingSource, existingDestinationProject], [discoveredSource])
+
+  assert.equal(merged.find((entry) => entry.sourcePath === existingSource.sourcePath).projectId, 'agent-teams-web')
+  assert.equal(
+    merged.find((entry) => entry.sourcePath === existingSource.sourcePath).knowledgeBaseId,
+    existingDestinationProject.knowledgeBaseId,
+  )
 })
 
 test('a vault-root CONTEXT.md groups root and nested Markdown under the vault project', async () => {
