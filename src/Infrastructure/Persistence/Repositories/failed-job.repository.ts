@@ -7,7 +7,6 @@ import type { DocumentIndexFailureRecordDTO } from '../../../Application/Documen
 import type { ExpiredDocumentIndexFailureDTO } from '../../../Application/DocumentIndexes/DataTransferObjects/expired-document-index-failure.dto.ts'
 import type {
   ArchiveDocumentIndexFailureQueryObject,
-  MarkDocumentIndexFailureRetriedQueryObject,
   ArchiveDocumentIndexFailuresQueryObject,
   RemoveDocumentIndexFailuresQueryObject,
 } from '../../../Application/DocumentIndexes/QueryObjects/document-index-failure.query-object.ts'
@@ -20,6 +19,7 @@ import type {
   DocumentIndexFailureIndexQueryObject,
   DocumentIndexFailureLookupQueryObject,
   UnretriedDocumentIndexFailureTargetQueryObject,
+  UnretriedDocumentIndexFailuresQueryObject,
 } from '../../../Application/DocumentIndexes/QueryObjects/document-index-failure.query-object.ts'
 import { FailedJobRecordAdapter } from '../Adapters/failed-job-record.adapter.ts'
 import { FailedJobRetentionFactsAdapter } from '../Adapters/failed-job-retention-facts.adapter.ts'
@@ -79,14 +79,34 @@ export class FailedJobRepository extends DocumentIndexFailureArchive {
     )
   }
 
+  async findByRetriedAtIsNullAndFailedAtLessThanOrEqualCutoffOrderByFailedAtAscAndIdAsc(
+    query: UnretriedDocumentIndexFailuresQueryObject,
+  ): Promise<string[]> {
+    const { cutoff, failedJobId, projectId } = query
+    const where = {
+      retriedAt: IsNull(),
+      failedAt: LessThanOrEqual(cutoff),
+      ...(failedJobId === undefined ? {} : { id: failedJobId }),
+      ...(projectId === undefined ? {} : { knowledgeBase: { projectId } }),
+    }
+
+    const failures = await this.failedJobModelRepository.find({
+      where,
+      select: { id: true },
+      order: { failedAt: 'ASC', id: 'ASC' },
+    })
+
+    return failures.map(({ id }) => id)
+  }
+
   async archive(saveFailedJobQO: ArchiveDocumentIndexFailureQueryObject): Promise<void> {
     await this.failedJobModelRepository.insert(FailedJobRecordAdapter.toPersistence(saveFailedJobQO))
   }
 
-  async markRetried(markFailedJobRetriedQO: MarkDocumentIndexFailureRetriedQueryObject): Promise<void> {
-    const { failedJobId, retriedAt } = markFailedJobRetriedQO
+  async removeFailure(failedJobIdQO: DocumentIndexFailureIdQueryObject): Promise<void> {
+    const { failedJobId } = failedJobIdQO
 
-    await this.failedJobModelRepository.update({ id: failedJobId }, { retriedAt, updatedAt: retriedAt })
+    await this.failedJobModelRepository.delete({ id: failedJobId })
   }
 
   async insertMany(insertFailedJobsQO: ArchiveDocumentIndexFailuresQueryObject): Promise<void> {

@@ -520,13 +520,11 @@ const createRetryJobScenario = (
 
       return options.failedJobLocked === false ? null : failedRecord()
     },
-    markRetried: async (markFailedJobRetriedQO: { failedJobId: string; retriedAt: Date }) => {
-      const { failedJobId, retriedAt: date } = markFailedJobRetriedQO
+    removeFailure: async (failedJobIdQO: { failedJobId: string }) => {
+      const { failedJobId } = failedJobIdQO
 
       assert.equal(failedJobId, 'failed-job')
-      assert.ok(date instanceof Date)
-      assert.equal(date, queuedJobs[0]?.availableAt)
-      events.push('mark-retried')
+      events.push('remove-failure')
     },
   })
   const useCase = new RetryDocumentIndexingListener(
@@ -588,7 +586,7 @@ test('manual retry locks and compares the current target before queuing and mark
     'lock-failed-job',
     'read-context',
     'create-job',
-    'mark-retried',
+    'remove-failure',
   ])
   assert.equal(retry.queuedJobs.length, 1)
   const queued = retry.queuedJobs[0]
@@ -608,7 +606,7 @@ test('manual retry locks and compares the current target before queuing and mark
     leaseToken: null,
     leaseExpiresAt: null,
     idempotencyKey: queued.idempotencyKey,
-    retryOfFailedJobId: 'failed-job',
+    retryOfFailedJobId: null,
     payload: { source: 'original-request' },
     executionState: { completedUnits: 2 },
     executionVerification: null,
@@ -850,7 +848,7 @@ test('manual retry compares fresh facts under all locks before any insert', asyn
         assert.ok(retry.events.includes('lock-failed-job'))
         assert.equal(retry.events.filter((event) => event === 'read-context').length, 3)
         assert.equal(retry.events.includes('create-job'), false)
-        assert.equal(retry.events.includes('mark-retried'), false)
+        assert.equal(retry.events.includes('remove-failure'), false)
         assert.deepEqual(retry.queuedJobs, [])
       }),
     ),
@@ -888,5 +886,5 @@ test('manual retry propagates insertion failure without consuming the failure', 
   })
 
   await assert.rejects(retry.useCase.handle({ projectId: 'project-id', failedJobId: 'failed-job' }), /insert failed/)
-  assert.equal(retry.events.includes('mark-retried'), false)
+  assert.equal(retry.events.includes('remove-failure'), false)
 })

@@ -19,6 +19,7 @@ import type { DocumentIndexingRetryContext } from '../DataTransferObjects/docume
 import type { DocumentIndexingRetryTarget } from '../DataTransferObjects/document-indexing-retry-target.dto.ts'
 import type { RetryDocumentIndexingResultDTO } from '../DataTransferObjects/retry-document-indexing-result.dto.ts'
 import type { RetryDocumentIndexingDTO } from '../DataTransferObjects/retry-document-indexing.dto.ts'
+import type { RetryUnretriedDocumentIndexFailuresResultDTO } from '../DataTransferObjects/retry-unretried-document-index-failures-result.dto.ts'
 import {
   DOCUMENT_INDEX_FAILURE_RETRY_STATUS,
   type DocumentIndexingNotRetryableStatus,
@@ -32,7 +33,24 @@ import { IndexRetrySourceChangedException } from '../Exceptions/index-retry-sour
 import { IndexRetrySourceUnavailableException } from '../Exceptions/index-retry-source-unavailable.exception.ts'
 import { InvalidIndexRetrySourceContextException } from '../Exceptions/invalid-index-retry-source-context.exception.ts'
 import { StaleDocumentIndexingFailureException } from '../Exceptions/stale-document-indexing-failure.exception.ts'
-import type { UnretriedDocumentIndexFailureTargetQueryObject } from '../QueryObjects/document-index-failure.query-object.ts'
+import type {
+  UnretriedDocumentIndexFailureTargetQueryObject,
+  UnretriedDocumentIndexFailuresQueryObject,
+} from '../QueryObjects/document-index-failure.query-object.ts'
+
+const NON_RETRYABLE_ERROR_CODES = new Set([
+  'KNOWLEDGE_JOB_NOT_FOUND',
+  'DOCUMENT_INDEXING_FAILURE_ALREADY_RETRIED',
+  'ACTIVE_DOCUMENT_INDEX_EXECUTION_PREVENTS_RETRY',
+  'DOCUMENT_INDEXING_FAILURE_NOT_CURRENT',
+  'STALE_DOCUMENT_INDEXING_FAILURE',
+])
+
+const retryFailureReason = (error: unknown): string =>
+  error instanceof Error ? error.message : 'Unknown retry failure'
+
+const isNonRetryableError = (error: unknown): boolean =>
+  typeof error === 'object' && error !== null && 'code' in error && NON_RETRYABLE_ERROR_CODES.has(String(error.code))
 
 const TRANSIENT_EXECUTION_FIELDS = new Set([
   'lastError',
@@ -167,6 +185,76 @@ export class RetryDocumentIndexingListener {
     return this.handle({ projectId: target.projectId, failedJobId: failure.id })
   }
 
+  async retryUnretriedFailures(
+    query: UnretriedDocumentIndexFailuresQueryObject,
+  ): Promise<RetryUnretriedDocumentIndexFailuresResultDTO> {
+    const failedJobIds =
+      await this.documentIndexFailureArchive.findByRetriedAtIsNullAndFailedAtLessThanOrEqualCutoffOrderByFailedAtAscAndIdAsc(
+        query,
+      )
+    const initial: RetryUnretriedDocumentIndexFailuresResultDTO = { queued: [], skipped: [], failures: [] }
+    const result = await failedJobIds.reduce(
+      (previous, failedJobId) =>
+        previous.then(async (summary) => {
+          const outcome = await this.retryUnretriedFailure(failedJobId, query.projectId)
+
+          return {
+            queued: [...summary.queued, ...outcome.queued],
+            skipped: [...summary.skipped, ...outcome.skipped],
+            failures: [...summary.failures, ...outcome.failures],
+          }
+        }),
+      Promise.resolve(initial),
+    )
+
+    if (query.failedJobId !== undefined && failedJobIds.length === 0) {
+      return {
+        ...result,
+        skipped: [...result.skipped, { failedJobId: query.failedJobId, reason: 'No eligible unretried failure found' }],
+      }
+    }
+
+    return result
+  }
+
+  private async retryUnretriedFailure(
+    failedJobId: string,
+    projectId?: string,
+  ): Promise<RetryUnretriedDocumentIndexFailuresResultDTO> {
+    try {
+      const failure = await this.documentIndexFailureArchive.findFailure({ id: failedJobId })
+
+      if (failure === null) {
+        return { queued: [], skipped: [{ failedJobId, reason: 'Failure no longer exists' }], failures: [] }
+      }
+
+      const knowledgeBase = await this.knowledgeBases.execute({ knowledgeBaseId: failure.knowledgeBaseId })
+
+      if (knowledgeBase === null || (projectId !== undefined && knowledgeBase.projectId !== projectId)) {
+        return {
+          queued: [],
+          skipped: [{ failedJobId, reason: 'Failure is outside the requested project' }],
+          failures: [],
+        }
+      }
+
+      const retry = await this.handle({ projectId: knowledgeBase.projectId, failedJobId })
+
+      if (retry.jobId === null) {
+        return { queued: [], skipped: [], failures: [{ failedJobId, reason: 'Retry returned no queued job' }] }
+      }
+
+      return { queued: [{ failedJobId, jobId: retry.jobId }], skipped: [], failures: [] }
+    } catch (error) {
+      const outcome = isNonRetryableError(error) ? 'skipped' : 'failures'
+      const item = { failedJobId, reason: retryFailureReason(error) }
+
+      return outcome === 'skipped'
+        ? { queued: [], skipped: [item], failures: [] }
+        : { queued: [], skipped: [], failures: [item] }
+    }
+  }
+
   async handle({ projectId, failedJobId }: RetryDocumentIndexingDTO): Promise<RetryDocumentIndexingResultDTO> {
     const retryContext = await this.transaction.run(() => this.readByFailedJobIdWithRetryContextProjection(failedJobId))
     const retryPreparationStatus = preparationStatus(retryContext, projectId)
@@ -264,7 +352,7 @@ export class RetryDocumentIndexingListener {
         this.reusableExecutionStateForRetry(lockedRetryContext.failedJob.retryPayload.executionState),
       )
       await this.documentIndexExecutionQueue.enqueueRetry(retryableJob)
-      await this.documentIndexFailureArchive.markRetried({ failedJobId, retriedAt: retriedAt })
+      await this.documentIndexFailureArchive.removeFailure({ failedJobId })
 
       return retryableJob.id
     })

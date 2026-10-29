@@ -27,6 +27,12 @@ export type DocumentIndexFailureLookupQueryObject = {
   readonly id: string
 }
 
+export type UnretriedDocumentIndexFailuresQueryObject = {
+  readonly cutoff: Date
+  readonly failedJobId?: string
+  readonly projectId?: string
+}
+
 export type DocumentIndexFailureDocumentQueryObject = {
   readonly documentId: string
 }
@@ -54,11 +60,6 @@ export interface ArchiveDocumentIndexFailureQueryObject extends NewDocumentIndex
   readonly id?: string
   readonly createdAt?: Date
   readonly updatedAt?: Date
-}
-
-export interface MarkDocumentIndexFailureRetriedQueryObject {
-  readonly failedJobId: string
-  readonly retriedAt: Date
 }
 
 export interface ArchiveDocumentIndexFailuresQueryObject {

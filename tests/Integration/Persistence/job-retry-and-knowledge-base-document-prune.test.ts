@@ -5,7 +5,6 @@ import { test } from 'node:test'
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
 import { CollectIndexChunkGarbageUseCase } from '../../../src/Application/Chunks/UseCases/collect-index-chunk-garbage.use-case.ts'
 import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
-import { DocumentIndexingFailureAlreadyRetriedException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-failure-already-retried.exception.ts'
 import { DocumentIndexingNotFoundException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-not-found.exception.ts'
 import { IndexRetrySourceChangedException } from '../../../src/Application/DocumentIndexes/Exceptions/index-retry-source-changed.exception.ts'
 import { StaleDocumentIndexingFailureException } from '../../../src/Application/DocumentIndexes/Exceptions/stale-document-indexing-failure.exception.ts'
@@ -426,7 +425,7 @@ test(
       assert.equal(rejected.length, 1)
       assert.ok(
         rejected[0]?.reason instanceof IndexRetrySourceChangedException ||
-          rejected[0]?.reason instanceof DocumentIndexingFailureAlreadyRetriedException,
+          rejected[0]?.reason instanceof DocumentIndexingNotFoundException,
       )
       assert.equal(await jobModelRepository.count(), 1)
       const retryResult = accepted[0]
@@ -437,26 +436,15 @@ test(
       assert.ok(typeof newJobId === 'string')
       assert.notEqual(newJobId, initialJob.id)
       assert.notEqual(newJobId, failedJobRecord.id)
-      await assert.rejects(retry(), DocumentIndexingFailureAlreadyRetriedException)
-
-      const updatedFailedRecord = await failedJobModelRepository.findOneByOrFail({ id: failedJobRecord.id })
-      assert.ok(updatedFailedRecord.retriedAt instanceof Date)
-      assert.equal(updatedFailedRecord.updatedAt.getTime(), updatedFailedRecord.retriedAt.getTime())
-      assert.deepEqual(
-        { ...updatedFailedRecord },
-        {
-          ...failedJobRecord,
-          retriedAt: updatedFailedRecord.retriedAt,
-          updatedAt: updatedFailedRecord.updatedAt,
-        },
-      )
+      await assert.rejects(retry(), DocumentIndexingNotFoundException)
+      assert.equal(await failedJobModelRepository.findOneBy({ id: failedJobRecord.id }), null)
 
       // The newly created retry job must be queued with attempts = 0
       const retryJobInDb = await jobModelRepository.findOneByOrFail({ id: newJobId })
       assert.equal(retryJobInDb.status, 'queued')
       assert.equal(retryJobInDb.attempts, 0)
-      assert.equal(retryJobInDb.retryOfFailedJobId, failedJobRecord.id)
-      assert.equal(retryJobInDb.availableAt.getTime(), updatedFailedRecord.retriedAt.getTime())
+      assert.equal(retryJobInDb.retryOfFailedJobId, null)
+      assert.ok(retryJobInDb.availableAt instanceof Date)
       assert.equal(retryJobInDb.reservedAt, null)
       assert.equal(retryJobInDb.leaseToken, null)
       assert.equal(retryJobInDb.executionVerification, null)

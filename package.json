@@ -11,6 +11,7 @@
     "migration:run": "npm run typeorm -- migration:run -d dist/database/data-source.js",
     "reset:database": "node --env-file-if-exists=.env scripts/reset-database.mjs",
     "import": "node --env-file-if-exists=.env scripts/import.mjs",
+    "retry:failed-jobs": "node --env-file-if-exists=.env scripts/retry-failed-jobs.mjs",
     "test": "tsc --project tsconfig.test.json && node --test \"dist/tests/Unit/**/*.test.js\" \"dist/tests/Feature/**/*.test.js\" && node --test tests/Unit/Scripts/import.test.mjs",
     "test:integration": "tsc --project tsconfig.test.json && node --env-file-if-exists=.env --test --test-concurrency=1 \"dist/tests/Integration/**/*.test.js\"",
     "start:worker": "node --env-file-if-exists=.env dist/src/worker.js",

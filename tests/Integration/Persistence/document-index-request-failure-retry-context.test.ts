@@ -11,7 +11,7 @@ import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/D
 import { DocumentIndexingTargetStateEnum } from '../../../src/Application/DocumentIndexes/Enums/document-indexing-target-state.enum.ts'
 import { DocumentIndexingDispatchedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-dispatched.event.ts'
 import { DocumentIndexingRequestedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-requested.event.ts'
-import { DocumentIndexingFailureAlreadyRetriedException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-failure-already-retried.exception.ts'
+import { DocumentIndexingNotFoundException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-not-found.exception.ts'
 import { IndexRetrySourceChangedException } from '../../../src/Application/DocumentIndexes/Exceptions/index-retry-source-changed.exception.ts'
 import { InvalidIndexRetrySourceContextException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-index-retry-source-context.exception.ts'
 import { StaleDocumentIndexingFailureException } from '../../../src/Application/DocumentIndexes/Exceptions/stale-document-indexing-failure.exception.ts'
@@ -62,6 +62,7 @@ import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Rep
 import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
 import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
 import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
+import { RetryFailedJobsCommand } from '../../../src/Interfaces/Console/Commands/retry-failed-jobs-command.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
@@ -289,22 +290,23 @@ test(
               assert.equal(retriedJob.attempts, 0)
               assert.equal(retriedJob.documentIndexId, archivedDocumentIndexRequestFixture.originalJob.documentIndexId)
               assert.equal(retriedJob.generation, archivedDocumentIndexRequestFixture.originalJob.generation)
-              assert.equal(retriedJob.retryOfFailedJobId, archivedDocumentIndexRequestFixture.archive.id)
+              assert.equal(retriedJob.retryOfFailedJobId, null)
               assert.equal(retriedJob.leaseToken, null)
               assert.equal(retriedJob.reservedAt, null)
               assert.equal(retriedJob.executionVerification, null)
               assert.equal(retriedJob.executionState, null)
-              const consumedArchive = await archivedDocumentIndexRequestFixture.failedJobs.findOneByOrFail({
-                id: archivedDocumentIndexRequestFixture.archive.id,
-              })
-              assert.ok(consumedArchive.retriedAt)
-              assert.deepEqual(consumedArchive.retryPayload, archivedDocumentIndexRequestFixture.archive.retryPayload)
+              assert.equal(
+                await archivedDocumentIndexRequestFixture.failedJobs.findOneBy({
+                  id: archivedDocumentIndexRequestFixture.archive.id,
+                }),
+                null,
+              )
               await assert.rejects(
                 archivedDocumentIndexRequestFixture.retry.handle({
                   projectId: archivedDocumentIndexRequestFixture.projectId,
                   failedJobId: archivedDocumentIndexRequestFixture.archive.id,
                 }),
-                DocumentIndexingFailureAlreadyRetriedException,
+                DocumentIndexingNotFoundException,
               )
               assert.equal(await archivedDocumentIndexRequestFixture.jobs.count(), 1)
             } finally {
@@ -315,6 +317,71 @@ test(
         toArray(),
       ),
     )
+  },
+)
+
+test(
+  'retry failed jobs command queues an eligible failure once and reports it skipped on the next run',
+  { skip: !process.env.RAG_DATABASE_URL },
+  async () => {
+    const fixture = await createArchivedRequest({ source: 'repository' })
+
+    try {
+      const command = new RetryFailedJobsCommand(fixture.retry)
+      const outsideProject = await command.execute({ projectId: `${fixture.projectId}-other` })
+
+      assert.equal(outsideProject.queued.length, 0)
+      assert.equal(outsideProject.skipped.length, 0)
+      assert.equal(outsideProject.failures.length, 0)
+      assert.equal((await fixture.failedJobs.findOneByOrFail({ id: fixture.archive.id })).retriedAt, null)
+      assert.equal(await fixture.jobs.count(), 0)
+
+      const queued = await command.execute({ projectId: fixture.projectId })
+
+      assert.equal(queued.queued.length, 1)
+      assert.equal(queued.skipped.length, 0)
+      assert.equal(queued.failures.length, 0)
+      assert.equal(queued.queued[0]?.failedJobId, fixture.archive.id)
+      const queuedJob = await fixture.jobs.findOneByOrFail({ id: queued.queued[0]!.jobId })
+      assert.equal(queuedJob.status, DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED)
+      assert.equal(queuedJob.retryOfFailedJobId, null)
+      assert.equal(await fixture.failedJobs.findOneBy({ id: fixture.archive.id }), null)
+      assert.equal(await fixture.jobs.count(), 1)
+
+      const duplicate = await command.execute({ failedJobId: fixture.archive.id })
+
+      assert.equal(duplicate.queued.length, 0)
+      assert.equal(duplicate.failures.length, 0)
+      assert.equal(duplicate.skipped.length, 1)
+      assert.equal(duplicate.skipped[0]?.failedJobId, fixture.archive.id)
+      assert.equal(await fixture.jobs.count(), 1)
+    } finally {
+      await fixture.cleanup()
+    }
+  },
+)
+
+test(
+  'retry removes the failed job only when enqueue and archive removal commit together',
+  { skip: !process.env.RAG_DATABASE_URL },
+  async () => {
+    const fixture = await createArchivedRequest({ source: 'repository' })
+
+    try {
+      fixture.persistenceFixture.failedJobRepository.removeFailure = async () => {
+        throw new Error('failure archive removal failed')
+      }
+
+      await assert.rejects(
+        fixture.retry.handle({ projectId: fixture.projectId, failedJobId: fixture.archive.id }),
+        /failure archive removal failed/,
+      )
+
+      assert.equal(await fixture.jobs.count(), 0)
+      assert.equal((await fixture.failedJobs.findOneByOrFail({ id: fixture.archive.id })).retriedAt, null)
+    } finally {
+      await fixture.cleanup()
+    }
   },
 )
 

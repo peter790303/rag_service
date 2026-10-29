@@ -7,9 +7,9 @@ import type {
   DocumentIndexFailureInProjectQueryObject,
   DocumentIndexFailureIndexQueryObject,
   DocumentIndexFailureLookupQueryObject,
-  MarkDocumentIndexFailureRetriedQueryObject,
   ArchiveDocumentIndexFailureQueryObject,
   UnretriedDocumentIndexFailureTargetQueryObject,
+  UnretriedDocumentIndexFailuresQueryObject,
 } from '../QueryObjects/document-index-failure.query-object.ts'
 
 /** Execution failure history owned by document-index listeners. */
@@ -28,7 +28,11 @@ export abstract class DocumentIndexFailureArchive {
     target: UnretriedDocumentIndexFailureTargetQueryObject,
   ): Promise<DocumentIndexFailureRecordDTO | null>
 
-  abstract markRetried(failure: MarkDocumentIndexFailureRetriedQueryObject): Promise<void>
+  abstract findByRetriedAtIsNullAndFailedAtLessThanOrEqualCutoffOrderByFailedAtAscAndIdAsc(
+    query: UnretriedDocumentIndexFailuresQueryObject,
+  ): Promise<string[]>
+
+  abstract removeFailure(failure: DocumentIndexFailureIdQueryObject): Promise<void>
 
   abstract countDocumentFailures(document: DocumentIndexFailureDocumentQueryObject): Promise<number>
 

@@ -6,6 +6,7 @@ export interface HostCliBridgeConfig {
   model: string
   timeoutMs: number
   maxOutputBytes: number
+  maxConcurrency: number
 }
 
 const positiveInteger = (name: string, value: string | undefined, fallback: number): number => {
@@ -33,5 +34,6 @@ export const loadHostCliBridgeConfig = (env: NodeJS.ProcessEnv = process.env): H
       env.RAG_CHUNKING_CLI_MAX_OUTPUT_BYTES,
       4194304,
     ),
+    maxConcurrency: positiveInteger('RAG_HOST_CLI_MAX_CONCURRENCY', env.RAG_HOST_CLI_MAX_CONCURRENCY, 1),
   }
 }
