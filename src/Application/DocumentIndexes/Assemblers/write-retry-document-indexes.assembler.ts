@@ -55,7 +55,7 @@ export class WriteRetryDocumentIndexesAssembler {
       leaseToken: null,
       leaseExpiresAt: null,
       idempotencyKey,
-      retryOfFailedJobId: retryContext.failedJob.id,
+      retryOfFailedJobId: null,
       payload: retryContext.failedJob.retryPayload.input,
       executionState: reusableExecutionState,
       executionVerification: null,

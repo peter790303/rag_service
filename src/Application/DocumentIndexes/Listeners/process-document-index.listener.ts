@@ -253,6 +253,41 @@ export class ProcessDocumentIndexListener {
     return genericFailureMessage
   }
 
+  private safeFailureCode(error: unknown): string {
+    const allowedCodes = new Set([
+      'HOST_CLI_BUSY_TIMEOUT',
+      'HOST_CLI_REQUEST_TIMED_OUT',
+      'HOST_CLI_REQUEST_ABORTED',
+      'HOST_CLI_EXECUTION_FAILED',
+      'HOST_CLI_OUTPUT_LIMIT_EXCEEDED',
+      'HOST_CLI_TURN_INCOMPLETE',
+      'HOST_CLI_INVALID_RESPONSE',
+      'HOST_CLI_REQUEST_FAILED',
+    ])
+    const causes = Array.from({ length: 4 }).reduce<unknown[]>(
+      (chain) => {
+        const current = chain.at(-1)
+
+        if (typeof current === 'object' && current !== null && 'cause' in current) chain.push(current.cause)
+
+        return chain
+      },
+      [error],
+    )
+
+    const safeCode = causes
+      .map((cause) =>
+        typeof cause === 'object' && cause !== null && 'code' in cause && typeof cause.code === 'string'
+          ? cause.code
+          : undefined,
+      )
+      .find((code) => code && (allowedCodes.has(code) || /^HOST_CLI_HTTP_[1-5]\d\d$/.test(code)))
+
+    if (safeCode) return safeCode
+
+    return 'INDEXING_FAILED'
+  }
+
   private failureDecision(
     error: unknown,
     job: DocumentIndexingDeliveryDTO,
@@ -266,7 +301,7 @@ export class ProcessDocumentIndexListener {
     }).afterFailure({ errorMessage: this.safeFailureMessage(error), failedAt })
 
     return {
-      errorCode: 'INDEXING_FAILED',
+      errorCode: this.safeFailureCode(error),
       errorMessage: transition.errorMessage,
       failedAt,
       retryAt: transition.retryAt,

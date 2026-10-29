@@ -306,6 +306,39 @@ test('rejects an incomplete embedding result before persisting the planned chunk
   assert.equal((context.failed[0] as { errorMessage: string }).errorMessage, 'Knowledge embedding is unavailable')
 })
 
+test('records only allowlisted host CLI failure codes and never persists provider details', async () => {
+  const safeCodeContext = createProcessJobScenario({
+    plan: async () => {
+      throw new ChunkPlanningUnavailableException({
+        cause: Object.assign(new Error('private provider response and secret'), { code: 'HOST_CLI_BUSY_TIMEOUT' }),
+      })
+    },
+  })
+  await safeCodeContext.useCase.handle(new DocumentIndexingDispatchedEvent(safeCodeContext.job))
+
+  assert.equal((safeCodeContext.failed[0] as { errorCode: string }).errorCode, 'HOST_CLI_BUSY_TIMEOUT')
+  assert.equal(
+    (safeCodeContext.failed[0] as { errorMessage: string }).errorMessage,
+    'Semantic chunk planning is unavailable',
+  )
+
+  const unsafeCodeContext = createProcessJobScenario({
+    plan: async () => {
+      throw new ChunkPlanningUnavailableException({
+        cause: Object.assign(new Error('private provider response and secret'), { code: 'secret-provider-token' }),
+      })
+    },
+  })
+  await unsafeCodeContext.useCase.handle(new DocumentIndexingDispatchedEvent(unsafeCodeContext.job))
+
+  assert.equal((unsafeCodeContext.failed[0] as { errorCode: string }).errorCode, 'INDEXING_FAILED')
+  assert.equal(
+    (unsafeCodeContext.failed[0] as { errorMessage: string }).errorMessage,
+    'Semantic chunk planning is unavailable',
+  )
+  assert.doesNotMatch(JSON.stringify(unsafeCodeContext.failed[0]), /private provider response|secret-provider-token/)
+})
+
 test(
   'keeps the renewal interval stable when an earlier phase outlives the original lease',
   { timeout: 1000 },

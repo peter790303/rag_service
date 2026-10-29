@@ -105,7 +105,21 @@ const readRequest = (request: IncomingMessage): Promise<HostCliRequest> => {
 }
 
 const errorCode = (cause: unknown): string => {
-  if (typeof cause === 'object' && cause !== null && 'code' in cause && typeof cause.code === 'string')
+  const knownCodes = new Set([
+    'HOST_CLI_EXECUTION_FAILED',
+    'HOST_CLI_REQUEST_TIMED_OUT',
+    'HOST_CLI_REQUEST_ABORTED',
+    'HOST_CLI_OUTPUT_LIMIT_EXCEEDED',
+    'HOST_CLI_TURN_INCOMPLETE',
+  ])
+
+  if (
+    typeof cause === 'object' &&
+    cause !== null &&
+    'code' in cause &&
+    typeof cause.code === 'string' &&
+    knownCodes.has(cause.code)
+  )
     return cause.code
 
   return 'HOST_CLI_FAILED'
@@ -116,8 +130,7 @@ export const createHostCliBridgeServer = (
   config: HostCliBridgeConfig,
   executor: HostCliExecutor = executeHostCliChunkPlanning,
 ): { server: Server; close: () => Promise<void> } => {
-  let activeRequest: AbortController | undefined
-  let activeExecution: Promise<string> | undefined
+  const activeExecutions = new Map<AbortController, Promise<string>>()
   const server = createServer(async (request, response) => {
     if (request.method !== 'POST' || request.url !== ROUTE) {
       send(response, 404, { error: 'NOT_FOUND' })
@@ -132,7 +145,7 @@ export const createHostCliBridgeServer = (
       return
     }
 
-    if (activeRequest) {
+    if (activeExecutions.size >= config.maxConcurrency) {
       request.resume()
       send(response, 503, { error: 'HOST_CLI_BUSY' })
 
@@ -172,14 +185,14 @@ export const createHostCliBridgeServer = (
       return
     }
 
-    if (activeRequest) {
+    if (activeExecutions.size >= config.maxConcurrency) {
       send(response, 503, { error: 'HOST_CLI_BUSY' })
 
       return
     }
 
     const controller = new AbortController()
-    activeRequest = controller
+    activeExecutions.set(controller, Promise.resolve(''))
     request.on('aborted', () => controller.abort())
     response.on('close', () => {
       if (!response.writableEnded) controller.abort()
@@ -195,7 +208,7 @@ export const createHostCliBridgeServer = (
         signal: controller.signal,
       }),
     )
-    activeExecution = execution
+    activeExecutions.set(controller, execution)
 
     try {
       const content = await execution
@@ -215,26 +228,27 @@ export const createHostCliBridgeServer = (
         send(response, status, { error: code })
       }
     } finally {
-      if (activeRequest === controller) activeRequest = undefined
-
-      if (activeExecution === execution) activeExecution = undefined
+      activeExecutions.delete(controller)
     }
   })
 
   return {
     server,
     close: async () => {
-      activeRequest?.abort()
+      Array.from(activeExecutions.keys()).forEach((controller) => controller.abort())
       const serverClosed = new Promise<void>((resolve, reject) => {
         server.close((cause) => (cause ? reject(cause) : resolve()))
         server.closeAllConnections()
       })
-      const executionSettled = activeExecution?.then(
-        () => undefined,
-        () => undefined,
+      await serverClosed
+      await Promise.all(
+        [...activeExecutions.values()].map((execution) =>
+          execution.then(
+            () => undefined,
+            () => undefined,
+          ),
+        ),
       )
-
-      await Promise.all([serverClosed, executionSettled])
     },
   }
 }
