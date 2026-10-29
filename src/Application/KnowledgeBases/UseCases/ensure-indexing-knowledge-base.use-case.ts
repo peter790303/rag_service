@@ -23,7 +23,7 @@ export class EnsureIndexingKnowledgeBaseUseCase implements EnsureIndexingKnowled
     const knowledgeBaseIdQO: KnowledgeBaseIdQueryObject = {
       knowledgeBaseId: ensureIndexingKnowledgeBaseDTO.knowledgeBaseId,
     }
-    const knowledgeBase = await this.knowledgeBases.lockByKnowledgeBaseId(knowledgeBaseIdQO)
+    let knowledgeBase = await this.knowledgeBases.lockByKnowledgeBaseId(knowledgeBaseIdQO)
 
     if (knowledgeBase === null) {
       const now = new Date()
@@ -41,9 +41,13 @@ export class EnsureIndexingKnowledgeBaseUseCase implements EnsureIndexingKnowled
         createdAt: newKnowledgeBase.createdAt,
         updatedAt: newKnowledgeBase.updatedAt,
       }
-      await this.knowledgeBases.create(createKnowledgeBaseQO)
+      const wasCreated = await this.knowledgeBases.createIfAbsent(createKnowledgeBaseQO)
 
-      return
+      if (wasCreated) return
+
+      knowledgeBase = await this.knowledgeBases.lockByKnowledgeBaseId(knowledgeBaseIdQO)
+
+      if (knowledgeBase === null) throw new Error('Knowledge base disappeared after a concurrent create')
     }
 
     knowledgeBase.assertProject(ensureIndexingKnowledgeBaseDTO.projectId)

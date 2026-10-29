@@ -27,13 +27,13 @@ test('knowledge-base required inputs fail before the existing-row or same-name s
 })
 
 test('new knowledge bases are validated as entities before creating a complete write', async (context) => {
-  const create = context.mock.fn<KnowledgeBaseRepository['create']>(async () => undefined)
+  const createIfAbsent = context.mock.fn<KnowledgeBaseRepository['createIfAbsent']>(async () => true)
   const useCase = new EnsureIndexingKnowledgeBaseUseCase({
     lockByKnowledgeBaseId: async () => null,
-    create,
+    createIfAbsent,
   } as unknown as KnowledgeBaseRepository)
   await useCase.execute(input)
-  const [query] = create.mock.calls[0]?.arguments ?? []
+  const [query] = createIfAbsent.mock.calls[0]?.arguments ?? []
   assert.ok(query)
   assert.deepEqual(query, { ...input, createdAt: query.createdAt, updatedAt: query.createdAt })
   assert.ok(query.createdAt instanceof Date)

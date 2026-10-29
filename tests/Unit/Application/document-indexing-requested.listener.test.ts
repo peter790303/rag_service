@@ -139,8 +139,10 @@ const createRequestDocumentIndexScenario = (
             updatedAt: new Date('2020-01-01T00:00:00.000Z'),
           })
     },
-    create: async () => {
+    createIfAbsent: async () => {
       events.push('create-knowledge-base')
+
+      return true
     },
     update: async (updateKnowledgeBaseQO: { projectName: string }) => {
       knowledgeBaseEvents.push(updateKnowledgeBaseQO.projectName)

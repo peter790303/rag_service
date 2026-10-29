@@ -21,6 +21,24 @@ test('RAG config accepts HTTP and HTTPS API URLs', () => {
   assert.equal(config.externalRequestTimeoutMs, 30000)
 })
 
+test('HTTP chunking transport ignores host CLI bridge authentication settings', () => {
+  const config = loadKnowledgeServiceConfig({
+    ...validEnvironment,
+    RAG_HOST_CLI_URL: 'http://host.docker.internal:30701/internal/chunk-planning',
+    RAG_HOST_CLI_SHARED_SECRET: undefined,
+  })
+
+  assert.equal(config.chunkingTransport, 'http')
+  assert.equal(config.hostCliSharedSecret, undefined)
+})
+
+test('RAG config always requires the service auth secret', () => {
+  const environmentWithoutSecret: NodeJS.ProcessEnv = { ...validEnvironment }
+  delete environmentWithoutSecret.RAG_SERVICE_AUTH_SECRET
+
+  assert.throws(() => loadKnowledgeServiceConfig(environmentWithoutSecret), ServiceConfigurationException)
+})
+
 test('RAG config reads the external request timeout', () => {
   const config = loadKnowledgeServiceConfig({ ...validEnvironment, RAG_EXTERNAL_REQUEST_TIMEOUT_MS: '45000' })
 

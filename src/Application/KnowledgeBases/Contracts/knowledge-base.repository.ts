@@ -12,6 +12,8 @@ export abstract class KnowledgeBaseRepository {
 
   abstract create(createKnowledgeBaseQO: CreateKnowledgeBaseQueryObject): Promise<void>
 
+  abstract createIfAbsent(createKnowledgeBaseQO: CreateKnowledgeBaseQueryObject): Promise<boolean>
+
   abstract update(updateKnowledgeBaseQO: UpdateKnowledgeBaseQueryObject): Promise<void>
 
   abstract findByKnowledgeBaseIdAndProjectId(
