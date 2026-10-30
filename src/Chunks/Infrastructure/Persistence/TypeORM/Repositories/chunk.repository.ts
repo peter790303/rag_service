@@ -5,7 +5,7 @@ import { In } from 'typeorm'
 import type { Repository } from 'typeorm'
 
 import { RETRIEVAL_READONLY_DATA_SOURCE } from '../../../../../Bootstrap/Nest/Providers/retrieval-readonly-data-source.options.ts'
-import { LexicalSearchQueryAdapter } from '../../../../../DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/lexical-search-query.adapter.ts'
+import { LexicalSearchQueryAdapter } from '../../../../../DocumentIndexes/Infrastructure/Persistence/TypeORM/Adapters/lexical-search-query.adapter.ts'
 import { ReadTransactionDataSourceMismatchException } from '../../../../../Shared/Infrastructure/Persistence/TypeORM/Exceptions/read-transaction-data-source-mismatch.exception.ts'
 import { ReadTransactionNotActiveException } from '../../../../../Shared/Infrastructure/Persistence/TypeORM/Exceptions/read-transaction-not-active.exception.ts'
 import { PersistenceTransaction } from '../../../../../Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
@@ -20,10 +20,10 @@ import type {
 } from '../../../../Application/QueryObjects/chunk.query-object.ts'
 import type { InsertChunksQO } from '../../../../Application/QueryObjects/insert-chunks.query-object.ts'
 import type { Chunk } from '../../../../Domain/Entities/chunk.ts'
-import { ChunkInsertAdapter } from '../Mappers/chunk-insert.adapter.ts'
-import { ChunkSearchResultAdapter } from '../Mappers/chunk-search-result.adapter.ts'
-import type { ChunkLexicalQueryRowDTO, ChunkSemanticQueryRowDTO } from '../Mappers/chunk-search-result.adapter.ts'
-import { ChunkPersistenceMapper } from '../Mappers/chunk.persistence.mapper.ts'
+import { ChunkInsertAdapter } from '../Adapters/chunk-insert.adapter.ts'
+import { ChunkSearchResultAdapter } from '../Adapters/chunk-search-result.adapter.ts'
+import type { ChunkLexicalQueryRowDTO, ChunkSemanticQueryRowDTO } from '../Adapters/chunk-search-result.adapter.ts'
+import { ChunkPersistenceAdapter } from '../Adapters/chunk.persistence.adapter.ts'
 import { ChunkModel } from '../Models/chunk.model.ts'
 
 /** Chunk-primary persistence operations. */
@@ -52,7 +52,7 @@ export class ChunkRepository extends ChunkRepositoryContract {
   async findByDocumentIndexId(chunkIndexQO: ChunkIndexQO): Promise<Chunk[]> {
     const persistedChunks = await this.chunkModelRepository.findBy({ documentIndexId: chunkIndexQO.documentIndexId })
 
-    return persistedChunks.map(ChunkPersistenceMapper.toChunk)
+    return persistedChunks.map(ChunkPersistenceAdapter.toChunk)
   }
 
   async removeByDocumentIndexId(chunkIndexQO: ChunkIndexQO): Promise<void> {
@@ -67,7 +67,7 @@ export class ChunkRepository extends ChunkRepositoryContract {
       id: In(chunkRetrievalCandidatesQO.chunkIds),
     })
 
-    return persistedChunks.map(ChunkPersistenceMapper.toChunk)
+    return persistedChunks.map(ChunkPersistenceAdapter.toChunk)
   }
 
   async findByDocumentIndexIdAndOrdinals(chunkIndexOrdinalsQO: ChunkIndexOrdinalsQO): Promise<Chunk[]> {
@@ -78,7 +78,7 @@ export class ChunkRepository extends ChunkRepositoryContract {
       ordinal: In(chunkIndexOrdinalsQO.ordinals),
     })
 
-    return persistedChunks.map(ChunkPersistenceMapper.toChunk)
+    return persistedChunks.map(ChunkPersistenceAdapter.toChunk)
   }
 
   async findByDocumentIndexIdsOrderByDocumentIndexIdAscAndOrdinalAsc(
@@ -91,7 +91,7 @@ export class ChunkRepository extends ChunkRepositoryContract {
       order: { documentIndexId: 'ASC', ordinal: 'ASC' },
     })
 
-    return persistedChunks.map(ChunkPersistenceMapper.toChunk)
+    return persistedChunks.map(ChunkPersistenceAdapter.toChunk)
   }
 
   async findByDocumentIndexIds(chunkIndexIdsQO: ChunkIndexIdsQO): Promise<Chunk[]> {
@@ -101,7 +101,7 @@ export class ChunkRepository extends ChunkRepositoryContract {
       documentIndexId: In(chunkIndexIdsQO.documentIndexIds),
     })
 
-    return persistedChunks.map(ChunkPersistenceMapper.toChunk)
+    return persistedChunks.map(ChunkPersistenceAdapter.toChunk)
   }
 
   async findByDocumentIndexIdsOrderByLexicalScoreDescAndIdAsc(

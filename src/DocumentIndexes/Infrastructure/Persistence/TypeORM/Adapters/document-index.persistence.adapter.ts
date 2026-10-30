@@ -1,7 +1,7 @@
 import { DocumentIndex } from '../../../../Domain/Entities/document-index.ts'
 import type { DocumentIndexModel } from '../Models/document-index.model.ts'
 
-export class DocumentIndexPersistenceMapper {
+export class DocumentIndexPersistenceAdapter {
   static toDocumentIndex(model: DocumentIndexModel): DocumentIndex {
     return new DocumentIndex({
       id: model.id,

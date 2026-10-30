@@ -34,8 +34,8 @@ import type {
   DocumentIndexExecutionsForKnowledgeBaseDocumentParams,
 } from '../../../../Application/Ports/Out/Gateways/document-index-execution.params.ts'
 import { DocumentIndexExecutionQueue } from '../../../../Application/Ports/Out/Gateways/document-index-execution.queue.ts'
-import { JobRecordAdapter } from '../Mappers/job-record.adapter.ts'
-import { JobWriteAdapter } from '../Mappers/job-write.adapter.ts'
+import { JobRecordAdapter } from '../Adapters/job-record.adapter.ts'
+import { JobWriteAdapter } from '../Adapters/job-write.adapter.ts'
 import { JobModel } from '../Models/job.model.ts'
 
 /** Persists document-index deliveries and leases in the current transaction. */

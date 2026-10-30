@@ -14,7 +14,7 @@ import type {
   UpsertDocumentSourceTitleQO,
 } from '../../../../Application/QueryObjects/document.query-object.ts'
 import type { Document } from '../../../../Domain/Entities/document.ts'
-import { DocumentPersistenceMapper } from '../Mappers/document.persistence.mapper.ts'
+import { DocumentPersistenceAdapter } from '../Adapters/document.persistence.adapter.ts'
 import { DocumentModel } from '../Models/document.model.ts'
 
 @Injectable()
@@ -70,7 +70,7 @@ export class DocumentRepository extends DocumentRepositoryContract {
   async findBySourceTypeAndSourceKeyAndSourcePath(documentSourceQO: DocumentSourceQO): Promise<Document | null> {
     const persistedDocument = await this.documentModelRepository.findOneBy(documentSourceQO)
 
-    return persistedDocument === null ? null : DocumentPersistenceMapper.toDocument(persistedDocument)
+    return persistedDocument === null ? null : DocumentPersistenceAdapter.toDocument(persistedDocument)
   }
 
   async lockByDocumentId(documentIdQO: DocumentIdQO): Promise<Document | null> {
@@ -79,13 +79,13 @@ export class DocumentRepository extends DocumentRepositoryContract {
       lock: { mode: 'pessimistic_write' },
     })
 
-    return persistedDocument === null ? null : DocumentPersistenceMapper.toDocument(persistedDocument)
+    return persistedDocument === null ? null : DocumentPersistenceAdapter.toDocument(persistedDocument)
   }
 
   async findByDocumentId(documentIdQO: DocumentIdQO): Promise<Document | null> {
     const persistedDocument = await this.documentModelRepository.findOneBy({ id: documentIdQO.documentId })
 
-    return persistedDocument === null ? null : DocumentPersistenceMapper.toDocument(persistedDocument)
+    return persistedDocument === null ? null : DocumentPersistenceAdapter.toDocument(persistedDocument)
   }
 
   async lockByDocumentIdSkipLocked(documentIdQO: DocumentIdQO): Promise<Document | null> {
@@ -94,7 +94,7 @@ export class DocumentRepository extends DocumentRepositoryContract {
       lock: { mode: 'pessimistic_write', onLocked: 'skip_locked' },
     })
 
-    return persistedDocument === null ? null : DocumentPersistenceMapper.toDocument(persistedDocument)
+    return persistedDocument === null ? null : DocumentPersistenceAdapter.toDocument(persistedDocument)
   }
 
   async findByUnreferencedSinceLessThanOrEqual(
@@ -104,7 +104,7 @@ export class DocumentRepository extends DocumentRepositoryContract {
       unreferencedSince: LessThanOrEqual(documentGarbageCandidatesQO.cutoff),
     })
 
-    return persistedDocuments.map(DocumentPersistenceMapper.toDocument)
+    return persistedDocuments.map(DocumentPersistenceAdapter.toDocument)
   }
 
   async updateUnreferencedSinceByDocumentIdAndUnreferencedSinceIsNull(
@@ -125,6 +125,6 @@ export class DocumentRepository extends DocumentRepositoryContract {
 
     const persistedDocuments = await this.documentModelRepository.findBy({ id: In(documentIdsQO.ids) })
 
-    return persistedDocuments.map(DocumentPersistenceMapper.toDocument)
+    return persistedDocuments.map(DocumentPersistenceAdapter.toDocument)
   }
 }

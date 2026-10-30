@@ -1,7 +1,7 @@
 import { DocumentRelation } from '../../../../Domain/Entities/document-relation.ts'
 import type { DocumentRelationModel } from '../Models/document-relation.model.ts'
 
-export class DocumentRelationPersistenceMapper {
+export class DocumentRelationPersistenceAdapter {
   static toDocumentRelation(model: DocumentRelationModel): DocumentRelation {
     return new DocumentRelation({
       id: model.id,

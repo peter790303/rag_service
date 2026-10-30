@@ -1,7 +1,7 @@
 import { KnowledgeBase } from '../../../../Domain/Entities/knowledge-base.ts'
 import { KnowledgeBaseModel } from '../Models/knowledge-base.model.ts'
 
-export class KnowledgeBasePersistenceMapper {
+export class KnowledgeBasePersistenceAdapter {
   static toKnowledgeBase(knowledgeBaseModel: KnowledgeBaseModel): KnowledgeBase {
     return KnowledgeBase.create({
       id: knowledgeBaseModel.id,

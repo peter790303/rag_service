@@ -11,7 +11,7 @@ import type {
   UpdateKnowledgeBaseQO,
 } from '../../../../Application/QueryObjects/knowledge-base.query-object.ts'
 import type { KnowledgeBase } from '../../../../Domain/Entities/knowledge-base.ts'
-import { KnowledgeBasePersistenceMapper } from '../Mappers/knowledge-base.persistence.mapper.ts'
+import { KnowledgeBasePersistenceAdapter } from '../Adapters/knowledge-base.persistence.adapter.ts'
 import { KnowledgeBaseModel } from '../Models/knowledge-base.model.ts'
 
 @Injectable()
@@ -30,7 +30,7 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
       lock: { mode: 'pessimistic_write' },
     })
 
-    return knowledgeBase ? KnowledgeBasePersistenceMapper.toKnowledgeBase(knowledgeBase) : null
+    return knowledgeBase ? KnowledgeBasePersistenceAdapter.toKnowledgeBase(knowledgeBase) : null
   }
 
   async create(createKnowledgeBaseQO: CreateKnowledgeBaseQO): Promise<void> {
@@ -81,13 +81,13 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
       projectId: knowledgeBaseProjectScopeQO.projectId,
     })
 
-    return knowledgeBase ? KnowledgeBasePersistenceMapper.toKnowledgeBase(knowledgeBase) : null
+    return knowledgeBase ? KnowledgeBasePersistenceAdapter.toKnowledgeBase(knowledgeBase) : null
   }
 
   async findByKnowledgeBaseId(knowledgeBaseIdQO: KnowledgeBaseIdQO): Promise<KnowledgeBase | null> {
     const knowledgeBase = await this.knowledgeBaseModelRepository.findOneBy({ id: knowledgeBaseIdQO.knowledgeBaseId })
 
-    return knowledgeBase ? KnowledgeBasePersistenceMapper.toKnowledgeBase(knowledgeBase) : null
+    return knowledgeBase ? KnowledgeBasePersistenceAdapter.toKnowledgeBase(knowledgeBase) : null
   }
 
   async findByProjectId(knowledgeBaseProjectQO: KnowledgeBaseProjectQO): Promise<KnowledgeBase | null> {
@@ -95,7 +95,7 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
       projectId: knowledgeBaseProjectQO.projectId,
     })
 
-    return knowledgeBase ? KnowledgeBasePersistenceMapper.toKnowledgeBase(knowledgeBase) : null
+    return knowledgeBase ? KnowledgeBasePersistenceAdapter.toKnowledgeBase(knowledgeBase) : null
   }
 
   async list(): Promise<readonly KnowledgeBase[]> {
@@ -103,6 +103,6 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
       order: { projectName: 'ASC', projectId: 'ASC' },
     })
 
-    return knowledgeBases.map((knowledgeBase) => KnowledgeBasePersistenceMapper.toKnowledgeBase(knowledgeBase))
+    return knowledgeBases.map((knowledgeBase) => KnowledgeBasePersistenceAdapter.toKnowledgeBase(knowledgeBase))
   }
 }

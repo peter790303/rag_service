@@ -16,7 +16,7 @@ import type {
   UpdateKnowledgeBaseDocumentActiveIndexQO,
 } from '../../../../Application/QueryObjects/knowledge-base-document.query-object.ts'
 import type { KnowledgeBaseDocument } from '../../../../Domain/Entities/knowledge-base-document.ts'
-import { KnowledgeBaseDocumentPersistenceMapper } from '../Mappers/knowledge-base-document.persistence.mapper.ts'
+import { KnowledgeBaseDocumentPersistenceAdapter } from '../Adapters/knowledge-base-document.persistence.adapter.ts'
 import { KnowledgeBaseDocumentModel } from '../Models/knowledge-base-document.model.ts'
 
 @Injectable()
@@ -39,7 +39,7 @@ export class KnowledgeBaseDocumentRepository extends KnowledgeBaseDocumentReposi
 
     return persistedKnowledgeBaseDocument === null
       ? null
-      : KnowledgeBaseDocumentPersistenceMapper.toKnowledgeBaseDocument(persistedKnowledgeBaseDocument)
+      : KnowledgeBaseDocumentPersistenceAdapter.toKnowledgeBaseDocument(persistedKnowledgeBaseDocument)
   }
 
   async lockByKnowledgeBaseIdAndDocumentId(
@@ -55,7 +55,7 @@ export class KnowledgeBaseDocumentRepository extends KnowledgeBaseDocumentReposi
 
     return persistedKnowledgeBaseDocument === null
       ? null
-      : KnowledgeBaseDocumentPersistenceMapper.toKnowledgeBaseDocument(persistedKnowledgeBaseDocument)
+      : KnowledgeBaseDocumentPersistenceAdapter.toKnowledgeBaseDocument(persistedKnowledgeBaseDocument)
   }
 
   async lockByKnowledgeBaseIdAndDocumentIdSkipLocked(
@@ -71,7 +71,7 @@ export class KnowledgeBaseDocumentRepository extends KnowledgeBaseDocumentReposi
 
     return persistedKnowledgeBaseDocument === null
       ? null
-      : KnowledgeBaseDocumentPersistenceMapper.toKnowledgeBaseDocument(persistedKnowledgeBaseDocument)
+      : KnowledgeBaseDocumentPersistenceAdapter.toKnowledgeBaseDocument(persistedKnowledgeBaseDocument)
   }
 
   async insert(insertKnowledgeBaseDocumentQO: InsertKnowledgeBaseDocumentQO): Promise<void> {
@@ -166,7 +166,7 @@ export class KnowledgeBaseDocumentRepository extends KnowledgeBaseDocumentReposi
 
     return persistedKnowledgeBaseDocument === null
       ? null
-      : KnowledgeBaseDocumentPersistenceMapper.toKnowledgeBaseDocument(persistedKnowledgeBaseDocument)
+      : KnowledgeBaseDocumentPersistenceAdapter.toKnowledgeBaseDocument(persistedKnowledgeBaseDocument)
   }
 
   async findByKnowledgeBaseIdOrderByDocumentIdAsc(
@@ -177,7 +177,7 @@ export class KnowledgeBaseDocumentRepository extends KnowledgeBaseDocumentReposi
       order: { documentId: 'ASC' },
     })
 
-    return persistedKnowledgeBaseDocuments.map(KnowledgeBaseDocumentPersistenceMapper.toKnowledgeBaseDocument)
+    return persistedKnowledgeBaseDocuments.map(KnowledgeBaseDocumentPersistenceAdapter.toKnowledgeBaseDocument)
   }
 
   async findByDocumentId(
@@ -189,6 +189,6 @@ export class KnowledgeBaseDocumentRepository extends KnowledgeBaseDocumentReposi
 
     return persistedKnowledgeBaseDocument === null
       ? null
-      : KnowledgeBaseDocumentPersistenceMapper.toKnowledgeBaseDocument(persistedKnowledgeBaseDocument)
+      : KnowledgeBaseDocumentPersistenceAdapter.toKnowledgeBaseDocument(persistedKnowledgeBaseDocument)
   }
 }

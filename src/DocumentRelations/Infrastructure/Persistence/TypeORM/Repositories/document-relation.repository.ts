@@ -11,7 +11,7 @@ import type {
   InsertPlannedDocumentRelationsQO,
 } from '../../../../Application/QueryObjects/document-relation.query-object.ts'
 import type { DocumentRelation } from '../../../../Domain/Entities/document-relation.ts'
-import { DocumentRelationPersistenceMapper } from '../Mappers/document-relation.persistence.mapper.ts'
+import { DocumentRelationPersistenceAdapter } from '../Adapters/document-relation.persistence.adapter.ts'
 import { DocumentRelationModel } from '../Models/document-relation.model.ts'
 
 /** Relation-primary persistence operations. */
@@ -36,7 +36,7 @@ export class DocumentRelationRepository extends DocumentRelationRepositoryContra
       sourceIndexId: documentRelationSourceIndexQO.sourceIndexId,
     })
 
-    return models.map(DocumentRelationPersistenceMapper.toDocumentRelation)
+    return models.map(DocumentRelationPersistenceAdapter.toDocumentRelation)
   }
 
   async removeBySourceIndexId(documentRelationSourceIndexQO: DocumentRelationSourceIndexQO): Promise<void> {
@@ -50,7 +50,7 @@ export class DocumentRelationRepository extends DocumentRelationRepositoryContra
       targetDocumentId: documentRelationTargetDocumentQO.documentId,
     })
 
-    return model === null ? null : DocumentRelationPersistenceMapper.toDocumentRelation(model)
+    return model === null ? null : DocumentRelationPersistenceAdapter.toDocumentRelation(model)
   }
 
   async findBySourceIndexIdsOrderByIdAsc(
@@ -63,6 +63,6 @@ export class DocumentRelationRepository extends DocumentRelationRepositoryContra
       order: { id: 'ASC' },
     })
 
-    return models.map(DocumentRelationPersistenceMapper.toDocumentRelation)
+    return models.map(DocumentRelationPersistenceAdapter.toDocumentRelation)
   }
 }

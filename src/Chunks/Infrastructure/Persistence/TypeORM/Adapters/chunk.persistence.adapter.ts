@@ -1,7 +1,7 @@
 import { Chunk, type ChunkState } from '../../../../Domain/Entities/chunk.ts'
 
 /** Restores a source passage through the same invariants used at creation. */
-export class ChunkPersistenceMapper {
+export class ChunkPersistenceAdapter {
   static toChunk(persistedChunk: ChunkState): Chunk {
     return new Chunk({
       id: persistedChunk.id,

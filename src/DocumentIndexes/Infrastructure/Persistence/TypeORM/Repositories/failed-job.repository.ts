@@ -22,8 +22,8 @@ import type {
   UnretriedDocumentIndexFailureTargetParams,
   UnretriedDocumentIndexFailuresParams,
 } from '../../../../Application/Ports/Out/Gateways/document-index-failure.params.ts'
-import { FailedJobRecordAdapter } from '../Mappers/failed-job-record.adapter.ts'
-import { FailedJobRetentionFactsAdapter } from '../Mappers/failed-job-retention-facts.adapter.ts'
+import { FailedJobRecordAdapter } from '../Adapters/failed-job-record.adapter.ts'
+import { FailedJobRetentionFactsAdapter } from '../Adapters/failed-job-retention-facts.adapter.ts'
 import { FailedJobModel } from '../Models/failed-job.model.ts'
 
 /** Persists document-index failure history in the current transaction. */

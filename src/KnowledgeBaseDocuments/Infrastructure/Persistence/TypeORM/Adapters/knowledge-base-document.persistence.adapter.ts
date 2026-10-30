@@ -1,7 +1,7 @@
 import { KnowledgeBaseDocument } from '../../../../Domain/Entities/knowledge-base-document.ts'
 import type { KnowledgeBaseDocumentModel } from '../Models/knowledge-base-document.model.ts'
 
-export class KnowledgeBaseDocumentPersistenceMapper {
+export class KnowledgeBaseDocumentPersistenceAdapter {
   static toKnowledgeBaseDocument(knowledgeBaseDocumentModel: KnowledgeBaseDocumentModel): KnowledgeBaseDocument {
     return new KnowledgeBaseDocument({
       knowledgeBaseId: knowledgeBaseDocumentModel.knowledgeBaseId,

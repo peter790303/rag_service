@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { InvalidLexicalSearchTermException } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Exceptions/invalid-lexical-search-term.exception.ts'
 import {
   LEXICAL_PROFILE_VERSION,
   LexicalSearchQueryAdapter,
-} from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/lexical-search-query.adapter.ts'
+} from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Adapters/lexical-search-query.adapter.ts'
+import { InvalidLexicalSearchTermException } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Exceptions/invalid-lexical-search-term.exception.ts'
 
 test('lexical search representation preserves the persisted profile version', () => {
   const representation = new LexicalSearchQueryAdapter().format('Architecture boundaries')

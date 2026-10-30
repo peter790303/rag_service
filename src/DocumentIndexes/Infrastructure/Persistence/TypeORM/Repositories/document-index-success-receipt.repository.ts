@@ -7,7 +7,7 @@ import type {
   ArchiveDocumentIndexSuccessParams,
   FindDocumentIndexSuccessByProjectIdAndJobIdParams,
 } from '../../../../Application/Ports/Out/Gateways/document-index-success.params.ts'
-import { DocumentIndexSuccessReceiptAdapter } from '../Mappers/document-index-success-receipt.adapter.ts'
+import { DocumentIndexSuccessReceiptAdapter } from '../Adapters/document-index-success-receipt.adapter.ts'
 import { DocumentIndexSuccessReceiptModel } from '../Models/document-index-success-receipt.model.ts'
 
 /** Persists successful document-index receipts in the current transaction. */

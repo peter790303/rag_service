@@ -1,7 +1,7 @@
 import { DocumentRevision, type DocumentRevisionState } from '../../../../Domain/Entities/document-revision.ts'
 import type { DocumentRevisionModel } from '../Models/document-revision.model.ts'
 
-export class DocumentRevisionPersistenceMapper {
+export class DocumentRevisionPersistenceAdapter {
   static toDocumentRevision(
     persistedRevision: Pick<DocumentRevisionModel, keyof DocumentRevisionState>,
   ): DocumentRevision {

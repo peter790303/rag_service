@@ -19,7 +19,7 @@ import type {
   DocumentIndexRevisionQO,
 } from '../../../../Application/QueryObjects/document-index.query-object.ts'
 import type { DocumentIndex } from '../../../../Domain/Entities/document-index.ts'
-import { DocumentIndexPersistenceMapper } from '../Mappers/document-index.persistence.mapper.ts'
+import { DocumentIndexPersistenceAdapter } from '../Adapters/document-index.persistence.adapter.ts'
 import { DocumentIndexModel } from '../Models/document-index.model.ts'
 
 /** CRUD and queries for the document-index Model. */
@@ -43,7 +43,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
 
     return persistedDocumentIndex === null
       ? null
-      : DocumentIndexPersistenceMapper.toDocumentIndex(persistedDocumentIndex)
+      : DocumentIndexPersistenceAdapter.toDocumentIndex(persistedDocumentIndex)
   }
 
   async createBuildingIndex(createBuildingDocumentIndexQO: CreateBuildingDocumentIndexQO): Promise<void> {
@@ -58,7 +58,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
 
     return persistedDocumentIndex === null
       ? null
-      : DocumentIndexPersistenceMapper.toDocumentIndex(persistedDocumentIndex)
+      : DocumentIndexPersistenceAdapter.toDocumentIndex(persistedDocumentIndex)
   }
 
   async lockByDocumentIndexIdSkipLocked(documentIndexIdQO: DocumentIndexIdQO): Promise<DocumentIndex | null> {
@@ -69,7 +69,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
 
     return persistedDocumentIndex === null
       ? null
-      : DocumentIndexPersistenceMapper.toDocumentIndex(persistedDocumentIndex)
+      : DocumentIndexPersistenceAdapter.toDocumentIndex(persistedDocumentIndex)
   }
 
   async findByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQO): Promise<DocumentIndex | null> {
@@ -79,7 +79,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
 
     return persistedDocumentIndex === null
       ? null
-      : DocumentIndexPersistenceMapper.toDocumentIndex(persistedDocumentIndex)
+      : DocumentIndexPersistenceAdapter.toDocumentIndex(persistedDocumentIndex)
   }
 
   async updateByDocumentIndexIdWithLifecycleFields(
@@ -103,7 +103,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
       documentId: documentIndexDocumentQO.documentId,
     })
 
-    return persistedDocumentIndexes.map(DocumentIndexPersistenceMapper.toDocumentIndex)
+    return persistedDocumentIndexes.map(DocumentIndexPersistenceAdapter.toDocumentIndex)
   }
 
   async findByRevisionId(documentIndexRevisionQO: DocumentIndexRevisionQO): Promise<DocumentIndex[]> {
@@ -111,7 +111,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
       revisionId: documentIndexRevisionQO.revisionId,
     })
 
-    return persistedDocumentIndexes.map(DocumentIndexPersistenceMapper.toDocumentIndex)
+    return persistedDocumentIndexes.map(DocumentIndexPersistenceAdapter.toDocumentIndex)
   }
 
   async findByUnreferencedSinceLessThanOrEqualOrderByIdAsc(
@@ -122,7 +122,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
       order: { id: 'ASC' },
     })
 
-    return persistedDocumentIndexes.map(DocumentIndexPersistenceMapper.toDocumentIndex)
+    return persistedDocumentIndexes.map(DocumentIndexPersistenceAdapter.toDocumentIndex)
   }
 
   async deleteByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQO): Promise<void> {
@@ -139,6 +139,6 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
       order: { createdAt: 'ASC', id: 'ASC' },
     })
 
-    return persistedDocumentIndexes.map(DocumentIndexPersistenceMapper.toDocumentIndex)
+    return persistedDocumentIndexes.map(DocumentIndexPersistenceAdapter.toDocumentIndex)
   }
 }

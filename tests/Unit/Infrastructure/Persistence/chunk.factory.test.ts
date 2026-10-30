@@ -11,7 +11,7 @@ import { InvalidChunkContentException } from '../../../../src/Chunks/Domain/Exce
 import { InvalidChunkHeadingPathException } from '../../../../src/Chunks/Domain/Exceptions/invalid-chunk-heading-path.exception.ts'
 import { InvalidChunkOrdinalException } from '../../../../src/Chunks/Domain/Exceptions/invalid-chunk-ordinal.exception.ts'
 import { InvalidChunkTokenCountException } from '../../../../src/Chunks/Domain/Exceptions/invalid-chunk-token-count.exception.ts'
-import { ChunkPersistenceMapper } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Mappers/chunk.persistence.mapper.ts'
+import { ChunkPersistenceAdapter } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Adapters/chunk.persistence.adapter.ts'
 import { ChunkModel } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
 
 const createChunkModel = (chunkStateOverrides: Partial<ChunkState> = {}): ChunkModel =>
@@ -30,10 +30,10 @@ const createChunkModel = (chunkStateOverrides: Partial<ChunkState> = {}): ChunkM
     ...chunkStateOverrides,
   })
 
-describe('ChunkPersistenceMapper', () => {
+describe('ChunkPersistenceAdapter', () => {
   it('restores a real Chunk with its persisted identity, owner and original source fields', () => {
     const persistedChunkModel = createChunkModel()
-    const chunk = ChunkPersistenceMapper.toChunk(persistedChunkModel)
+    const chunk = ChunkPersistenceAdapter.toChunk(persistedChunkModel)
 
     assert.ok(chunk instanceof Chunk)
     assert.equal(chunk.id, persistedChunkModel.id)
@@ -53,7 +53,7 @@ describe('ChunkPersistenceMapper', () => {
 
   it('isolates restored headings, embeddings and timestamps from mutable ORM model state', () => {
     const persistedChunkModel = createChunkModel()
-    const chunk = ChunkPersistenceMapper.toChunk(persistedChunkModel)
+    const chunk = ChunkPersistenceAdapter.toChunk(persistedChunkModel)
     persistedChunkModel.headingPath[0] = 'Changed after restoration'
     persistedChunkModel.headingPath.push('Added after restoration')
     persistedChunkModel.embedding[0] = 99
@@ -98,7 +98,7 @@ describe('ChunkPersistenceMapper', () => {
     await Promise.all(
       testCases.map(({ name, state: invalidChunkState, exception }) =>
         t.test(name, () => {
-          assert.throws(() => ChunkPersistenceMapper.toChunk(createChunkModel(invalidChunkState)), exception)
+          assert.throws(() => ChunkPersistenceAdapter.toChunk(createChunkModel(invalidChunkState)), exception)
         }),
       ),
     )

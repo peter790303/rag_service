@@ -8,7 +8,7 @@ import {
   type DocumentIndexPipelineSettings,
   WriteRequestDocumentIndexesAssembler,
 } from '../../../src/DocumentIndexes/Application/Assemblers/write-request-document-indexes.assembler.ts'
-import { LEXICAL_PROFILE_VERSION } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/lexical-search-query.adapter.ts'
+import { LEXICAL_PROFILE_VERSION } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Adapters/lexical-search-query.adapter.ts'
 
 const documentIndexRequestFactsFixture = {
   contentSha256: 'a'.repeat(64),

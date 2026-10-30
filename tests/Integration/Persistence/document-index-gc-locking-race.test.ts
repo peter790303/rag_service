@@ -12,7 +12,7 @@ import { CollectDocumentIndexGarbageCommandHandler } from '../../../src/Document
 import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
-import { JobExecutionVerificationAdapter } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/job-execution-verification.adapter.ts'
+import { JobExecutionVerificationAdapter } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Adapters/job-execution-verification.adapter.ts'
 import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
 import { FailedJobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/failed-job.model.ts'
 import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'

@@ -1,4 +1,4 @@
-import { LexicalSearchQueryAdapter } from '../../../../../DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/lexical-search-query.adapter.ts'
+import { LexicalSearchQueryAdapter } from '../../../../../DocumentIndexes/Infrastructure/Persistence/TypeORM/Adapters/lexical-search-query.adapter.ts'
 import type { InsertChunksQO } from '../../../../Application/QueryObjects/insert-chunks.query-object.ts'
 
 type ChunkInsertPayload = InsertChunksQO['chunks'][number] & { searchVector: string }

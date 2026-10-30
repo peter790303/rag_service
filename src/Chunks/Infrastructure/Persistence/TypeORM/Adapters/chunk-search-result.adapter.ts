@@ -1,4 +1,4 @@
-import { ChunkPersistenceMapper } from './chunk.persistence.mapper.ts'
+import { ChunkPersistenceAdapter } from './chunk.persistence.adapter.ts'
 import type { Chunk } from '../../../../Domain/Entities/chunk.ts'
 import { InvalidChunkEmbeddingException } from '../Exceptions/invalid-chunk-embedding.exception.ts'
 
@@ -67,7 +67,7 @@ export class ChunkSearchResultAdapter {
   }
 
   private static toChunk(row: ChunkSemanticQueryRowDTO | ChunkLexicalQueryRowDTO): Chunk {
-    return ChunkPersistenceMapper.toChunk({
+    return ChunkPersistenceAdapter.toChunk({
       id: row.id,
       documentIndexId: row.documentIndexId,
       ordinal: row.ordinal,

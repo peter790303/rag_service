@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 import type { DataSource, EntityManager } from 'typeorm'
 
 import { Chunk } from '../../../../src/Chunks/Domain/Entities/chunk.ts'
-import type { ChunkSemanticQueryRowDTO } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Mappers/chunk-search-result.adapter.ts'
+import type { ChunkSemanticQueryRowDTO } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Adapters/chunk-search-result.adapter.ts'
 import { ChunkModel } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
 import { ChunkRepository } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
 import { ReadTransactionDataSourceMismatchException } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/Exceptions/read-transaction-data-source-mismatch.exception.ts'

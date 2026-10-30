@@ -14,7 +14,7 @@ import type {
   DocumentRevisionIdsQO,
 } from '../../../../Application/QueryObjects/document-revision.query-object.ts'
 import type { DocumentRevision } from '../../../../Domain/Entities/document-revision.ts'
-import { DocumentRevisionPersistenceMapper } from '../Mappers/document-revision.persistence.mapper.ts'
+import { DocumentRevisionPersistenceAdapter } from '../Adapters/document-revision.persistence.adapter.ts'
 import { DocumentRevisionModel } from '../Models/document-revision.model.ts'
 
 /** Revision-primary persistence operations. */
@@ -36,7 +36,7 @@ export class DocumentRevisionRepository extends DocumentRevisionRepositoryContra
       contentSha256: documentRevisionContentQO.contentSha256,
     })
 
-    return persistedRevision === null ? null : DocumentRevisionPersistenceMapper.toDocumentRevision(persistedRevision)
+    return persistedRevision === null ? null : DocumentRevisionPersistenceAdapter.toDocumentRevision(persistedRevision)
   }
 
   async create(createDocumentRevisionQO: CreateDocumentRevisionQO): Promise<void> {
@@ -51,7 +51,7 @@ export class DocumentRevisionRepository extends DocumentRevisionRepositoryContra
       order: { createdAt: 'DESC' },
     })
 
-    return persistedRevision === null ? null : DocumentRevisionPersistenceMapper.toDocumentRevision(persistedRevision)
+    return persistedRevision === null ? null : DocumentRevisionPersistenceAdapter.toDocumentRevision(persistedRevision)
   }
 
   async findByDocumentRevisionIdAndDocumentId(
@@ -62,7 +62,7 @@ export class DocumentRevisionRepository extends DocumentRevisionRepositoryContra
       documentId: documentRevisionDocumentScopeQO.documentId,
     })
 
-    return persistedRevision === null ? null : DocumentRevisionPersistenceMapper.toDocumentRevision(persistedRevision)
+    return persistedRevision === null ? null : DocumentRevisionPersistenceAdapter.toDocumentRevision(persistedRevision)
   }
 
   async findByCreatedAtLessThanOrEqual(
@@ -72,7 +72,7 @@ export class DocumentRevisionRepository extends DocumentRevisionRepositoryContra
       createdAt: LessThanOrEqual(documentRevisionGarbageCandidatesQO.cutoff),
     })
 
-    return persistedRevisions.map(DocumentRevisionPersistenceMapper.toDocumentRevision)
+    return persistedRevisions.map(DocumentRevisionPersistenceAdapter.toDocumentRevision)
   }
 
   async lockByDocumentRevisionId(documentRevisionIdQO: DocumentRevisionIdQO): Promise<DocumentRevision | null> {
@@ -81,7 +81,7 @@ export class DocumentRevisionRepository extends DocumentRevisionRepositoryContra
       lock: { mode: 'pessimistic_write' },
     })
 
-    return persistedRevision === null ? null : DocumentRevisionPersistenceMapper.toDocumentRevision(persistedRevision)
+    return persistedRevision === null ? null : DocumentRevisionPersistenceAdapter.toDocumentRevision(persistedRevision)
   }
 
   async findByDocumentRevisionId(documentRevisionIdQO: DocumentRevisionIdQO): Promise<DocumentRevision | null> {
@@ -89,7 +89,7 @@ export class DocumentRevisionRepository extends DocumentRevisionRepositoryContra
       id: documentRevisionIdQO.revisionId,
     })
 
-    return persistedRevision === null ? null : DocumentRevisionPersistenceMapper.toDocumentRevision(persistedRevision)
+    return persistedRevision === null ? null : DocumentRevisionPersistenceAdapter.toDocumentRevision(persistedRevision)
   }
 
   async deleteByDocumentRevisionId(documentRevisionIdQO: DocumentRevisionIdQO): Promise<void> {
@@ -101,6 +101,6 @@ export class DocumentRevisionRepository extends DocumentRevisionRepositoryContra
 
     const persistedRevisions = await this.documentRevisionModelRepository.findBy({ id: In(documentRevisionIdsQO.ids) })
 
-    return persistedRevisions.map(DocumentRevisionPersistenceMapper.toDocumentRevision)
+    return persistedRevisions.map(DocumentRevisionPersistenceAdapter.toDocumentRevision)
   }
 }
