@@ -3,13 +3,13 @@ import test from 'node:test'
 
 import { DataSource, type EntityManager, In, LessThanOrEqual } from 'typeorm'
 
-import { ReadDocumentIndexAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/read-document-index.assembler.ts'
-import { DocumentIndex } from '../../../src/Domain/DocumentIndex/document-index.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { InvalidDocumentIndexTimestampException } from '../../../src/Domain/DocumentIndex/Exceptions/invalid-document-index-timestamp.exception.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
+import { ReadDocumentIndexAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/read-document-index.assembler.ts'
+import { DocumentIndex } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { InvalidDocumentIndexTimestampException } from '../../../src/DocumentIndexes/Domain/Exceptions/invalid-document-index-timestamp.exception.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 const createRepositoryManagerStub = (): EntityManager => new DataSource({ type: 'postgres' }).manager
 const createDocumentIndexModelFixture = (): DocumentIndexModel =>

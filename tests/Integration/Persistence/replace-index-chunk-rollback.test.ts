@@ -4,36 +4,36 @@ import test from 'node:test'
 
 import { QueryFailedError } from 'typeorm'
 
-import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
-import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
-import type { DocumentIndexingClaimDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
-import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
-import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
-import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { AuthorizeDocumentIndexChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/authorize-document-index-chunk-replacement.use-case.ts'
-import type { InsertPlannedDocumentRelationsQueryObject } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
-import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
-import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
-import { Chunk } from '../../../src/Domain/Chunk/chunk.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { MarkdownSourceAdapter } from '../../../src/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
-import { LexicalSearchQueryAdapter } from '../../../src/Infrastructure/Persistence/Adapters/lexical-search-query.adapter.ts'
-import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRelationModel } from '../../../src/Infrastructure/Persistence/Models/document-relation.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
-import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
-import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
-import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
-import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
-import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
+import { AuthorizeDocumentIndexChunkReplacementCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/authorize-document-index-chunk-replacement.command.handler.ts'
+import { ReplaceIndexChunkCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/replace-index-chunk.command.handler.ts'
+import type { DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-claim.dto.ts'
+import type { MarkdownChunkPlan } from '../../../src/DocumentIndexes/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
+import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease.exception.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import { Chunk } from '../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { MarkdownSourceAdapter } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
+import { LexicalSearchQueryAdapter } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/lexical-search-query.adapter.ts'
+import { ChunkModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
+import { ChunkRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { JobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/Documents/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
+import type { InsertPlannedDocumentRelationsQueryObject } from '../../../src/Documents/Application/QueryObjects/document-relation.query-object.ts'
+import { DocumentRelationModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-relation.model.ts'
+import { DocumentRevisionModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { DocumentRelationRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'
+import { DocumentRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document.repository.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
@@ -236,20 +236,20 @@ test(
         assert.equal(await documentRelationModelRepository.count(), 1)
       }
       const createUseCase = (relationRepository = new DocumentRelationRepository(persistenceTransaction)) =>
-        new ReplaceIndexChunkUseCase(
+        new ReplaceIndexChunkCommandHandler(
           persistenceTransaction,
-          new AuthorizeDocumentIndexChunkReplacementUseCase(
-            new ReserveDocumentForIndexingUseCase(new DocumentRepository(persistenceTransaction)),
-            new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+          new AuthorizeDocumentIndexChunkReplacementCommandHandler(
+            new ReserveDocumentForIndexingCommandHandler(new DocumentRepository(persistenceTransaction)),
+            new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
               new KnowledgeBaseDocumentRepository(persistenceTransaction),
             ),
             new JobRepository(persistenceTransaction),
             new DocumentIndexRepository(persistenceTransaction),
           ),
           new ChunkRepository(persistenceTransaction, retrievalDataSource),
-          new ReplacePlannedDocumentRelationsUseCase(relationRepository),
+          new ReplacePlannedDocumentRelationsCommandHandler(relationRepository),
         )
-      const replace = (useCase: ReplaceIndexChunkUseCase, claimedJob = job) =>
+      const replace = (useCase: ReplaceIndexChunkCommandHandler, claimedJob = job) =>
         useCase.execute({
           job: claimedJob,
           markdownChunkPlan: replacementPlan,

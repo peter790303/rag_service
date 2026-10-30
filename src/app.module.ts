@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common'
 
-import { KnowledgeServiceInfrastructureModule } from './Infrastructure/Providers/knowledge-service-infrastructure.module.ts'
-import { DocumentIndexesController } from './Interfaces/Http/Controllers/document-indexes.controller.ts'
-import { HealthController } from './Interfaces/Http/Controllers/health.controller.ts'
-import { IndexManifestController } from './Interfaces/Http/Controllers/index-manifest.controller.ts'
-import { KnowledgeBaseDocumentsController } from './Interfaces/Http/Controllers/knowledge-base-documents.controller.ts'
-import { KnowledgeBaseRetrievalController } from './Interfaces/Http/Controllers/knowledge-base-retrieval.controller.ts'
-import { KnowledgeGraphController } from './Interfaces/Http/Controllers/knowledge-graph.controller.ts'
-import { ProjectServiceAuthGuard } from './Interfaces/Http/Middleware/project-service-auth.guard.ts'
+import { KnowledgeServiceInfrastructureModule } from './Bootstrap/Nest/Providers/knowledge-service-infrastructure.module.ts'
+import { DocumentIndexesController } from './DocumentIndexes/Interfaces/Nest/Controllers/document-indexes.controller.ts'
+import { IndexManifestController } from './DocumentIndexes/Interfaces/Nest/Controllers/index-manifest.controller.ts'
+import { KnowledgeBaseDocumentsController } from './KnowledgeBases/Interfaces/Nest/Controllers/knowledge-base-documents.controller.ts'
+import { KnowledgeBaseRetrievalController } from './KnowledgeBases/Interfaces/Nest/Controllers/knowledge-base-retrieval.controller.ts'
+import { KnowledgeGraphController } from './KnowledgeBases/Interfaces/Nest/Controllers/knowledge-graph.controller.ts'
+import { HealthController } from './Shared/Interfaces/Nest/Controllers/health.controller.ts'
+import { ProjectServiceAuthGuard } from './Shared/Interfaces/Nest/Middleware/project-service-auth.guard.ts'
 
 @Module({
   imports: [KnowledgeServiceInfrastructureModule],

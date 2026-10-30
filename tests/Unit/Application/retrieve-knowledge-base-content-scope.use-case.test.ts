@@ -6,9 +6,9 @@ import {
   createRetrievalPersistenceFixture,
   retrievalProfileFixtures,
 } from './retrieve-knowledge-base-content.use-case.fixtures.ts'
-import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { HybridKnowledgeRetrievalResource } from '../../../src/Interfaces/Http/Resources/hybrid-knowledge-retrieval.resource.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
+import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
+import { HybridKnowledgeRetrievalResource } from '../../../src/KnowledgeBases/Interfaces/Nest/Resources/hybrid-knowledge-retrieval.resource.ts'
 
 test('retrieve rejects supplied query vectors without a matching embedding model identity', async () => {
   const snapshot = {
@@ -27,7 +27,7 @@ test('retrieve rejects supplied query vectors without a matching embedding model
       },
     ],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1, 0]], modelId: 'current-embedding-model' },
     retrievalProfileFixtures,
@@ -65,7 +65,7 @@ test('retrieve accepts a supplied vector when its model matches the active index
       },
     ],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1, 0]], modelId: 'current-embedding-model' },
     retrievalProfileFixtures,
@@ -98,7 +98,7 @@ test('retrieve rejects active indexes created with a different lexical profile',
       },
     ],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1]], modelId: 'test' },
     retrievalProfileFixtures,
@@ -127,7 +127,7 @@ test('retrieve rejects query vectors whose dimensions differ from the active ind
       },
     ],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1]], modelId: 'test' },
     retrievalProfileFixtures,
@@ -183,7 +183,7 @@ test('document-scoped retrieval keeps candidates scoped while including project-
     })),
     relations: [],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1]], modelId: 'test' },
     retrievalProfileFixtures,
@@ -248,7 +248,7 @@ test('includeNonEffective retrieves ready non-active indexes and marks their mat
     })),
     relations: [],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1]], modelId: 'test' },
     retrievalProfileFixtures,
@@ -323,7 +323,7 @@ test('required document retrieval does not append historical index chunks as man
     })),
     relations: [],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1]], modelId: 'test' },
     retrievalProfileFixtures,

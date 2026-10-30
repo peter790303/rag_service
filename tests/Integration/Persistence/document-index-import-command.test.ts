@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { test } from 'node:test'
 
-import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
+import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 test(

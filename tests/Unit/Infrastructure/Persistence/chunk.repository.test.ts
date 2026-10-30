@@ -8,12 +8,12 @@ import type { EntityManager, FindManyOptions, FindOptionsWhere } from 'typeorm'
 import type {
   ChunkIndexQueryObject,
   ChunkIndexOrdinalsQueryObject,
-} from '../../../../src/Application/Chunks/QueryObjects/chunk.query-object.ts'
-import { Chunk } from '../../../../src/Domain/Chunk/chunk.ts'
-import { InvalidChunkOrdinalException } from '../../../../src/Domain/Chunk/Exceptions/invalid-chunk-ordinal.exception.ts'
-import { ChunkModel } from '../../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
-import { PersistenceTransaction } from '../../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
+} from '../../../../src/DocumentIndexes/Application/QueryObjects/chunk.query-object.ts'
+import { Chunk } from '../../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
+import { InvalidChunkOrdinalException } from '../../../../src/DocumentIndexes/Domain/Exceptions/invalid-chunk-ordinal.exception.ts'
+import { ChunkModel } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { ChunkRepository } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { PersistenceTransaction } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 const createChunkModel = (chunkModelOverrides: Partial<ChunkModel> = {}): ChunkModel =>
   Object.assign(new ChunkModel(), {

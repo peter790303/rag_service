@@ -8,20 +8,20 @@ import {
   createJobRecordFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexingDeliveryDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
-import { DocumentIndexingFailedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-failed.event.ts'
-import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
-import { InvalidDocumentIndexingFailureDecisionException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-indexing-failure-decision.exception.ts'
-import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { DocumentIndexingFailedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-failed.listener.ts'
-import type { DocumentIndexExecutionStatusFields } from '../../../src/Application/DocumentIndexes/QueryObjects/document-index-execution.query-object.ts'
-import type { ArchiveDocumentIndexFailureQueryObject } from '../../../src/Application/DocumentIndexes/QueryObjects/document-index-failure.query-object.ts'
-import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
-import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-delivery.dto.ts'
+import { DocumentIndexingFailedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-failed.event.ts'
+import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease.exception.ts'
+import { InvalidDocumentIndexingFailureDecisionException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-indexing-failure-decision.exception.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import { DocumentIndexingFailedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexing-failed.listener.ts'
+import type { DocumentIndexExecutionStatusFields } from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-execution.query-object.ts'
+import type { ArchiveDocumentIndexFailureQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-failure.query-object.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
+import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
 
 const now = new Date('2026-10-14T00:00:30.000Z')
 const claimedJobFixture: DocumentIndexingDeliveryDTO = {
@@ -80,7 +80,7 @@ const createFailedJobScenario = (
         return result
       },
     },
-    new ReserveDocumentForIndexingUseCase(
+    new ReserveDocumentForIndexingCommandHandler(
       createRepositoryStub<DocumentRepository>({
         lockByDocumentId: async () => {
           calls.push('document')
@@ -89,7 +89,7 @@ const createFailedJobScenario = (
         },
       }),
     ),
-    new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+    new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
       createRepositoryStub<KnowledgeBaseDocumentRepository>({
         lockByKnowledgeBaseIdAndDocumentId: async () => {
           calls.push('knowledgeBaseDocument')

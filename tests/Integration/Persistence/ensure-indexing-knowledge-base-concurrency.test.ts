@@ -2,11 +2,11 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { test } from 'node:test'
 
-import { KnowledgeBaseRepository as KnowledgeBaseRepositoryContract } from '../../../src/Application/KnowledgeBases/Contracts/knowledge-base.repository.ts'
-import { EnsureIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/ensure-indexing-knowledge-base.use-case.ts'
-import { KnowledgeBaseProjectMismatchException } from '../../../src/Domain/KnowledgeBase/Exceptions/knowledge-base-project-mismatch.exception.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
+import { EnsureIndexingKnowledgeBaseCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/ensure-indexing-knowledge-base.command.handler.ts'
+import { KnowledgeBaseRepository as KnowledgeBaseRepositoryContract } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base.repository.ts'
+import { KnowledgeBaseProjectMismatchException } from '../../../src/KnowledgeBases/Domain/Exceptions/knowledge-base-project-mismatch.exception.ts'
+import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 test(
@@ -39,7 +39,7 @@ test(
       createIfAbsent: (query: Parameters<typeof repository.createIfAbsent>[0]) => repository.createIfAbsent(query),
       update: (query: Parameters<typeof repository.update>[0]) => repository.update(query),
     } as unknown as KnowledgeBaseRepositoryContract
-    const useCase = new EnsureIndexingKnowledgeBaseUseCase(concurrentRepository)
+    const useCase = new EnsureIndexingKnowledgeBaseCommandHandler(concurrentRepository)
     const sharedInput = {
       knowledgeBaseId,
       projectId: `concurrent-project-${randomUUID()}`,

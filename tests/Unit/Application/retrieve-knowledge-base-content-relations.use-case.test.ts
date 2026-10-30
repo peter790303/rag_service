@@ -6,9 +6,9 @@ import {
   createRetrievalPersistenceFixture,
   retrievalProfileFixtures,
 } from './retrieve-knowledge-base-content.use-case.fixtures.ts'
-import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { HybridKnowledgeRetrievalResource } from '../../../src/Interfaces/Http/Resources/hybrid-knowledge-retrieval.resource.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
+import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
+import { HybridKnowledgeRetrievalResource } from '../../../src/KnowledgeBases/Interfaces/Nest/Resources/hybrid-knowledge-retrieval.resource.ts'
 
 test('retrieve maps adjacent chunks selected by the retrieval context', async () => {
   const snapshot = {
@@ -104,7 +104,7 @@ test('retrieve maps adjacent chunks selected by the retrieval context', async ()
     ],
     relations: [],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1, 0]], modelId: 'embed-v1' },
     retrievalProfileFixtures,
@@ -212,7 +212,7 @@ test('relation target is resolved from the unique ready project member even when
       },
     ],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1]], modelId: 'test' },
     retrievalProfileFixtures,
@@ -318,7 +318,7 @@ test('relation with a missing anchor is reported unresolved and is not expanded'
       },
     ],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1]], modelId: 'test' },
     retrievalProfileFixtures,
@@ -412,7 +412,7 @@ test('relation target reports ambiguity and does not expand duplicate project re
       },
     ],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1]], modelId: 'test' },
     retrievalProfileFixtures,
@@ -456,7 +456,7 @@ test('retrieve rejects active indexes created with a different embedding model',
       },
     ],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1, 0]], modelId: 'current-embedding-model' },
     retrievalProfileFixtures,

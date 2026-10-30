@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import { HttpEmbeddingClient } from '../../../src/Infrastructure/External/Embedding/http-embedding.client.ts'
+import { HttpEmbeddingClient } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/http-embedding.client.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
 
 const config = {
   embeddingApiUrl: 'https://embedding.example.test/v1/embeddings',

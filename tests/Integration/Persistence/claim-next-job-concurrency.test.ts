@@ -5,46 +5,46 @@ import { test } from 'node:test'
 import type { DataSource } from 'typeorm'
 
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
-import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
-import { DocumentIndexExecutionClaimConflictException } from '../../../src/Application/DocumentIndexes/Exceptions/document-index-execution-claim-conflict.exception.ts'
-import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
+import { AuthorizeDocumentIndexChunkReplacementCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/authorize-document-index-chunk-replacement.command.handler.ts'
+import { ReplaceIndexChunkCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/replace-index-chunk.command.handler.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
+import { DocumentIndexExecutionClaimConflictException } from '../../../src/DocumentIndexes/Application/Exceptions/document-index-execution-claim-conflict.exception.ts'
+import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease.exception.ts'
 import {
   DocumentIndexExecutionLifecycle as RagJobEntity,
   DOCUMENT_INDEX_EXECUTION_STATUS,
-} from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { DispatchDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/dispatch-document-indexing.listener.ts'
-import { DocumentIndexedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexed.listener.ts'
-import { DocumentIndexingFailedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-failed.listener.ts'
-import { AuthorizeDocumentIndexChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/authorize-document-index-chunk-replacement.use-case.ts'
-import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
-import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import { ActivateKnowledgeBaseDocumentIndexUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/activate-knowledge-base-document-index.use-case.ts'
-import { CompleteKnowledgeBaseDocumentIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/complete-knowledge-base-document-indexing.use-case.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
-import { GetIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/get-indexing-knowledge-base.use-case.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { LexicalSearchQueryAdapter } from '../../../src/Infrastructure/Persistence/Adapters/lexical-search-query.adapter.ts'
-import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { FailedJobModel } from '../../../src/Infrastructure/Persistence/Models/failed-job.model.ts'
-import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
-import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
-import { DocumentIndexSuccessReceiptRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index-success-receipt.repository.ts'
-import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
-import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
-import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-revision.repository.ts'
-import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
-import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
-import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
-import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
-import { HybridKnowledgeRetrievalResource } from '../../../src/Interfaces/Http/Resources/hybrid-knowledge-retrieval.resource.ts'
+} from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import { DispatchDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/dispatch-document-indexing.listener.ts'
+import { DocumentIndexedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexed.listener.ts'
+import { DocumentIndexingFailedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexing-failed.listener.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { LexicalSearchQueryAdapter } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/lexical-search-query.adapter.ts'
+import { ChunkModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { FailedJobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/failed-job.model.ts'
+import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
+import { ChunkRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { DocumentIndexSuccessReceiptRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index-success-receipt.repository.ts'
+import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { FailedJobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/failed-job.repository.ts'
+import { JobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/Documents/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
+import { DocumentRevisionModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { DocumentRelationRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'
+import { DocumentRevisionRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
+import { DocumentRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document.repository.ts'
+import { ActivateKnowledgeBaseDocumentIndexCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/activate-knowledge-base-document-index.command.handler.ts'
+import { CompleteKnowledgeBaseDocumentIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/complete-knowledge-base-document-indexing.command.handler.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import { GetIndexingKnowledgeBaseQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/get-indexing-knowledge-base.query.handler.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
+import { HybridKnowledgeRetrievalResource } from '../../../src/KnowledgeBases/Interfaces/Nest/Resources/hybrid-knowledge-retrieval.resource.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
@@ -242,14 +242,14 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
 
       return new DispatchDocumentIndexingListener(
         store.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(store.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(store.knowledgeBaseDocumentRepository),
+        new ReserveDocumentForIndexingCommandHandler(store.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(store.knowledgeBaseDocumentRepository),
         store.documentIndexRepository,
         store.jobRepository,
         store.failedJobRepository,
         config.workerLeaseSeconds,
-        new ActivateKnowledgeBaseDocumentIndexUseCase(store.knowledgeBaseDocumentRepository),
-        new GetIndexingKnowledgeBaseUseCase(store.knowledgeBaseRepository),
+        new ActivateKnowledgeBaseDocumentIndexCommandHandler(store.knowledgeBaseDocumentRepository),
+        new GetIndexingKnowledgeBaseQueryHandler(store.knowledgeBaseRepository),
         failReceiptSave
           ? Object.assign(new DocumentIndexSuccessReceiptRepository(store.persistenceTransaction), {
               archiveSuccess: async () => {
@@ -360,12 +360,12 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await assert.rejects(
       new DocumentIndexedListener(
         lifecycleStore.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
-        new CompleteKnowledgeBaseDocumentIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
-        new GetIndexingKnowledgeBaseUseCase(lifecycleStore.knowledgeBaseRepository),
+        new CompleteKnowledgeBaseDocumentIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
+        new GetIndexingKnowledgeBaseQueryHandler(lifecycleStore.knowledgeBaseRepository),
         new DocumentIndexSuccessReceiptRepository(lifecycleStore.persistenceTransaction),
       ).handle({ jobDelivery: claimed[0]!, completedAt: new Date() }),
       InvalidDocumentIndexExecutionLeaseException,
@@ -373,8 +373,8 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await assert.rejects(
       new DocumentIndexingFailedListener(
         lifecycleStore.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
         lifecycleStore.failedJobRepository,
@@ -402,16 +402,16 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     const stalePlan = createMarkdownChunkPlan('stale lease must not write')
     const stalePlanSavedAt = new Date()
     await assert.rejects(
-      new ReplaceIndexChunkUseCase(
+      new ReplaceIndexChunkCommandHandler(
         lifecycleStore.persistenceTransaction,
-        new AuthorizeDocumentIndexChunkReplacementUseCase(
-          new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-          new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new AuthorizeDocumentIndexChunkReplacementCommandHandler(
+          new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
           lifecycleStore.jobRepository,
           lifecycleStore.documentIndexRepository,
         ),
         lifecycleStore.chunkRepository,
-        new ReplacePlannedDocumentRelationsUseCase(lifecycleStore.documentRelationRepository),
+        new ReplacePlannedDocumentRelationsCommandHandler(lifecycleStore.documentRelationRepository),
       ).execute({
         job: claimed[0]!,
         markdownChunkPlan: stalePlan,
@@ -433,16 +433,16 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
       { requestedGeneration: '2' },
     )
     await assert.rejects(
-      new ReplaceIndexChunkUseCase(
+      new ReplaceIndexChunkCommandHandler(
         lifecycleStore.persistenceTransaction,
-        new AuthorizeDocumentIndexChunkReplacementUseCase(
-          new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-          new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new AuthorizeDocumentIndexChunkReplacementCommandHandler(
+          new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
           lifecycleStore.jobRepository,
           lifecycleStore.documentIndexRepository,
         ),
         lifecycleStore.chunkRepository,
-        new ReplacePlannedDocumentRelationsUseCase(lifecycleStore.documentRelationRepository),
+        new ReplacePlannedDocumentRelationsCommandHandler(lifecycleStore.documentRelationRepository),
       ).execute({
         job: recovered!,
         markdownChunkPlan: plan,
@@ -454,12 +454,12 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await assert.rejects(
       new DocumentIndexedListener(
         lifecycleStore.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
-        new CompleteKnowledgeBaseDocumentIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
-        new GetIndexingKnowledgeBaseUseCase(lifecycleStore.knowledgeBaseRepository),
+        new CompleteKnowledgeBaseDocumentIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
+        new GetIndexingKnowledgeBaseQueryHandler(lifecycleStore.knowledgeBaseRepository),
         new DocumentIndexSuccessReceiptRepository(lifecycleStore.persistenceTransaction),
       ).handle({ jobDelivery: recovered!, completedAt: new Date() }),
       InvalidDocumentIndexExecutionLeaseException,
@@ -467,8 +467,8 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await assert.rejects(
       new DocumentIndexingFailedListener(
         lifecycleStore.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
         lifecycleStore.failedJobRepository,
@@ -500,16 +500,16 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     }
     await jobModelRepository.save(liveClaim)
     await assert.rejects(
-      new ReplaceIndexChunkUseCase(
+      new ReplaceIndexChunkCommandHandler(
         lifecycleStore.persistenceTransaction,
-        new AuthorizeDocumentIndexChunkReplacementUseCase(
-          new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-          new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new AuthorizeDocumentIndexChunkReplacementCommandHandler(
+          new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
           lifecycleStore.jobRepository,
           lifecycleStore.documentIndexRepository,
         ),
         lifecycleStore.chunkRepository,
-        new ReplacePlannedDocumentRelationsUseCase(lifecycleStore.documentRelationRepository),
+        new ReplacePlannedDocumentRelationsCommandHandler(lifecycleStore.documentRelationRepository),
       ).execute({
         job: recovered!,
         markdownChunkPlan: plan,
@@ -521,12 +521,12 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await assert.rejects(
       new DocumentIndexedListener(
         lifecycleStore.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
-        new CompleteKnowledgeBaseDocumentIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
-        new GetIndexingKnowledgeBaseUseCase(lifecycleStore.knowledgeBaseRepository),
+        new CompleteKnowledgeBaseDocumentIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
+        new GetIndexingKnowledgeBaseQueryHandler(lifecycleStore.knowledgeBaseRepository),
         new DocumentIndexSuccessReceiptRepository(lifecycleStore.persistenceTransaction),
       ).handle({ jobDelivery: recovered!, completedAt: new Date(Date.now() - 2000) }),
       InvalidDocumentIndexExecutionLeaseException,
@@ -534,8 +534,8 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await assert.rejects(
       new DocumentIndexingFailedListener(
         lifecycleStore.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
         lifecycleStore.failedJobRepository,
@@ -564,8 +564,8 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await assert.rejects(
       new DocumentIndexingFailedListener(
         lifecycleStore.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+        new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
         failingJobs,
         lifecycleStore.documentIndexRepository,
         lifecycleStore.failedJobRepository,
@@ -590,16 +590,16 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     await jobModelRepository.update(job.id, { attempts: recovered!.attempts })
 
     const planSavedAt = new Date()
-    await new ReplaceIndexChunkUseCase(
+    await new ReplaceIndexChunkCommandHandler(
       lifecycleStore.persistenceTransaction,
-      new AuthorizeDocumentIndexChunkReplacementUseCase(
-        new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+      new AuthorizeDocumentIndexChunkReplacementCommandHandler(
+        new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
         lifecycleStore.jobRepository,
         lifecycleStore.documentIndexRepository,
       ),
       lifecycleStore.chunkRepository,
-      new ReplacePlannedDocumentRelationsUseCase(lifecycleStore.documentRelationRepository),
+      new ReplacePlannedDocumentRelationsCommandHandler(lifecycleStore.documentRelationRepository),
     ).execute({
       job: recovered!,
       markdownChunkPlan: plan,
@@ -608,12 +608,12 @@ test('concurrent workers claim a queued job exactly once', { skip: !process.env.
     })
     await new DocumentIndexedListener(
       lifecycleStore.persistenceTransaction,
-      new ReserveDocumentForIndexingUseCase(lifecycleStore.documentRepository),
-      new ReserveKnowledgeBaseDocumentForIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
+      new ReserveDocumentForIndexingCommandHandler(lifecycleStore.documentRepository),
+      new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
       lifecycleStore.jobRepository,
       lifecycleStore.documentIndexRepository,
-      new CompleteKnowledgeBaseDocumentIndexingUseCase(lifecycleStore.knowledgeBaseDocumentRepository),
-      new GetIndexingKnowledgeBaseUseCase(lifecycleStore.knowledgeBaseRepository),
+      new CompleteKnowledgeBaseDocumentIndexingCommandHandler(lifecycleStore.knowledgeBaseDocumentRepository),
+      new GetIndexingKnowledgeBaseQueryHandler(lifecycleStore.knowledgeBaseRepository),
       new DocumentIndexSuccessReceiptRepository(lifecycleStore.persistenceTransaction),
     ).handle({ jobDelivery: recovered!, completedAt: new Date() })
     await jobModelRepository.update(ineligibleJobs[0]!.id, { availableAt: new Date(Date.now() - 1000) })
@@ -901,14 +901,14 @@ async function createReadyIndexReuseFixture(dataSource: DataSource) {
   const knowledgeBaseDocumentRepository = new KnowledgeBaseDocumentRepository(persistenceTransaction)
   const dispatcher = new DispatchDocumentIndexingListener(
     persistenceTransaction,
-    new ReserveDocumentForIndexingUseCase(new DocumentRepository(persistenceTransaction)),
-    new ReserveKnowledgeBaseDocumentForIndexingUseCase(knowledgeBaseDocumentRepository),
+    new ReserveDocumentForIndexingCommandHandler(new DocumentRepository(persistenceTransaction)),
+    new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(knowledgeBaseDocumentRepository),
     new DocumentIndexRepository(persistenceTransaction),
     jobRepository,
     new FailedJobRepository(persistenceTransaction),
     config.workerLeaseSeconds,
-    new ActivateKnowledgeBaseDocumentIndexUseCase(knowledgeBaseDocumentRepository),
-    new GetIndexingKnowledgeBaseUseCase(new KnowledgeBaseRepository(persistenceTransaction)),
+    new ActivateKnowledgeBaseDocumentIndexCommandHandler(knowledgeBaseDocumentRepository),
+    new GetIndexingKnowledgeBaseQueryHandler(new KnowledgeBaseRepository(persistenceTransaction)),
     successReceiptRepository,
   )
 

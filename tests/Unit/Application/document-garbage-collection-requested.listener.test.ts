@@ -12,12 +12,12 @@ import {
   createGarbageCollectionListener,
   type GarbageCollectionTestDependencies,
 } from './document-retention-use-cases.fixture.ts'
-import type { ExpiredDocumentIndexFailureDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/expired-document-index-failure.dto.ts'
-import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Application/Documents/Events/document-garbage-collection-requested.event.ts'
-import type { DocumentIndexStatus } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { DocumentRelation } from '../../../src/Domain/DocumentRelation/document-relation.ts'
-import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
+import type { ExpiredDocumentIndexFailureDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/expired-document-index-failure.dto.ts'
+import type { DocumentIndexStatus } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Documents/Application/Events/document-garbage-collection-requested.event.ts'
+import { DocumentRelation } from '../../../src/Documents/Domain/Entities/document-relation.ts'
+import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
 
 type GarbageDocumentIndexCandidateDTO = {
   documentIndexId: string

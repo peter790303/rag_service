@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { Chunk } from '../../../../src/Domain/Chunk/chunk.ts'
-import { Document } from '../../../../src/Domain/Document/document.ts'
-import { InvalidDocumentTimestampException } from '../../../../src/Domain/Document/Exceptions/invalid-document-timestamp.exception.ts'
-import { DateTime } from '../../../../src/Domain/Document/ValueObjects/date-time.ts'
-import { DocumentIndex } from '../../../../src/Domain/DocumentIndex/document-index.ts'
-import { DocumentIndexStatusEnum } from '../../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { DocumentRevision } from '../../../../src/Domain/DocumentRevision/document-revision.ts'
-import { KnowledgeBaseDocument } from '../../../../src/Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
+import { Chunk } from '../../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
+import { DocumentIndex } from '../../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
+import { DocumentIndexStatusEnum } from '../../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { DocumentRevision } from '../../../../src/Documents/Domain/Entities/document-revision.ts'
+import { Document } from '../../../../src/Documents/Domain/Entities/document.ts'
+import { InvalidDocumentTimestampException } from '../../../../src/Documents/Domain/Exceptions/invalid-document-timestamp.exception.ts'
+import { KnowledgeBaseDocument } from '../../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
+import { DateTime } from '../../../../src/Shared/Domain/ValueObjects/date-time.ts'
 
 const timestamp = new DateTime(new Date('2026-10-16T20:34:56.789Z'), { timeZone: 'Asia/Taipei' })
 

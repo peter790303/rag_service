@@ -2,7 +2,7 @@ import {
   createRetrievalSnapshotFixture,
   retrievalProfileFixtures,
 } from './retrieve-knowledge-base-content.use-case.fixtures.ts'
-import type { RetrievalKnowledgeBaseContentAssemblerInput } from '../../../src/Application/KnowledgeBases/Assemblers/retrieval-knowledge-base-content.assembler.ts'
+import type { RetrievalKnowledgeBaseContentAssemblerInput } from '../../../src/KnowledgeBases/Application/Assemblers/retrieval-knowledge-base-content.assembler.ts'
 
 export const createRetrievalKnowledgeBaseContentInputFixture = (): RetrievalKnowledgeBaseContentAssemblerInput => {
   const snapshot = createRetrievalSnapshotFixture({

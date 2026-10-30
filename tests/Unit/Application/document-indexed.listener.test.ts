@@ -10,22 +10,22 @@ import {
   createRestoredDocumentIndexFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
-import type { DocumentIndexExecutionLeaseDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-lease.dto.ts'
-import type { DocumentIndexLifecycleFact } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-lifecycle.dto.ts'
-import type { DocumentIndexingClaimDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
-import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
-import { DocumentIndexedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexed.event.ts'
-import { DocumentIndexingNotFoundException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-not-found.exception.ts'
-import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
-import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { DocumentIndexedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexed.listener.ts'
-import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
-import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
-import { CompleteKnowledgeBaseDocumentIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/complete-knowledge-base-document-indexing.use-case.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { KnowledgeBase } from '../../../src/Domain/KnowledgeBase/knowledge-base.ts'
+import type { DocumentIndexExecutionLeaseDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-lease.dto.ts'
+import type { DocumentIndexLifecycleFact } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-lifecycle.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-claim.dto.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
+import { DocumentIndexedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexed.event.ts'
+import { DocumentIndexingNotFoundException } from '../../../src/DocumentIndexes/Application/Exceptions/document-indexing-not-found.exception.ts'
+import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease.exception.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import { DocumentIndexedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexed.listener.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
+import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
+import { CompleteKnowledgeBaseDocumentIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/complete-knowledge-base-document-indexing.command.handler.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'
 
 const claimedJobFixture: DocumentIndexingClaimDTO = {
   id: 'job-id',
@@ -64,7 +64,7 @@ const createDocumentIndexedListener = (
       run: async (operation) => operation(),
       runReadOnlySnapshot: async () => assert.fail('completing an index job uses a write transaction'),
     },
-    new ReserveDocumentForIndexingUseCase(
+    new ReserveDocumentForIndexingCommandHandler(
       createRepositoryStub<DocumentRepository>({
         lockByDocumentId: async () => {
           calls.push('lock-document')
@@ -73,7 +73,7 @@ const createDocumentIndexedListener = (
         },
       }),
     ),
-    new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+    new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
       createRepositoryStub<KnowledgeBaseDocumentRepository>({
         lockByKnowledgeBaseIdAndDocumentId: async () => {
           calls.push('lock-knowledgeBaseDocument')
@@ -120,7 +120,7 @@ const createDocumentIndexedListener = (
         lifecycleWrites.set(documentIndexId, lifecycle)
       },
     }),
-    new CompleteKnowledgeBaseDocumentIndexingUseCase(
+    new CompleteKnowledgeBaseDocumentIndexingCommandHandler(
       createRepositoryStub<KnowledgeBaseDocumentRepository>({
         updateActiveDocumentIndexByKnowledgeBaseIdAndDocumentIdAndRequestedGenerationAndActiveDocumentIndexId: async (
           activation,

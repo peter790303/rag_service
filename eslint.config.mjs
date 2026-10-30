@@ -961,11 +961,11 @@ export default tseslint.config(
       'local/no-async-collection-callback': 'error',
       'no-restricted-syntax': [
         'error',
-        { selector: 'ForStatement', message: 'Collection handling must use map, filter, reduce, or flatMap.' },
-        { selector: 'ForOfStatement', message: 'Collection handling must use map, filter, reduce, or flatMap.' },
-        { selector: 'ForInStatement', message: 'Collection handling must use map, filter, reduce, or flatMap.' },
-        { selector: 'WhileStatement', message: 'Collection handling must use map, filter, reduce, or flatMap.' },
-        { selector: 'DoWhileStatement', message: 'Collection handling must use map, filter, reduce, or flatMap.' },
+        { selector: 'ForStatement', message: 'Collection handling must use map, filter, or flatMap.' },
+        { selector: 'ForOfStatement', message: 'Collection handling must use map, filter, or flatMap.' },
+        { selector: 'ForInStatement', message: 'Collection handling must use map, filter, or flatMap.' },
+        { selector: 'WhileStatement', message: 'Collection handling must use map, filter, or flatMap.' },
+        { selector: 'DoWhileStatement', message: 'Collection handling must use map, filter, or flatMap.' },
       ],
       'import-x/newline-after-import': ['error', { count: 1, considerComments: true }],
       'import-x/order': [
@@ -986,15 +986,15 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/Application/Chunks/**/*.ts', 'src/Domain/Chunk/**/*.ts'],
+    files: ['src/DocumentIndexes/Application/**/*.ts', 'src/DocumentIndexes/Domain/**/*.ts'],
     rules: {
       'no-restricted-syntax': [
         'error',
-        { selector: 'ForStatement', message: 'Chunks 集合處理請使用 map、filter、reduce 或 flatMap。' },
-        { selector: 'ForOfStatement', message: 'Chunks 集合處理請使用 map、filter、reduce 或 flatMap。' },
-        { selector: 'ForInStatement', message: 'Chunks 集合處理請使用 map、filter、reduce 或 flatMap。' },
-        { selector: 'WhileStatement', message: 'Chunks 集合處理請使用 map、filter、reduce 或 flatMap。' },
-        { selector: 'DoWhileStatement', message: 'Chunks 集合處理請使用 map、filter、reduce 或 flatMap。' },
+        { selector: 'ForStatement', message: 'Chunks collection handling must use map, filter, or flatMap.' },
+        { selector: 'ForOfStatement', message: 'Chunks collection handling must use map, filter, or flatMap.' },
+        { selector: 'ForInStatement', message: 'Chunks collection handling must use map, filter, or flatMap.' },
+        { selector: 'WhileStatement', message: 'Chunks collection handling must use map, filter, or flatMap.' },
+        { selector: 'DoWhileStatement', message: 'Chunks collection handling must use map, filter, or flatMap.' },
       ],
     },
   },

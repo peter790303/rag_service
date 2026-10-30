@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { MarkdownChunkStartsAdapter } from '../../../src/Infrastructure/External/ChunkPlanning/Adapters/markdown-chunk-starts.adapter.ts'
-import { MarkdownSourceAdapter } from '../../../src/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
-import { EmptyMarkdownChunkStartsException } from '../../../src/Infrastructure/External/ChunkPlanning/Exceptions/empty-markdown-chunk-starts.exception.ts'
-import { MarkdownChunkStartOutOfBoundsException } from '../../../src/Infrastructure/External/ChunkPlanning/Exceptions/markdown-chunk-start-out-of-bounds.exception.ts'
-import { MarkdownChunkStartsNotIncreasingException } from '../../../src/Infrastructure/External/ChunkPlanning/Exceptions/markdown-chunk-starts-not-increasing.exception.ts'
-import { MarkdownFirstChunkStartRequiredException } from '../../../src/Infrastructure/External/ChunkPlanning/Exceptions/markdown-first-chunk-start-required.exception.ts'
+import { MarkdownChunkStartsAdapter } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Adapters/markdown-chunk-starts.adapter.ts'
+import { MarkdownSourceAdapter } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
+import { EmptyMarkdownChunkStartsException } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Exceptions/empty-markdown-chunk-starts.exception.ts'
+import { MarkdownChunkStartOutOfBoundsException } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Exceptions/markdown-chunk-start-out-of-bounds.exception.ts'
+import { MarkdownChunkStartsNotIncreasingException } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Exceptions/markdown-chunk-starts-not-increasing.exception.ts'
+import { MarkdownFirstChunkStartRequiredException } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Exceptions/markdown-first-chunk-start-required.exception.ts'
 
 const source = '# One\n\nFirst.\n\n# Two\n\nSecond.'
 

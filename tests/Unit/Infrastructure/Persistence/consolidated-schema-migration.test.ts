@@ -3,9 +3,9 @@ import { test } from 'node:test'
 
 import type { QueryRunner } from 'typeorm'
 
-import { CreateKnowledgeBases1729000000001 } from '../../../../database/migrations/1729000000001-create-knowledge-bases.ts'
-import { CreateDocuments1729000000002 } from '../../../../database/migrations/1729000000002-create-documents.ts'
-import { CreateJobs1729000000008 } from '../../../../database/migrations/1729000000008-create-jobs.ts'
+import { CreateKnowledgeBases1729000000001 } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/Migrations/1729000000001-create-knowledge-bases.ts'
+import { CreateDocuments1729000000002 } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/Migrations/1729000000002-create-documents.ts'
+import { CreateJobs1729000000008 } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/Migrations/1729000000008-create-jobs.ts'
 
 const captureStatements = () => {
   const statements: string[] = []

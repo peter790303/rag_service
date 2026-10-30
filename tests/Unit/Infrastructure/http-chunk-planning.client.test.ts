@@ -4,10 +4,10 @@ import test from 'node:test'
 import { concatMap, firstValueFrom, from, toArray } from 'rxjs'
 
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import { ChunkPlanningUnavailableException } from '../../../src/Application/Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
-import { mapChunkPlanningResponse } from '../../../src/Infrastructure/External/ChunkPlanning/Adapters/chunk-planning-response.adapter.ts'
-import { MarkdownSourceAdapter } from '../../../src/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
-import { HttpChunkPlanningClient } from '../../../src/Infrastructure/External/ChunkPlanning/http-chunk-planning.client.ts'
+import { ChunkPlanningUnavailableException } from '../../../src/DocumentIndexes/Application/Exceptions/chunk-planning-unavailable.exception.ts'
+import { mapChunkPlanningResponse } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Adapters/chunk-planning-response.adapter.ts'
+import { MarkdownSourceAdapter } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
+import { HttpChunkPlanningClient } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/http-chunk-planning.client.ts'
 
 const chunkPlanningClient = (apiKey?: string) =>
   new HttpChunkPlanningClient({

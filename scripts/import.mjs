@@ -15,10 +15,10 @@ import {
   readSource,
   sourceType as obsidianSourceType,
 } from './import-sources/obsidian-reader.mjs'
-import { createDataSource } from '../dist/database/data-source.js'
-import { loadObsidianImportCatalog } from '../dist/src/Infrastructure/Persistence/obsidian-import-catalog.js'
-import { DocumentIndexImportCommand } from '../dist/src/Interfaces/Console/Commands/document-index-import-command.js'
-import { DocumentIndexImportModule } from '../dist/src/Interfaces/Console/Commands/document-index-import.module.js'
+import { DocumentIndexImportCommand } from '../dist/src/Documents/Interfaces/Console/Commands/document-index-import-command.js'
+import { DocumentIndexImportModule } from '../dist/src/Documents/Interfaces/Console/Commands/document-index-import.module.js'
+import { createDataSource } from '../dist/src/Shared/Infrastructure/Persistence/TypeORM/DataSource.js'
+import { loadObsidianImportCatalog } from '../dist/src/Shared/Infrastructure/Persistence/TypeORM/obsidian-import-catalog.js'
 
 const sourceReaders = new Map([[obsidianSourceType, { isValidEntry, readSource }]])
 const { sourceType, manifestPath: manifestArgPath } = parseImportOptions(process.argv.slice(2))
@@ -132,6 +132,29 @@ const run = async () => {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0)
     throw new Error('RAG_IMPORT_TIMEOUT_MS must be a positive integer')
 
+  const createImportRequest = (entry, content) => ({
+    knowledgeBaseId: entry.knowledgeBaseId,
+    projectId: entry.projectId,
+    projectName: entry.projectName,
+    sourceType,
+    sourceKey: entry.sourceKey,
+    sourcePath: entry.sourcePath,
+    title: entry.title ?? undefined,
+    content,
+    payload: entry.payload,
+    isEntry: entry.isEntry,
+    alwaysIncludeFullContent: entry.alwaysIncludeFullContent,
+  })
+
+  const runImportBatch = (previous, batch, command) =>
+    previous.then(async (completedSoFar) => {
+      await Promise.all(
+        batch.map(({ entry, content }) => command.requestAndWait(createImportRequest(entry, content), timeoutMs)),
+      )
+
+      return completedSoFar + batch.length
+    })
+
   await runWithDefaultManifestArchive(
     async () => {
       const originalAuthSecret = process.env.RAG_SERVICE_AUTH_SECRET
@@ -142,31 +165,7 @@ const run = async () => {
         app = await NestFactory.createApplicationContext(DocumentIndexImportModule, { logger: false })
         const command = app.get(DocumentIndexImportCommand)
         const completed = await batches.reduce(
-          (previous, batch) =>
-            previous.then(async (completedSoFar) => {
-              await Promise.all(
-                batch.map(async ({ entry, content }) =>
-                  command.requestAndWait(
-                    {
-                      knowledgeBaseId: entry.knowledgeBaseId,
-                      projectId: entry.projectId,
-                      projectName: entry.projectName,
-                      sourceType,
-                      sourceKey: entry.sourceKey,
-                      sourcePath: entry.sourcePath,
-                      title: entry.title ?? undefined,
-                      content,
-                      payload: entry.payload,
-                      isEntry: entry.isEntry,
-                      alwaysIncludeFullContent: entry.alwaysIncludeFullContent,
-                    },
-                    timeoutMs,
-                  ),
-                ),
-              )
-
-              return completedSoFar + batch.length
-            }),
+          (previous, batch) => runImportBatch(previous, batch, command),
           Promise.resolve(0),
         )
         process.stdout.write(`Imported ${completed} ${sourceType} knowledge-base memberships successfully.\n`)

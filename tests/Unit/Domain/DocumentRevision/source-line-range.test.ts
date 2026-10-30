@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { InvalidSourceLineRangeEndException } from '../../../../src/Domain/DocumentRevision/Exceptions/invalid-source-line-range-end.exception.ts'
-import { InvalidSourceLineRangeStartException } from '../../../../src/Domain/DocumentRevision/Exceptions/invalid-source-line-range-start.exception.ts'
-import { SourceLineRangeReversedException } from '../../../../src/Domain/DocumentRevision/Exceptions/source-line-range-reversed.exception.ts'
-import { SourceLineRange } from '../../../../src/Domain/DocumentRevision/ValueObjects/source-line-range.ts'
+import { InvalidSourceLineRangeEndException } from '../../../../src/Shared/Domain/Exceptions/invalid-source-line-range-end.exception.ts'
+import { InvalidSourceLineRangeStartException } from '../../../../src/Shared/Domain/Exceptions/invalid-source-line-range-start.exception.ts'
+import { SourceLineRangeReversedException } from '../../../../src/Shared/Domain/Exceptions/source-line-range-reversed.exception.ts'
+import { SourceLineRange } from '../../../../src/Shared/Domain/ValueObjects/source-line-range.ts'
 
 describe('SourceLineRange', () => {
   it('preserves zero-based coordinates with an exclusive end and accepts empty ranges', () => {

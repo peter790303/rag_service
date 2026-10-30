@@ -9,33 +9,33 @@ import { DataSource } from 'typeorm'
 
 import { KNOWLEDGE_SERVICE_CONFIG } from '../../../config/knowledge-service.config.ts'
 import { AppModule } from '../../../src/app.module.ts'
-import { ChunkPlanningProvider } from '../../../src/Application/Chunks/Contracts/chunk-planning-provider.ts'
-import { DocumentIndexExecutionQueue } from '../../../src/Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
-import { DispatchDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/dispatch-document-indexing.listener.ts'
-import { DocumentIndexingRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-requested.listener.ts'
-import { ProcessDocumentIndexListener } from '../../../src/Application/DocumentIndexes/Listeners/process-document-index.listener.ts'
-import { ReadDocumentIndexingStatusListener } from '../../../src/Application/DocumentIndexes/Listeners/read-document-indexing-status.listener.ts'
-import { RetryDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
-import { DocumentGarbageCollectionRequestedListener } from '../../../src/Application/Documents/Listeners/document-garbage-collection-requested.listener.ts'
-import { PruneKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prune-knowledge-base-documents.use-case.ts'
-import { EmbeddingProvider } from '../../../src/Application/KnowledgeBases/Contracts/embedding-provider.ts'
-import { PersistenceTransaction as PersistenceTransactionContract } from '../../../src/Application/KnowledgeBases/Contracts/persistence-transaction.ts'
-import { ServiceAuthenticator } from '../../../src/Application/KnowledgeBases/Contracts/service-authenticator.ts'
-import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { HmacProjectServiceAuthenticator } from '../../../src/Infrastructure/Auth/hmac-project-service.authenticator.ts'
-import { HttpChunkPlanningClient } from '../../../src/Infrastructure/External/ChunkPlanning/http-chunk-planning.client.ts'
-import { HttpEmbeddingClient } from '../../../src/Infrastructure/External/Embedding/http-embedding.client.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeMaintenanceWorkerModule } from '../../../src/Infrastructure/Providers/knowledge-maintenance-worker.module.ts'
-import { KnowledgeServiceConfigModule } from '../../../src/Infrastructure/Providers/knowledge-service-config.module.ts'
-import { KnowledgeServiceInfrastructureModule } from '../../../src/Infrastructure/Providers/knowledge-service-infrastructure.module.ts'
-import { RETRIEVAL_READONLY_DATA_SOURCE } from '../../../src/Infrastructure/Providers/retrieval-readonly-data-source.options.ts'
-import { KnowledgeMaintenanceWorker } from '../../../src/Interfaces/Console/Workers/knowledge-maintenance-worker.ts'
-import { DocumentIndexesController } from '../../../src/Interfaces/Http/Controllers/document-indexes.controller.ts'
-import { KnowledgeBaseDocumentsController } from '../../../src/Interfaces/Http/Controllers/knowledge-base-documents.controller.ts'
-import { KnowledgeBaseRetrievalController } from '../../../src/Interfaces/Http/Controllers/knowledge-base-retrieval.controller.ts'
-import { ProjectServiceAuthGuard } from '../../../src/Interfaces/Http/Middleware/project-service-auth.guard.ts'
+import { KnowledgeMaintenanceWorkerModule } from '../../../src/Bootstrap/Nest/Providers/knowledge-maintenance-worker.module.ts'
+import { KnowledgeServiceConfigModule } from '../../../src/Bootstrap/Nest/Providers/knowledge-service-config.module.ts'
+import { KnowledgeServiceInfrastructureModule } from '../../../src/Bootstrap/Nest/Providers/knowledge-service-infrastructure.module.ts'
+import { RETRIEVAL_READONLY_DATA_SOURCE } from '../../../src/Bootstrap/Nest/Providers/retrieval-readonly-data-source.options.ts'
+import { DispatchDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/dispatch-document-indexing.listener.ts'
+import { DocumentIndexingRequestedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexing-requested.listener.ts'
+import { ProcessDocumentIndexListener } from '../../../src/DocumentIndexes/Application/Listeners/process-document-index.listener.ts'
+import { ReadDocumentIndexingStatusListener } from '../../../src/DocumentIndexes/Application/Listeners/read-document-indexing-status.listener.ts'
+import { RetryDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/retry-document-indexing.listener.ts'
+import { ChunkPlanningProvider } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/chunk-planning-provider.ts'
+import { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
+import { HttpChunkPlanningClient } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/http-chunk-planning.client.ts'
+import { HttpEmbeddingClient } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/http-embedding.client.ts'
+import { JobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { KnowledgeMaintenanceWorker } from '../../../src/DocumentIndexes/Interfaces/Console/Workers/knowledge-maintenance-worker.ts'
+import { DocumentIndexesController } from '../../../src/DocumentIndexes/Interfaces/Nest/Controllers/document-indexes.controller.ts'
+import { DocumentGarbageCollectionRequestedListener } from '../../../src/Documents/Application/Listeners/document-garbage-collection-requested.listener.ts'
+import { PruneKnowledgeBaseDocumentsCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/prune-knowledge-base-documents.command.handler.ts'
+import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
+import { KnowledgeBaseDocumentsController } from '../../../src/KnowledgeBases/Interfaces/Nest/Controllers/knowledge-base-documents.controller.ts'
+import { KnowledgeBaseRetrievalController } from '../../../src/KnowledgeBases/Interfaces/Nest/Controllers/knowledge-base-retrieval.controller.ts'
+import { EmbeddingProvider } from '../../../src/Shared/Application/Ports/Out/Gateways/embedding-provider.ts'
+import { PersistenceTransaction as PersistenceTransactionContract } from '../../../src/Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
+import { ServiceAuthenticator } from '../../../src/Shared/Application/Ports/Out/Gateways/service-authenticator.ts'
+import { HmacProjectServiceAuthenticator } from '../../../src/Shared/Infrastructure/Auth/hmac-project-service.authenticator.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
+import { ProjectServiceAuthGuard } from '../../../src/Shared/Interfaces/Nest/Middleware/project-service-auth.guard.ts'
 import { createKnowledgeServiceConfigFixture } from '../../Support/knowledge-service-config.fixture.ts'
 
 @Module({ imports: [AppModule, KnowledgeMaintenanceWorkerModule] })
@@ -72,10 +72,10 @@ test('HTTP and worker modules resolve their real feature graph with one writable
     try {
       const httpTokens = [
         DocumentIndexingRequestedListener,
-        RetrieveKnowledgeBaseContentUseCase,
+        RetrieveKnowledgeBaseContentQueryHandler,
         ReadDocumentIndexingStatusListener,
         RetryDocumentIndexingListener,
-        PruneKnowledgeBaseDocumentsUseCase,
+        PruneKnowledgeBaseDocumentsCommandHandler,
         ServiceAuthenticator,
       ]
       const workerTokens = [

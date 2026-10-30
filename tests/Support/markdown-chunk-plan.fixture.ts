@@ -1,7 +1,7 @@
-import type { MarkdownChunkPlan } from '../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
-import { MarkdownChunkStartsAdapter } from '../../src/Infrastructure/External/ChunkPlanning/Adapters/markdown-chunk-starts.adapter.ts'
-import { MarkdownDocumentLinksAdapter } from '../../src/Infrastructure/External/ChunkPlanning/Adapters/markdown-document-links.adapter.ts'
-import { MarkdownSourceAdapter } from '../../src/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
+import type { MarkdownChunkPlan } from '../../src/DocumentIndexes/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import { MarkdownChunkStartsAdapter } from '../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Adapters/markdown-chunk-starts.adapter.ts'
+import { MarkdownDocumentLinksAdapter } from '../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Adapters/markdown-document-links.adapter.ts'
+import { MarkdownSourceAdapter } from '../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
 
 /** Creates a deterministic plan for tests that do not exercise the external model. */
 export const createMarkdownChunkPlan = (source: string, chunkStarts?: readonly number[]): MarkdownChunkPlan => {

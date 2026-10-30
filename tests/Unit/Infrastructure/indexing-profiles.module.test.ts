@@ -5,15 +5,15 @@ import { MODULE_METADATA } from '@nestjs/common/constants.js'
 import { NestFactory } from '@nestjs/core'
 
 import { KNOWLEDGE_SERVICE_CONFIG, type KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import type { DocumentIndexPipelineSettings } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
-import { EmbeddingProvider } from '../../../src/Application/KnowledgeBases/Contracts/embedding-provider.ts'
-import { HttpEmbeddingClient } from '../../../src/Infrastructure/External/Embedding/http-embedding.client.ts'
-import { LocalEmbeddingClient } from '../../../src/Infrastructure/External/Embedding/local-embedding.client.ts'
 import {
   DOCUMENT_INDEX_PIPELINE_SETTINGS,
   IndexingProfilesModule,
-} from '../../../src/Infrastructure/Providers/indexing-profiles.module.ts'
-import { KnowledgeServiceConfigModule } from '../../../src/Infrastructure/Providers/knowledge-service-config.module.ts'
+} from '../../../src/Bootstrap/Nest/Providers/indexing-profiles.module.ts'
+import { KnowledgeServiceConfigModule } from '../../../src/Bootstrap/Nest/Providers/knowledge-service-config.module.ts'
+import type { DocumentIndexPipelineSettings } from '../../../src/DocumentIndexes/Application/Assemblers/write-request-document-indexes.assembler.ts'
+import { HttpEmbeddingClient } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/http-embedding.client.ts'
+import { LocalEmbeddingClient } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/local-embedding.client.ts'
+import { EmbeddingProvider } from '../../../src/Shared/Application/Ports/Out/Gateways/embedding-provider.ts'
 import { createKnowledgeServiceConfigFixture } from '../../Support/knowledge-service-config.fixture.ts'
 
 const resolveIdentity = async (config: KnowledgeServiceConfig): Promise<void> => {

@@ -1,33 +1,33 @@
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import type { ChunkRepository } from '../../../src/Application/Chunks/Contracts/chunk.repository.ts'
-import { CollectIndexChunkGarbageUseCase } from '../../../src/Application/Chunks/UseCases/collect-index-chunk-garbage.use-case.ts'
-import type { DocumentIndexExecutionQueue } from '../../../src/Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
-import type { DocumentIndexFailureArchive } from '../../../src/Application/DocumentIndexes/Contracts/document-index-failure.archive.ts'
-import type { DocumentIndexRepository } from '../../../src/Application/DocumentIndexes/Contracts/document-index.repository.ts'
-import { CancelKnowledgeBaseDocumentDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/cancel-knowledge-base-document-document-indexing.listener.ts'
-import { CollectDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/collect-document-index-garbage.use-case.ts'
-import { InspectDocumentIndexRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/inspect-document-index-retention.use-case.ts'
-import { PlanDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/plan-document-index-garbage.use-case.ts'
-import { StartDocumentIndexPruningRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/start-document-index-pruning-retention.use-case.ts'
-import type { DocumentRelationRepository } from '../../../src/Application/DocumentRelations/Contracts/document-relation.repository.ts'
-import { CollectDocumentRelationGarbageUseCase } from '../../../src/Application/DocumentRelations/UseCases/collect-document-relation-garbage.use-case.ts'
-import { InspectDocumentRelationRetentionUseCase } from '../../../src/Application/DocumentRelations/UseCases/inspect-document-relation-retention.use-case.ts'
-import { PlanDocumentRelationGarbageUseCase } from '../../../src/Application/DocumentRelations/UseCases/plan-document-relation-garbage.use-case.ts'
-import type { DocumentRevisionRepository } from '../../../src/Application/DocumentRevisions/Contracts/document-revision.repository.ts'
-import { CollectDocumentRevisionGarbageUseCase } from '../../../src/Application/DocumentRevisions/UseCases/collect-document-revision-garbage.use-case.ts'
-import { InspectDocumentRevisionRetentionUseCase } from '../../../src/Application/DocumentRevisions/UseCases/inspect-document-revision-retention.use-case.ts'
-import { PlanDocumentRevisionGarbageUseCase } from '../../../src/Application/DocumentRevisions/UseCases/plan-document-revision-garbage.use-case.ts'
-import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
-import { DocumentGarbageCollectionRequestedListener } from '../../../src/Application/Documents/Listeners/document-garbage-collection-requested.listener.ts'
-import { InspectDocumentRetentionUseCase } from '../../../src/Application/Documents/UseCases/inspect-document-retention.use-case.ts'
-import { LockDocumentRetentionParentsUseCase } from '../../../src/Application/Documents/UseCases/lock-document-retention-parents.use-case.ts'
-import { StartDocumentPruningRetentionUseCase } from '../../../src/Application/Documents/UseCases/start-document-pruning-retention.use-case.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
-import { InspectKnowledgeBaseDocumentRetentionUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/inspect-knowledge-base-document-retention.use-case.ts'
-import { PruneKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prune-knowledge-base-documents.use-case.ts'
-import type { KnowledgeBaseRepository } from '../../../src/Application/KnowledgeBases/Contracts/knowledge-base.repository.ts'
-import type { PersistenceTransaction } from '../../../src/Application/KnowledgeBases/Contracts/persistence-transaction.ts'
-import { ValidateKnowledgeBasePruningUseCase } from '../../../src/Application/KnowledgeBases/UseCases/validate-knowledge-base-pruning.use-case.ts'
+import { CollectDocumentIndexGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-document-index-garbage.command.handler.ts'
+import { CollectIndexChunkGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-index-chunk-garbage.command.handler.ts'
+import { StartDocumentIndexPruningRetentionCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/start-document-index-pruning-retention.command.handler.ts'
+import { CancelKnowledgeBaseDocumentDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/cancel-knowledge-base-document-document-indexing.listener.ts'
+import type { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
+import type { DocumentIndexFailureArchive } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-failure.archive.ts'
+import type { ChunkRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/chunk.repository.ts'
+import type { DocumentIndexRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
+import { InspectDocumentIndexRetentionQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/inspect-document-index-retention.query.handler.ts'
+import { PlanDocumentIndexGarbageQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/plan-document-index-garbage.query.handler.ts'
+import { CollectDocumentRelationGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-relation-garbage.command.handler.ts'
+import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-revision-garbage.command.handler.ts'
+import { LockDocumentRetentionParentsCommandHandler } from '../../../src/Documents/Application/Commands/lock-document-retention-parents.command.handler.ts'
+import { StartDocumentPruningRetentionCommandHandler } from '../../../src/Documents/Application/Commands/start-document-pruning-retention.command.handler.ts'
+import { DocumentGarbageCollectionRequestedListener } from '../../../src/Documents/Application/Listeners/document-garbage-collection-requested.listener.ts'
+import type { DocumentRelationRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-relation.repository.ts'
+import type { DocumentRevisionRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
+import { InspectDocumentRelationRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-relation-retention.query.handler.ts'
+import { InspectDocumentRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-retention.query.handler.ts'
+import { InspectDocumentRevisionRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-revision-retention.query.handler.ts'
+import { PlanDocumentRelationGarbageQueryHandler } from '../../../src/Documents/Application/Queries/plan-document-relation-garbage.query.handler.ts'
+import { PlanDocumentRevisionGarbageQueryHandler } from '../../../src/Documents/Application/Queries/plan-document-revision-garbage.query.handler.ts'
+import { PruneKnowledgeBaseDocumentsCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/prune-knowledge-base-documents.command.handler.ts'
+import { ValidateKnowledgeBasePruningCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/validate-knowledge-base-pruning.command.handler.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import type { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base.repository.ts'
+import { InspectKnowledgeBaseDocumentRetentionQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/inspect-knowledge-base-document-retention.query.handler.ts'
+import type { PersistenceTransaction } from '../../../src/Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 
 export type GarbageCollectionTestDependencies = [
   PersistenceTransaction,
@@ -62,12 +62,12 @@ const createDocumentRetention = (
   failedJobRepository: DocumentIndexFailureArchive,
   documentRelationRepository: DocumentRelationRepository,
   documentRepository: DocumentRepository,
-): InspectDocumentRetentionUseCase =>
-  new InspectDocumentRetentionUseCase(
-    new InspectKnowledgeBaseDocumentRetentionUseCase(knowledgeBaseDocumentRepository),
-    new InspectDocumentRevisionRetentionUseCase(documentRevisionRepository),
-    new InspectDocumentIndexRetentionUseCase(documentIndexRepository),
-    new InspectDocumentRelationRetentionUseCase(documentRelationRepository),
+): InspectDocumentRetentionQueryHandler =>
+  new InspectDocumentRetentionQueryHandler(
+    new InspectKnowledgeBaseDocumentRetentionQueryHandler(knowledgeBaseDocumentRepository),
+    new InspectDocumentRevisionRetentionQueryHandler(documentRevisionRepository),
+    new InspectDocumentIndexRetentionQueryHandler(documentIndexRepository),
+    new InspectDocumentRelationRetentionQueryHandler(documentRelationRepository),
     documentRepository,
     jobRepository,
     failedJobRepository,
@@ -87,27 +87,27 @@ export const createGarbageCollectionListener = (
     config,
   ]: GarbageCollectionTestDependencies
 ): DocumentGarbageCollectionRequestedListener => {
-  const knowledgeBaseDocumentRetention = new InspectKnowledgeBaseDocumentRetentionUseCase(
+  const knowledgeBaseDocumentRetention = new InspectKnowledgeBaseDocumentRetentionQueryHandler(
     knowledgeBaseDocumentRepository,
   )
-  const indexRetention = new InspectDocumentIndexRetentionUseCase(documentIndexRepository)
+  const indexRetention = new InspectDocumentIndexRetentionQueryHandler(documentIndexRepository)
 
   return new DocumentGarbageCollectionRequestedListener(
     persistenceTransaction,
     documentRepository,
-    new PlanDocumentIndexGarbageUseCase(documentIndexRepository),
-    new CollectDocumentIndexGarbageUseCase(
+    new PlanDocumentIndexGarbageQueryHandler(documentIndexRepository),
+    new CollectDocumentIndexGarbageCommandHandler(
       documentIndexRepository,
       jobRepository,
       failedJobRepository,
       knowledgeBaseDocumentRetention,
-      new CollectDocumentRelationGarbageUseCase(documentRelationRepository),
-      new CollectIndexChunkGarbageUseCase(chunkRepository),
+      new CollectDocumentRelationGarbageCommandHandler(documentRelationRepository),
+      new CollectIndexChunkGarbageCommandHandler(chunkRepository),
     ),
-    new PlanDocumentRevisionGarbageUseCase(documentRevisionRepository),
-    new CollectDocumentRevisionGarbageUseCase(documentRevisionRepository, indexRetention),
-    new PlanDocumentRelationGarbageUseCase(documentRelationRepository),
-    new LockDocumentRetentionParentsUseCase(documentRepository),
+    new PlanDocumentRevisionGarbageQueryHandler(documentRevisionRepository),
+    new CollectDocumentRevisionGarbageCommandHandler(documentRevisionRepository, indexRetention),
+    new PlanDocumentRelationGarbageQueryHandler(documentRelationRepository),
+    new LockDocumentRetentionParentsCommandHandler(documentRepository),
     createDocumentRetention(
       knowledgeBaseDocumentRepository,
       documentRevisionRepository,
@@ -135,23 +135,23 @@ export const createKnowledgeBaseDocumentPruningUseCase = (
     failedJobRepository,
     documentRelationRepository,
   ]: KnowledgeBaseDocumentPruningTestDependencies
-): PruneKnowledgeBaseDocumentsUseCase => {
-  const knowledgeBaseDocumentRetention = new InspectKnowledgeBaseDocumentRetentionUseCase(
+): PruneKnowledgeBaseDocumentsCommandHandler => {
+  const knowledgeBaseDocumentRetention = new InspectKnowledgeBaseDocumentRetentionQueryHandler(
     knowledgeBaseDocumentRepository,
   )
 
-  return new PruneKnowledgeBaseDocumentsUseCase(
+  return new PruneKnowledgeBaseDocumentsCommandHandler(
     persistenceTransaction,
-    new ValidateKnowledgeBasePruningUseCase(knowledgeBaseRepository),
-    new LockDocumentRetentionParentsUseCase(documentRepository),
+    new ValidateKnowledgeBasePruningCommandHandler(knowledgeBaseRepository),
+    new LockDocumentRetentionParentsCommandHandler(documentRepository),
     knowledgeBaseDocumentRepository,
     { deliver: (event) => new CancelKnowledgeBaseDocumentDocumentIndexingListener(jobRepository).handle(event) },
-    new StartDocumentIndexPruningRetentionUseCase(
+    new StartDocumentIndexPruningRetentionCommandHandler(
       documentIndexRepository,
       jobRepository,
       knowledgeBaseDocumentRetention,
     ),
-    new StartDocumentPruningRetentionUseCase(
+    new StartDocumentPruningRetentionCommandHandler(
       documentRepository,
       createDocumentRetention(
         knowledgeBaseDocumentRepository,

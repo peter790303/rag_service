@@ -4,10 +4,10 @@ import test from 'node:test'
 import { validateSync } from 'class-validator'
 import 'reflect-metadata'
 
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { HybridKnowledgeRetrievalRequest } from '../../../src/Interfaces/Http/Requests/hybrid-knowledge-retrieval.request.ts'
-import { PruneKnowledgeBaseDocumentsRequest } from '../../../src/Interfaces/Http/Requests/prune-knowledge-base-documents.request.ts'
-import { SourceDocumentIndexRequest } from '../../../src/Interfaces/Http/Requests/source-document-index.request.ts'
+import { SourceDocumentIndexRequest } from '../../../src/DocumentIndexes/Interfaces/Nest/Requests/source-document-index.request.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { HybridKnowledgeRetrievalRequest } from '../../../src/KnowledgeBases/Interfaces/Nest/Requests/hybrid-knowledge-retrieval.request.ts'
+import { PruneKnowledgeBaseDocumentsRequest } from '../../../src/KnowledgeBases/Interfaces/Nest/Requests/prune-knowledge-base-documents.request.ts'
 
 test('prune request assembles its validated body with the route knowledge-base id', () => {
   const request = Object.assign(new PruneKnowledgeBaseDocumentsRequest(), {

@@ -5,12 +5,12 @@ import { test } from 'node:test'
 import { Module } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 
-import { ServiceAuthenticator } from '../../../src/Application/KnowledgeBases/Contracts/service-authenticator.ts'
-import { LoadIndexManifestUseCase } from '../../../src/Application/KnowledgeBases/UseCases/load-index-manifest.use-case.ts'
-import { HmacProjectServiceAuthenticator } from '../../../src/Infrastructure/Auth/hmac-project-service.authenticator.ts'
-import { IndexManifestController } from '../../../src/Interfaces/Http/Controllers/index-manifest.controller.ts'
-import { createGlobalValidationPipe } from '../../../src/Interfaces/Http/Pipes/create-global-validation-pipe.ts'
-import type { IndexManifestResource } from '../../../src/Interfaces/Http/Resources/index-manifest.resource.ts'
+import { IndexManifestController } from '../../../src/DocumentIndexes/Interfaces/Nest/Controllers/index-manifest.controller.ts'
+import type { IndexManifestResource } from '../../../src/DocumentIndexes/Interfaces/Nest/Resources/index-manifest.resource.ts'
+import { LoadIndexManifestQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/load-index-manifest.query.handler.ts'
+import { ServiceAuthenticator } from '../../../src/Shared/Application/Ports/Out/Gateways/service-authenticator.ts'
+import { HmacProjectServiceAuthenticator } from '../../../src/Shared/Infrastructure/Auth/hmac-project-service.authenticator.ts'
+import { createGlobalValidationPipe } from '../../../src/Shared/Interfaces/Nest/Pipes/create-global-validation-pipe.ts'
 import { createKnowledgeServiceConfigFixture } from '../../Support/knowledge-service-config.fixture.ts'
 import { createManifestUseCase, manifestFixture } from '../../Unit/Application/load-index-manifest.fixture.ts'
 
@@ -26,7 +26,7 @@ let requests = 0
       useValue: new HmacProjectServiceAuthenticator(createKnowledgeServiceConfigFixture({ serviceAuthSecret: secret })),
     },
     {
-      provide: LoadIndexManifestUseCase,
+      provide: LoadIndexManifestQueryHandler,
       useValue: {
         execute: async (request: { projectId: string }) => {
           requests += 1

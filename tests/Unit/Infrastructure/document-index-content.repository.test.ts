@@ -3,18 +3,18 @@ import { test } from 'node:test'
 
 import { DataSource, EntityManager } from 'typeorm'
 
-import type { DocumentIndexExecutionQueue } from '../../../src/Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
-import type { DocumentIndexingDeliveryDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
-import { DocumentIndexingDispatchedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-dispatched.event.ts'
-import type { DocumentIndexingFailedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-failed.event.ts'
-import { ProcessDocumentIndexListener } from '../../../src/Application/DocumentIndexes/Listeners/process-document-index.listener.ts'
-import { LoadDocumentRevisionUseCase } from '../../../src/Application/DocumentRevisions/UseCases/load-document-revision.use-case.ts'
-import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
-import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-revision.repository.ts'
+import type { DocumentIndexingDeliveryDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-delivery.dto.ts'
+import { DocumentIndexingDispatchedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-dispatched.event.ts'
+import type { DocumentIndexingFailedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-failed.event.ts'
+import { ProcessDocumentIndexListener } from '../../../src/DocumentIndexes/Application/Listeners/process-document-index.listener.ts'
+import type { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { LoadDocumentRevisionQueryHandler } from '../../../src/Documents/Application/Queries/load-document-revision.query.handler.ts'
+import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
+import { DocumentRevisionModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentRevisionRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 import {
   createDocumentFixture,
@@ -38,7 +38,9 @@ const createRevisionModel = (content: string): DocumentRevisionModel =>
 const createIndexContentProcessing = () => {
   const dataSource = new DataSource({ type: 'postgres', url: 'postgresql://unused@localhost/unused' })
   const persistenceTransaction = new PersistenceTransaction(dataSource)
-  const loadDocumentRevision = new LoadDocumentRevisionUseCase(new DocumentRevisionRepository(persistenceTransaction))
+  const loadDocumentRevision = new LoadDocumentRevisionQueryHandler(
+    new DocumentRevisionRepository(persistenceTransaction),
+  )
   const job: DocumentIndexingDeliveryDTO = {
     id: 'job',
     knowledgeBaseId: 'kb',
@@ -155,7 +157,7 @@ test('index processing records a failure when the declared revision is unavailab
 test('revision loading follows the current transaction manager and returns to the default manager afterward', async (context) => {
   const dataSource = new DataSource({ type: 'postgres', url: 'postgresql://unused@localhost/unused' })
   const persistenceTransaction = new PersistenceTransaction(dataSource)
-  const loadRevision = new LoadDocumentRevisionUseCase(new DocumentRevisionRepository(persistenceTransaction))
+  const loadRevision = new LoadDocumentRevisionQueryHandler(new DocumentRevisionRepository(persistenceTransaction))
   const defaultRead = context.mock.method(dataSource.getRepository(DocumentRevisionModel), 'findOneBy', async () =>
     createRevisionModel('committed content'),
   )

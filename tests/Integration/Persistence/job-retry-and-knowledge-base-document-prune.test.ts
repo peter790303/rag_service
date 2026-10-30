@@ -3,66 +3,66 @@ import { createHash, randomUUID } from 'node:crypto'
 import { test } from 'node:test'
 
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import { CollectIndexChunkGarbageUseCase } from '../../../src/Application/Chunks/UseCases/collect-index-chunk-garbage.use-case.ts'
-import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
-import { DocumentIndexingNotFoundException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-not-found.exception.ts'
-import { IndexRetrySourceChangedException } from '../../../src/Application/DocumentIndexes/Exceptions/index-retry-source-changed.exception.ts'
-import { StaleDocumentIndexingFailureException } from '../../../src/Application/DocumentIndexes/Exceptions/stale-document-indexing-failure.exception.ts'
+import { WriteRequestDocumentIndexesAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/write-request-document-indexes.assembler.ts'
+import { CollectDocumentIndexGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-document-index-garbage.command.handler.ts'
+import { CollectIndexChunkGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-index-chunk-garbage.command.handler.ts'
+import { StartDocumentIndexPruningRetentionCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/start-document-index-pruning-retention.command.handler.ts'
+import { DocumentIndexingNotFoundException } from '../../../src/DocumentIndexes/Application/Exceptions/document-indexing-not-found.exception.ts'
+import { IndexRetrySourceChangedException } from '../../../src/DocumentIndexes/Application/Exceptions/index-retry-source-changed.exception.ts'
+import { StaleDocumentIndexingFailureException } from '../../../src/DocumentIndexes/Application/Exceptions/stale-document-indexing-failure.exception.ts'
 import {
   DocumentIndexExecutionLifecycle as RagJobEntity,
   DOCUMENT_INDEX_EXECUTION_STATUS,
-} from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { CancelKnowledgeBaseDocumentDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/cancel-knowledge-base-document-document-indexing.listener.ts'
-import { DispatchDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/dispatch-document-indexing.listener.ts'
-import { DocumentIndexingFailedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-failed.listener.ts'
-import { RetryDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
-import { CollectDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/collect-document-index-garbage.use-case.ts'
-import { InspectDocumentIndexRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/inspect-document-index-retention.use-case.ts'
-import { PlanDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/plan-document-index-garbage.use-case.ts'
-import { StartDocumentIndexPruningRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/start-document-index-pruning-retention.use-case.ts'
-import { CollectDocumentRelationGarbageUseCase } from '../../../src/Application/DocumentRelations/UseCases/collect-document-relation-garbage.use-case.ts'
-import { InspectDocumentRelationRetentionUseCase } from '../../../src/Application/DocumentRelations/UseCases/inspect-document-relation-retention.use-case.ts'
-import { PlanDocumentRelationGarbageUseCase } from '../../../src/Application/DocumentRelations/UseCases/plan-document-relation-garbage.use-case.ts'
-import { CollectDocumentRevisionGarbageUseCase } from '../../../src/Application/DocumentRevisions/UseCases/collect-document-revision-garbage.use-case.ts'
-import { GetDocumentRevisionForIndexRetryUseCase } from '../../../src/Application/DocumentRevisions/UseCases/get-document-revision-for-index-retry.use-case.ts'
-import { InspectDocumentRevisionRetentionUseCase } from '../../../src/Application/DocumentRevisions/UseCases/inspect-document-revision-retention.use-case.ts'
-import { PlanDocumentRevisionGarbageUseCase } from '../../../src/Application/DocumentRevisions/UseCases/plan-document-revision-garbage.use-case.ts'
-import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Application/Documents/Events/document-garbage-collection-requested.event.ts'
-import { DocumentGarbageCollectionRequestedListener } from '../../../src/Application/Documents/Listeners/document-garbage-collection-requested.listener.ts'
-import { GetDocumentForIndexRetryUseCase } from '../../../src/Application/Documents/UseCases/get-document-for-index-retry.use-case.ts'
-import { InspectDocumentRetentionUseCase } from '../../../src/Application/Documents/UseCases/inspect-document-retention.use-case.ts'
-import { LockDocumentRetentionParentsUseCase } from '../../../src/Application/Documents/UseCases/lock-document-retention-parents.use-case.ts'
-import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import { StartDocumentPruningRetentionUseCase } from '../../../src/Application/Documents/UseCases/start-document-pruning-retention.use-case.ts'
-import { ActivateKnowledgeBaseDocumentIndexUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/activate-knowledge-base-document-index.use-case.ts'
-import { GetKnowledgeBaseDocumentIndexingStateUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/get-knowledge-base-document-indexing-state.use-case.ts'
-import { InspectKnowledgeBaseDocumentRetentionUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/inspect-knowledge-base-document-retention.use-case.ts'
-import { PruneKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prune-knowledge-base-documents.use-case.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
-import { GetIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/get-indexing-knowledge-base.use-case.ts'
-import { ValidateKnowledgeBasePruningUseCase } from '../../../src/Application/KnowledgeBases/UseCases/validate-knowledge-base-pruning.use-case.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRelationModel } from '../../../src/Infrastructure/Persistence/Models/document-relation.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { FailedJobModel } from '../../../src/Infrastructure/Persistence/Models/failed-job.model.ts'
-import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
-import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
-import { DocumentIndexSuccessReceiptRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index-success-receipt.repository.ts'
-import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
-import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
-import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-revision.repository.ts'
-import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
-import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
-import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
-import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
+} from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import { CancelKnowledgeBaseDocumentDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/cancel-knowledge-base-document-document-indexing.listener.ts'
+import { DispatchDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/dispatch-document-indexing.listener.ts'
+import { DocumentIndexingFailedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexing-failed.listener.ts'
+import { RetryDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/retry-document-indexing.listener.ts'
+import { InspectDocumentIndexRetentionQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/inspect-document-index-retention.query.handler.ts'
+import { PlanDocumentIndexGarbageQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/plan-document-index-garbage.query.handler.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { ChunkModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { FailedJobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/failed-job.model.ts'
+import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
+import { ChunkRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { DocumentIndexSuccessReceiptRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index-success-receipt.repository.ts'
+import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { FailedJobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/failed-job.repository.ts'
+import { JobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { CollectDocumentRelationGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-relation-garbage.command.handler.ts'
+import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-revision-garbage.command.handler.ts'
+import { LockDocumentRetentionParentsCommandHandler } from '../../../src/Documents/Application/Commands/lock-document-retention-parents.command.handler.ts'
+import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
+import { StartDocumentPruningRetentionCommandHandler } from '../../../src/Documents/Application/Commands/start-document-pruning-retention.command.handler.ts'
+import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Documents/Application/Events/document-garbage-collection-requested.event.ts'
+import { DocumentGarbageCollectionRequestedListener } from '../../../src/Documents/Application/Listeners/document-garbage-collection-requested.listener.ts'
+import { GetDocumentForIndexRetryQueryHandler } from '../../../src/Documents/Application/Queries/get-document-for-index-retry.query.handler.ts'
+import { GetDocumentRevisionForIndexRetryQueryHandler } from '../../../src/Documents/Application/Queries/get-document-revision-for-index-retry.query.handler.ts'
+import { InspectDocumentRelationRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-relation-retention.query.handler.ts'
+import { InspectDocumentRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-retention.query.handler.ts'
+import { InspectDocumentRevisionRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-revision-retention.query.handler.ts'
+import { PlanDocumentRelationGarbageQueryHandler } from '../../../src/Documents/Application/Queries/plan-document-relation-garbage.query.handler.ts'
+import { PlanDocumentRevisionGarbageQueryHandler } from '../../../src/Documents/Application/Queries/plan-document-revision-garbage.query.handler.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { DocumentRelationModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-relation.model.ts'
+import { DocumentRevisionModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { DocumentRelationRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'
+import { DocumentRevisionRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
+import { DocumentRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document.repository.ts'
+import { ActivateKnowledgeBaseDocumentIndexCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/activate-knowledge-base-document-index.command.handler.ts'
+import { PruneKnowledgeBaseDocumentsCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/prune-knowledge-base-documents.command.handler.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import { ValidateKnowledgeBasePruningCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/validate-knowledge-base-pruning.command.handler.ts'
+import { GetIndexingKnowledgeBaseQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/get-indexing-knowledge-base.query.handler.ts'
+import { GetKnowledgeBaseDocumentIndexingStateQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/get-knowledge-base-document-indexing-state.query.handler.ts'
+import { InspectKnowledgeBaseDocumentRetentionQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/inspect-knowledge-base-document-retention.query.handler.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
@@ -155,18 +155,18 @@ test(
       const claimNext = () =>
         new DispatchDocumentIndexingListener(
           documentIndexPersistenceFixture.persistenceTransaction,
-          new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-          new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+          new ReserveDocumentForIndexingCommandHandler(documentIndexPersistenceFixture.documentRepository),
+          new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
             documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
           ),
           documentIndexPersistenceFixture.documentIndexRepository,
           documentIndexPersistenceFixture.jobRepository,
           documentIndexPersistenceFixture.failedJobRepository,
           config.workerLeaseSeconds,
-          new ActivateKnowledgeBaseDocumentIndexUseCase(
+          new ActivateKnowledgeBaseDocumentIndexCommandHandler(
             documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
           ),
-          new GetIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
+          new GetIndexingKnowledgeBaseQueryHandler(documentIndexPersistenceFixture.knowledgeBaseRepository),
           new DocumentIndexSuccessReceiptRepository(documentIndexPersistenceFixture.persistenceTransaction),
         )
 
@@ -253,8 +253,8 @@ test(
       assert.equal(claim1.attempts, 1)
       await new DocumentIndexingFailedListener(
         documentIndexPersistenceFixture.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+        new ReserveDocumentForIndexingCommandHandler(documentIndexPersistenceFixture.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
           documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
         ),
         documentIndexPersistenceFixture.jobRepository,
@@ -284,8 +284,8 @@ test(
       assert.equal(claim2.attempts, 2)
       await new DocumentIndexingFailedListener(
         documentIndexPersistenceFixture.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+        new ReserveDocumentForIndexingCommandHandler(documentIndexPersistenceFixture.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
           documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
         ),
         documentIndexPersistenceFixture.jobRepository,
@@ -307,8 +307,8 @@ test(
       assert.equal(claim3.attempts, 3)
       await new DocumentIndexingFailedListener(
         documentIndexPersistenceFixture.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+        new ReserveDocumentForIndexingCommandHandler(documentIndexPersistenceFixture.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
           documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
         ),
         documentIndexPersistenceFixture.jobRepository,
@@ -330,8 +330,8 @@ test(
       assert.equal(claim4.attempts, 4)
       await new DocumentIndexingFailedListener(
         documentIndexPersistenceFixture.persistenceTransaction,
-        new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+        new ReserveDocumentForIndexingCommandHandler(documentIndexPersistenceFixture.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
           documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
         ),
         documentIndexPersistenceFixture.jobRepository,
@@ -376,20 +376,20 @@ test(
 
       const retryUseCase = new RetryDocumentIndexingListener(
         documentIndexPersistenceFixture.persistenceTransaction,
-        new GetIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
-        new GetDocumentForIndexRetryUseCase(documentIndexPersistenceFixture.documentRepository),
-        new GetKnowledgeBaseDocumentIndexingStateUseCase(
+        new GetIndexingKnowledgeBaseQueryHandler(documentIndexPersistenceFixture.knowledgeBaseRepository),
+        new GetDocumentForIndexRetryQueryHandler(documentIndexPersistenceFixture.documentRepository),
+        new GetKnowledgeBaseDocumentIndexingStateQueryHandler(
           documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
         ),
-        new GetDocumentRevisionForIndexRetryUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
+        new GetDocumentRevisionForIndexRetryQueryHandler(documentIndexPersistenceFixture.documentRevisionRepository),
         documentIndexPersistenceFixture.documentIndexRepository,
         documentIndexPersistenceFixture.jobRepository,
         documentIndexPersistenceFixture.failedJobRepository,
         { modelId: config.embeddingModel } as never,
         config,
         writeRequestDocumentIndexesAssembler,
-        new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+        new ReserveDocumentForIndexingCommandHandler(documentIndexPersistenceFixture.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
           documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
         ),
       )
@@ -626,15 +626,15 @@ test(
         }),
       )
 
-      const startDocumentRetention = new StartDocumentPruningRetentionUseCase(
+      const startDocumentRetention = new StartDocumentPruningRetentionCommandHandler(
         documentIndexPersistenceFixture.documentRepository,
-        new InspectDocumentRetentionUseCase(
-          new InspectKnowledgeBaseDocumentRetentionUseCase(
+        new InspectDocumentRetentionQueryHandler(
+          new InspectKnowledgeBaseDocumentRetentionQueryHandler(
             documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
           ),
-          new InspectDocumentRevisionRetentionUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
-          new InspectDocumentIndexRetentionUseCase(documentIndexPersistenceFixture.documentIndexRepository),
-          new InspectDocumentRelationRetentionUseCase(documentIndexPersistenceFixture.documentRelationRepository),
+          new InspectDocumentRevisionRetentionQueryHandler(documentIndexPersistenceFixture.documentRevisionRepository),
+          new InspectDocumentIndexRetentionQueryHandler(documentIndexPersistenceFixture.documentIndexRepository),
+          new InspectDocumentRelationRetentionQueryHandler(documentIndexPersistenceFixture.documentRelationRepository),
           documentIndexPersistenceFixture.documentRepository,
           documentIndexPersistenceFixture.jobRepository,
           documentIndexPersistenceFixture.failedJobRepository,
@@ -642,10 +642,10 @@ test(
       )
       const pruneFailure = new Error('Injected failure after pruning cancellation and retention')
       let rejectPruningCompletion = true
-      const prune = new PruneKnowledgeBaseDocumentsUseCase(
+      const prune = new PruneKnowledgeBaseDocumentsCommandHandler(
         documentIndexPersistenceFixture.persistenceTransaction,
-        new ValidateKnowledgeBasePruningUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
-        new LockDocumentRetentionParentsUseCase(documentIndexPersistenceFixture.documentRepository),
+        new ValidateKnowledgeBasePruningCommandHandler(documentIndexPersistenceFixture.knowledgeBaseRepository),
+        new LockDocumentRetentionParentsCommandHandler(documentIndexPersistenceFixture.documentRepository),
         documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
         {
           deliver: (event) =>
@@ -653,10 +653,10 @@ test(
               documentIndexPersistenceFixture.jobRepository,
             ).handle(event),
         },
-        new StartDocumentIndexPruningRetentionUseCase(
+        new StartDocumentIndexPruningRetentionCommandHandler(
           documentIndexPersistenceFixture.documentIndexRepository,
           documentIndexPersistenceFixture.jobRepository,
-          new InspectKnowledgeBaseDocumentRetentionUseCase(
+          new InspectKnowledgeBaseDocumentRetentionQueryHandler(
             documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
           ),
         ),
@@ -729,31 +729,31 @@ test(
       const collect = new DocumentGarbageCollectionRequestedListener(
         documentIndexPersistenceFixture.persistenceTransaction,
         documentIndexPersistenceFixture.documentRepository,
-        new PlanDocumentIndexGarbageUseCase(documentIndexPersistenceFixture.documentIndexRepository),
-        new CollectDocumentIndexGarbageUseCase(
+        new PlanDocumentIndexGarbageQueryHandler(documentIndexPersistenceFixture.documentIndexRepository),
+        new CollectDocumentIndexGarbageCommandHandler(
           documentIndexPersistenceFixture.documentIndexRepository,
           documentIndexPersistenceFixture.jobRepository,
           documentIndexPersistenceFixture.failedJobRepository,
-          new InspectKnowledgeBaseDocumentRetentionUseCase(
+          new InspectKnowledgeBaseDocumentRetentionQueryHandler(
             documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
           ),
-          new CollectDocumentRelationGarbageUseCase(documentIndexPersistenceFixture.documentRelationRepository),
-          new CollectIndexChunkGarbageUseCase(documentIndexPersistenceFixture.chunkRepository),
+          new CollectDocumentRelationGarbageCommandHandler(documentIndexPersistenceFixture.documentRelationRepository),
+          new CollectIndexChunkGarbageCommandHandler(documentIndexPersistenceFixture.chunkRepository),
         ),
-        new PlanDocumentRevisionGarbageUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
-        new CollectDocumentRevisionGarbageUseCase(
+        new PlanDocumentRevisionGarbageQueryHandler(documentIndexPersistenceFixture.documentRevisionRepository),
+        new CollectDocumentRevisionGarbageCommandHandler(
           documentIndexPersistenceFixture.documentRevisionRepository,
-          new InspectDocumentIndexRetentionUseCase(documentIndexPersistenceFixture.documentIndexRepository),
+          new InspectDocumentIndexRetentionQueryHandler(documentIndexPersistenceFixture.documentIndexRepository),
         ),
-        new PlanDocumentRelationGarbageUseCase(documentIndexPersistenceFixture.documentRelationRepository),
-        new LockDocumentRetentionParentsUseCase(documentIndexPersistenceFixture.documentRepository),
-        new InspectDocumentRetentionUseCase(
-          new InspectKnowledgeBaseDocumentRetentionUseCase(
+        new PlanDocumentRelationGarbageQueryHandler(documentIndexPersistenceFixture.documentRelationRepository),
+        new LockDocumentRetentionParentsCommandHandler(documentIndexPersistenceFixture.documentRepository),
+        new InspectDocumentRetentionQueryHandler(
+          new InspectKnowledgeBaseDocumentRetentionQueryHandler(
             documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
           ),
-          new InspectDocumentRevisionRetentionUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
-          new InspectDocumentIndexRetentionUseCase(documentIndexPersistenceFixture.documentIndexRepository),
-          new InspectDocumentRelationRetentionUseCase(documentIndexPersistenceFixture.documentRelationRepository),
+          new InspectDocumentRevisionRetentionQueryHandler(documentIndexPersistenceFixture.documentRevisionRepository),
+          new InspectDocumentIndexRetentionQueryHandler(documentIndexPersistenceFixture.documentIndexRepository),
+          new InspectDocumentRelationRetentionQueryHandler(documentIndexPersistenceFixture.documentRelationRepository),
           documentIndexPersistenceFixture.documentRepository,
           documentIndexPersistenceFixture.jobRepository,
           documentIndexPersistenceFixture.failedJobRepository,

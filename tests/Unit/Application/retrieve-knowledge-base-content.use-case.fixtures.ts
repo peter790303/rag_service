@@ -4,29 +4,35 @@ import {
   createRestoredKnowledgeBaseDocumentFixture,
   createRestoredDocumentIndexFixture,
 } from './document-index-lifecycle.fixture.ts'
-import type { FindLexicalChunkCandidatesUseCaseContract } from '../../../src/Application/Chunks/Contracts/find-lexical-chunk-candidates.use-case.contract.ts'
+import type { FindLexicalChunkCandidatesQueryHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/find-lexical-chunk-candidates.query.handler.contract.ts'
+import { FindRetrievalChunkCandidatesQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/find-retrieval-chunk-candidates.query.handler.ts'
+import { LoadRetrievalChunkContextQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-chunk-context.query.handler.ts'
+import { LoadRetrievalDocumentIndexesQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-document-indexes.query.handler.ts'
+import { LoadRetrievalIndexChunksQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-index-chunks.query.handler.ts'
 import type {
   ChunkIndexOrdinalsQueryObject,
   ChunkVectorSimilarityQueryObject,
-} from '../../../src/Application/Chunks/QueryObjects/chunk.query-object.ts'
-import { FindRetrievalChunkCandidatesUseCase } from '../../../src/Application/Chunks/UseCases/find-retrieval-chunk-candidates.use-case.ts'
-import { LoadRetrievalChunkContextUseCase } from '../../../src/Application/Chunks/UseCases/load-retrieval-chunk-context.use-case.ts'
-import { LoadRetrievalIndexChunksUseCase } from '../../../src/Application/Chunks/UseCases/load-retrieval-index-chunks.use-case.ts'
-import { LoadRetrievalDocumentIndexesUseCase } from '../../../src/Application/DocumentIndexes/UseCases/load-retrieval-document-indexes.use-case.ts'
-import { LoadRetrievalDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/load-retrieval-document-relations.use-case.ts'
-import { LoadRetrievalDocumentRevisionsUseCase } from '../../../src/Application/DocumentRevisions/UseCases/load-retrieval-document-revisions.use-case.ts'
-import { LoadRetrievalDocumentsUseCase } from '../../../src/Application/Documents/UseCases/load-retrieval-documents.use-case.ts'
-import { LoadRetrievalKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/load-retrieval-knowledge-base-documents.use-case.ts'
-import type { RetrievalSnapshot } from '../../../src/Application/KnowledgeBases/Types/retrieval-snapshot.ts'
-import type { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { Chunk, type ChunkState } from '../../../src/Domain/Chunk/chunk.ts'
-import type { DocumentState } from '../../../src/Domain/Document/document.ts'
-import type { DocumentIndexState } from '../../../src/Domain/DocumentIndex/document-index.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { DocumentRelation, type DocumentRelationState } from '../../../src/Domain/DocumentRelation/document-relation.ts'
-import { DocumentRevision, type DocumentRevisionState } from '../../../src/Domain/DocumentRevision/document-revision.ts'
-import { KnowledgeBase } from '../../../src/Domain/KnowledgeBase/knowledge-base.ts'
-import type { KnowledgeBaseDocumentState } from '../../../src/Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
+} from '../../../src/DocumentIndexes/Application/QueryObjects/chunk.query-object.ts'
+import { Chunk, type ChunkState } from '../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
+import type { DocumentIndexState } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { LoadRetrievalDocumentRelationsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-document-relations.query.handler.ts'
+import { LoadRetrievalDocumentRevisionsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-document-revisions.query.handler.ts'
+import { LoadRetrievalDocumentsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-documents.query.handler.ts'
+import {
+  DocumentRelation,
+  type DocumentRelationState,
+} from '../../../src/Documents/Domain/Entities/document-relation.ts'
+import {
+  DocumentRevision,
+  type DocumentRevisionState,
+} from '../../../src/Documents/Domain/Entities/document-revision.ts'
+import type { DocumentState } from '../../../src/Documents/Domain/Entities/document.ts'
+import { LoadRetrievalKnowledgeBaseDocumentsQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/load-retrieval-knowledge-base-documents.query.handler.ts'
+import type { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
+import type { RetrievalSnapshot } from '../../../src/KnowledgeBases/Application/Types/retrieval-snapshot.ts'
+import type { KnowledgeBaseDocumentState } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
+import { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'
 
 export type RetrievalChunkFixture = Pick<ChunkState, 'id' | 'documentIndexId'> &
   Partial<Omit<ChunkState, 'id' | 'documentIndexId' | 'searchVector'>> & {
@@ -114,7 +120,7 @@ export const createRetrievalSnapshotFixture = (input: RetrievalSnapshotFixture):
   ),
 })
 
-type RetrievalConstructor = ConstructorParameters<typeof RetrieveKnowledgeBaseContentUseCase>
+type RetrievalConstructor = ConstructorParameters<typeof RetrieveKnowledgeBaseContentQueryHandler>
 type RetrievalPersistenceDependencies = [
   RetrievalConstructor[0],
   RetrievalConstructor[1],
@@ -156,7 +162,7 @@ export const createRetrievalPersistenceFixture = (
     },
   })
   const chunkEntities = snapshot.chunks
-  const lexicalCandidates: FindLexicalChunkCandidatesUseCaseContract = {
+  const lexicalCandidates: FindLexicalChunkCandidatesQueryHandlerContract = {
     execute: async (findLexicalChunkCandidatesDTO) => {
       withinSnapshot('lexical')
       const terms = findLexicalChunkCandidatesDTO.queryText.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
@@ -277,53 +283,61 @@ export const createRetrievalPersistenceFixture = (
     createRepositoryStub<RetrievalConstructor[1]>(repositories[1]),
     traceOwner(
       'knowledgeBaseDocuments',
-      new LoadRetrievalKnowledgeBaseDocumentsUseCase(
-        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalKnowledgeBaseDocumentsUseCase>[0]>(
+      new LoadRetrievalKnowledgeBaseDocumentsQueryHandler(
+        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalKnowledgeBaseDocumentsQueryHandler>[0]>(
           repositories[2],
         ),
       ),
     ),
     traceOwner(
       'documents',
-      new LoadRetrievalDocumentsUseCase(
-        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalDocumentsUseCase>[0]>(repositories[3]),
+      new LoadRetrievalDocumentsQueryHandler(
+        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalDocumentsQueryHandler>[0]>(repositories[3]),
       ),
     ),
     traceOwner(
       'indexes',
-      new LoadRetrievalDocumentIndexesUseCase(
-        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalDocumentIndexesUseCase>[0]>(repositories[4]),
+      new LoadRetrievalDocumentIndexesQueryHandler(
+        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalDocumentIndexesQueryHandler>[0]>(
+          repositories[4],
+        ),
       ),
     ),
     traceOwner(
       'revisions',
-      new LoadRetrievalDocumentRevisionsUseCase(
-        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalDocumentRevisionsUseCase>[0]>(repositories[5]),
+      new LoadRetrievalDocumentRevisionsQueryHandler(
+        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalDocumentRevisionsQueryHandler>[0]>(
+          repositories[5],
+        ),
       ),
     ),
     traceOwner(
       'indexChunks',
-      new LoadRetrievalIndexChunksUseCase(
-        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalIndexChunksUseCase>[0]>(repositories[6]),
+      new LoadRetrievalIndexChunksQueryHandler(
+        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalIndexChunksQueryHandler>[0]>(repositories[6]),
       ),
     ),
     traceOwner(
       'relations',
-      new LoadRetrievalDocumentRelationsUseCase(
-        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalDocumentRelationsUseCase>[0]>(repositories[7]),
+      new LoadRetrievalDocumentRelationsQueryHandler(
+        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalDocumentRelationsQueryHandler>[0]>(
+          repositories[7],
+        ),
       ),
     ),
     traceOwner(
       'candidates',
-      new FindRetrievalChunkCandidatesUseCase(
-        createRepositoryStub<ConstructorParameters<typeof FindRetrievalChunkCandidatesUseCase>[0]>(repositories[6]),
+      new FindRetrievalChunkCandidatesQueryHandler(
+        createRepositoryStub<ConstructorParameters<typeof FindRetrievalChunkCandidatesQueryHandler>[0]>(
+          repositories[6],
+        ),
         lexicalCandidates,
       ),
     ),
     traceOwner(
       'chunkContext',
-      new LoadRetrievalChunkContextUseCase(
-        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalChunkContextUseCase>[0]>(repositories[6]),
+      new LoadRetrievalChunkContextQueryHandler(
+        createRepositoryStub<ConstructorParameters<typeof LoadRetrievalChunkContextQueryHandler>[0]>(repositories[6]),
       ),
     ),
   ]

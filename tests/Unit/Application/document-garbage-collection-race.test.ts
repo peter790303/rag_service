@@ -6,15 +6,15 @@ import {
   createRestoredDocumentIndexFixture,
   createRestoredKnowledgeBaseDocumentFixture,
 } from './document-index-lifecycle.fixture.ts'
-import type { CollectIndexChunkGarbageUseCaseContract } from '../../../src/Application/Chunks/Contracts/collect-index-chunk-garbage.use-case.contract.ts'
-import type { DocumentIndexExecutionQueue } from '../../../src/Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
-import type { DocumentIndexFailureArchive } from '../../../src/Application/DocumentIndexes/Contracts/document-index-failure.archive.ts'
-import type { DocumentIndexRepository } from '../../../src/Application/DocumentIndexes/Contracts/document-index.repository.ts'
-import { CollectDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/collect-document-index-garbage.use-case.ts'
-import type { CollectDocumentRelationGarbageUseCaseContract } from '../../../src/Application/DocumentRelations/Contracts/collect-document-relation-garbage.use-case.contract.ts'
-import type { DocumentGarbageCollectionScopeDTO } from '../../../src/Application/Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
-import type { InspectKnowledgeBaseDocumentRetentionUseCaseContract } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/inspect-knowledge-base-document-retention.use-case.contract.ts'
-import type { DocumentIndex } from '../../../src/Domain/DocumentIndex/document-index.ts'
+import { CollectDocumentIndexGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-document-index-garbage.command.handler.ts'
+import type { CollectIndexChunkGarbageCommandHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/collect-index-chunk-garbage.command.handler.contract.ts'
+import type { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
+import type { DocumentIndexFailureArchive } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-failure.archive.ts'
+import type { DocumentIndexRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
+import type { DocumentIndex } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
+import type { CollectDocumentRelationGarbageCommandHandlerContract } from '../../../src/Documents/Application/Contracts/collect-document-relation-garbage.command.handler.contract.ts'
+import type { DocumentGarbageCollectionScopeDTO } from '../../../src/Documents/Application/DataTransferObjects/document-garbage-collection-scope.dto.ts'
+import type { InspectKnowledgeBaseDocumentRetentionQueryHandlerContract } from '../../../src/KnowledgeBases/Application/Contracts/inspect-knowledge-base-document-retention.query.handler.contract.ts'
 
 const retentionCutoff = new Date('2026-01-01T00:00:00.000Z')
 const beforeCutoff = new Date('2025-12-31T23:59:59.999Z')
@@ -87,26 +87,27 @@ const startGarbageCollectionRace = (): GarbageCollectionRace => {
       return 0
     },
   })
-  const knowledgeBaseDocumentRetention = createRepositoryStub<InspectKnowledgeBaseDocumentRetentionUseCaseContract>({
-    execute: async () => {
-      calls.knowledgeBaseDocumentChecks += 1
+  const knowledgeBaseDocumentRetention =
+    createRepositoryStub<InspectKnowledgeBaseDocumentRetentionQueryHandlerContract>({
+      execute: async () => {
+        calls.knowledgeBaseDocumentChecks += 1
 
-      return knowledgeBaseDocumentReferenceExists ? createRestoredKnowledgeBaseDocumentFixture() : null
-    },
-  })
-  const relationGarbage = createRepositoryStub<CollectDocumentRelationGarbageUseCaseContract>({
+        return knowledgeBaseDocumentReferenceExists ? createRestoredKnowledgeBaseDocumentFixture() : null
+      },
+    })
+  const relationGarbage = createRepositoryStub<CollectDocumentRelationGarbageCommandHandlerContract>({
     execute: async () => {
       calls.relationCollections += 1
 
       return []
     },
   })
-  const chunkGarbage = createRepositoryStub<CollectIndexChunkGarbageUseCaseContract>({
+  const chunkGarbage = createRepositoryStub<CollectIndexChunkGarbageCommandHandlerContract>({
     execute: async () => {
       calls.chunkCollections += 1
     },
   })
-  const useCase = new CollectDocumentIndexGarbageUseCase(
+  const useCase = new CollectDocumentIndexGarbageCommandHandler(
     documentIndexRepository,
     executionQueue,
     failureArchive,

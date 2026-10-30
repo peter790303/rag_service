@@ -1,34 +1,34 @@
-import { FindLexicalChunkCandidatesUseCase } from '../../src/Application/Chunks/UseCases/find-lexical-chunk-candidates.use-case.ts'
-import { FindRetrievalChunkCandidatesUseCase } from '../../src/Application/Chunks/UseCases/find-retrieval-chunk-candidates.use-case.ts'
-import { LoadRetrievalChunkContextUseCase } from '../../src/Application/Chunks/UseCases/load-retrieval-chunk-context.use-case.ts'
-import { LoadRetrievalIndexChunksUseCase } from '../../src/Application/Chunks/UseCases/load-retrieval-index-chunks.use-case.ts'
-import { ReadDocumentIndexingStatusListener } from '../../src/Application/DocumentIndexes/Listeners/read-document-indexing-status.listener.ts'
-import { LoadRetrievalDocumentIndexesUseCase } from '../../src/Application/DocumentIndexes/UseCases/load-retrieval-document-indexes.use-case.ts'
-import { LoadRetrievalDocumentRelationsUseCase } from '../../src/Application/DocumentRelations/UseCases/load-retrieval-document-relations.use-case.ts'
-import { LoadRetrievalDocumentRevisionsUseCase } from '../../src/Application/DocumentRevisions/UseCases/load-retrieval-document-revisions.use-case.ts'
-import { LoadRetrievalDocumentsUseCase } from '../../src/Application/Documents/UseCases/load-retrieval-documents.use-case.ts'
-import { GetKnowledgeBaseDocumentIndexingStateUseCase } from '../../src/Application/KnowledgeBaseDocuments/UseCases/get-knowledge-base-document-indexing-state.use-case.ts'
-import { LoadRetrievalKnowledgeBaseDocumentsUseCase } from '../../src/Application/KnowledgeBaseDocuments/UseCases/load-retrieval-knowledge-base-documents.use-case.ts'
-import { RetrievalSnapshotKnowledgeBaseAssembler } from '../../src/Application/KnowledgeBases/Assemblers/retrieval-snapshot-knowledge-base.assembler.ts'
-import type { EmbeddingProvider } from '../../src/Application/KnowledgeBases/Contracts/embedding-provider.ts'
-import type { RetrievalProfileSettingsDTO } from '../../src/Application/KnowledgeBases/DataTransferObjects/retrieval-profile-settings.dto.ts'
+import { ReadDocumentIndexingStatusListener } from '../../src/DocumentIndexes/Application/Listeners/read-document-indexing-status.listener.ts'
+import { FindLexicalChunkCandidatesQueryHandler } from '../../src/DocumentIndexes/Application/Queries/find-lexical-chunk-candidates.query.handler.ts'
+import { FindRetrievalChunkCandidatesQueryHandler } from '../../src/DocumentIndexes/Application/Queries/find-retrieval-chunk-candidates.query.handler.ts'
+import { LoadRetrievalChunkContextQueryHandler } from '../../src/DocumentIndexes/Application/Queries/load-retrieval-chunk-context.query.handler.ts'
+import { LoadRetrievalDocumentIndexesQueryHandler } from '../../src/DocumentIndexes/Application/Queries/load-retrieval-document-indexes.query.handler.ts'
+import { LoadRetrievalIndexChunksQueryHandler } from '../../src/DocumentIndexes/Application/Queries/load-retrieval-index-chunks.query.handler.ts'
+import { ChunkRepository } from '../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { DocumentIndexSuccessReceiptRepository } from '../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index-success-receipt.repository.ts'
+import { DocumentIndexRepository } from '../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { FailedJobRepository } from '../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/failed-job.repository.ts'
+import { JobRepository } from '../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { LoadRetrievalDocumentRelationsQueryHandler } from '../../src/Documents/Application/Queries/load-retrieval-document-relations.query.handler.ts'
+import { LoadRetrievalDocumentRevisionsQueryHandler } from '../../src/Documents/Application/Queries/load-retrieval-document-revisions.query.handler.ts'
+import { LoadRetrievalDocumentsQueryHandler } from '../../src/Documents/Application/Queries/load-retrieval-documents.query.handler.ts'
+import { DocumentRelationRepository } from '../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'
+import { DocumentRevisionRepository } from '../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
+import { DocumentRepository } from '../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document.repository.ts'
+import { RetrievalSnapshotKnowledgeBaseAssembler } from '../../src/KnowledgeBases/Application/Assemblers/retrieval-snapshot-knowledge-base.assembler.ts'
+import type { RetrievalProfileSettingsDTO } from '../../src/KnowledgeBases/Application/DataTransferObjects/retrieval-profile-settings.dto.ts'
+import { GetKnowledgeBaseDocumentIndexingStateQueryHandler } from '../../src/KnowledgeBases/Application/Queries/get-knowledge-base-document-indexing-state.query.handler.ts'
+import { LoadRetrievalKnowledgeBaseDocumentsQueryHandler } from '../../src/KnowledgeBases/Application/Queries/load-retrieval-knowledge-base-documents.query.handler.ts'
+import { RetrieveKnowledgeBaseContentQueryHandler } from '../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
 import type {
   RetrievalSnapshotQueryObject,
   RetrievalSnapshotLimitsQueryObject,
-} from '../../src/Application/KnowledgeBases/QueryObjects/retrieval-snapshot.query-object.ts'
-import type { RetrievalSnapshot } from '../../src/Application/KnowledgeBases/Types/retrieval-snapshot.ts'
-import { RetrieveKnowledgeBaseContentUseCase } from '../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { PersistenceTransaction } from '../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
-import { DocumentIndexSuccessReceiptRepository } from '../../src/Infrastructure/Persistence/Repositories/document-index-success-receipt.repository.ts'
-import { DocumentIndexRepository } from '../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
-import { DocumentRelationRepository } from '../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
-import { DocumentRevisionRepository } from '../../src/Infrastructure/Persistence/Repositories/document-revision.repository.ts'
-import { DocumentRepository } from '../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
-import { FailedJobRepository } from '../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
-import { JobRepository } from '../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentRepository } from '../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
-import { KnowledgeBaseRepository } from '../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
+} from '../../src/KnowledgeBases/Application/QueryObjects/retrieval-snapshot.query-object.ts'
+import type { RetrievalSnapshot } from '../../src/KnowledgeBases/Application/Types/retrieval-snapshot.ts'
+import { KnowledgeBaseDocumentRepository } from '../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import { KnowledgeBaseRepository } from '../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
+import type { EmbeddingProvider } from '../../src/Shared/Application/Ports/Out/Gateways/embedding-provider.ts'
+import { PersistenceTransaction } from '../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 /** All write repositories in a fixture share the same async transaction resource. */
 export class DocumentIndexPersistenceFixture {
@@ -48,7 +48,7 @@ export class DocumentIndexPersistenceFixture {
   ) {
     this.jobStatusUseCase = new ReadDocumentIndexingStatusListener(
       jobRepository,
-      new GetKnowledgeBaseDocumentIndexingStateUseCase(knowledgeBaseDocumentRepository),
+      new GetKnowledgeBaseDocumentIndexingStateQueryHandler(knowledgeBaseDocumentRepository),
       documentIndexRepository,
       failedJobRepository,
       new DocumentIndexSuccessReceiptRepository(persistenceTransaction),
@@ -58,21 +58,21 @@ export class DocumentIndexPersistenceFixture {
   createRetrievalUseCase(
     embeddingProvider: EmbeddingProvider,
     profiles: RetrievalProfileSettingsDTO,
-  ): RetrieveKnowledgeBaseContentUseCase {
-    return new RetrieveKnowledgeBaseContentUseCase(
+  ): RetrieveKnowledgeBaseContentQueryHandler {
+    return new RetrieveKnowledgeBaseContentQueryHandler(
       this.persistenceTransaction,
       this.knowledgeBaseRepository,
-      new LoadRetrievalKnowledgeBaseDocumentsUseCase(this.knowledgeBaseDocumentRepository),
-      new LoadRetrievalDocumentsUseCase(this.documentRepository),
-      new LoadRetrievalDocumentIndexesUseCase(this.documentIndexRepository),
-      new LoadRetrievalDocumentRevisionsUseCase(this.documentRevisionRepository),
-      new LoadRetrievalIndexChunksUseCase(this.chunkRepository),
-      new LoadRetrievalDocumentRelationsUseCase(this.documentRelationRepository),
-      new FindRetrievalChunkCandidatesUseCase(
+      new LoadRetrievalKnowledgeBaseDocumentsQueryHandler(this.knowledgeBaseDocumentRepository),
+      new LoadRetrievalDocumentsQueryHandler(this.documentRepository),
+      new LoadRetrievalDocumentIndexesQueryHandler(this.documentIndexRepository),
+      new LoadRetrievalDocumentRevisionsQueryHandler(this.documentRevisionRepository),
+      new LoadRetrievalIndexChunksQueryHandler(this.chunkRepository),
+      new LoadRetrievalDocumentRelationsQueryHandler(this.documentRelationRepository),
+      new FindRetrievalChunkCandidatesQueryHandler(
         this.chunkRepository,
-        new FindLexicalChunkCandidatesUseCase(this.chunkRepository),
+        new FindLexicalChunkCandidatesQueryHandler(this.chunkRepository),
       ),
-      new LoadRetrievalChunkContextUseCase(this.chunkRepository),
+      new LoadRetrievalChunkContextQueryHandler(this.chunkRepository),
       embeddingProvider,
       profiles,
     )
@@ -90,22 +90,22 @@ export class DocumentIndexPersistenceFixture {
         projectId: retrievalSnapshotQO.projectId,
       })
       const knowledgeBaseDocuments = knowledgeBase
-        ? await new LoadRetrievalKnowledgeBaseDocumentsUseCase(this.knowledgeBaseDocumentRepository).execute({
+        ? await new LoadRetrievalKnowledgeBaseDocumentsQueryHandler(this.knowledgeBaseDocumentRepository).execute({
             knowledgeBaseId: knowledgeBase.id,
           })
         : []
       const documentIds = knowledgeBaseDocuments.map((member) => member.documentId)
-      const documents = await new LoadRetrievalDocumentsUseCase(this.documentRepository).execute({ documentIds })
-      const indexes = await new LoadRetrievalDocumentIndexesUseCase(this.documentIndexRepository).execute({
+      const documents = await new LoadRetrievalDocumentsQueryHandler(this.documentRepository).execute({ documentIds })
+      const indexes = await new LoadRetrievalDocumentIndexesQueryHandler(this.documentIndexRepository).execute({
         documentIds,
       })
-      const revisions = await new LoadRetrievalDocumentRevisionsUseCase(this.documentRevisionRepository).execute({
+      const revisions = await new LoadRetrievalDocumentRevisionsQueryHandler(this.documentRevisionRepository).execute({
         revisionIds: indexes.map((index) => index.revisionId),
       })
-      const relations = await new LoadRetrievalDocumentRelationsUseCase(this.documentRelationRepository).execute({
+      const relations = await new LoadRetrievalDocumentRelationsQueryHandler(this.documentRelationRepository).execute({
         documentIndexIds: indexes.map((index) => index.id),
       })
-      const chunks = await new LoadRetrievalIndexChunksUseCase(this.chunkRepository).execute({
+      const chunks = await new LoadRetrievalIndexChunksQueryHandler(this.chunkRepository).execute({
         fullContentIndexIds: indexes.map((index) => index.id),
         countedIndexIds: [],
       })

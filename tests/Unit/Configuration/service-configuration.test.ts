@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { loadKnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import { ServiceConfigurationException } from '../../../src/Application/KnowledgeBases/Exceptions/service-configuration.exception.ts'
+import { ServiceConfigurationException } from '../../../src/KnowledgeBases/Application/Exceptions/service-configuration.exception.ts'
 
 const validEnvironment = {
   RAG_DATABASE_URL: 'postgres://localhost:5432/rag_service',

@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { RetrievalCandidateChunkAssembler } from '../../../src/Application/Chunks/Assemblers/retrieval-candidate-chunk.assembler.ts'
-import type { ChunkRepository } from '../../../src/Application/Chunks/Contracts/chunk.repository.ts'
-import type { FindLexicalChunkCandidatesUseCaseContract } from '../../../src/Application/Chunks/Contracts/find-lexical-chunk-candidates.use-case.contract.ts'
-import type { FindLexicalChunkCandidatesDTO } from '../../../src/Application/Chunks/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
-import type { ChunkVectorSimilarityQueryObject } from '../../../src/Application/Chunks/QueryObjects/chunk.query-object.ts'
-import { FindLexicalChunkCandidatesUseCase } from '../../../src/Application/Chunks/UseCases/find-lexical-chunk-candidates.use-case.ts'
-import { FindRetrievalChunkCandidatesUseCase } from '../../../src/Application/Chunks/UseCases/find-retrieval-chunk-candidates.use-case.ts'
-import { Chunk } from '../../../src/Domain/Chunk/chunk.ts'
-import { ChunkLexicalSearchMatchMissingException } from '../../../src/Domain/Chunk/Exceptions/chunk-lexical-search-match-missing.exception.ts'
+import { RetrievalCandidateChunkAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/retrieval-candidate-chunk.assembler.ts'
+import type { FindLexicalChunkCandidatesQueryHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/find-lexical-chunk-candidates.query.handler.contract.ts'
+import type { FindLexicalChunkCandidatesDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
+import type { ChunkRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/chunk.repository.ts'
+import { FindLexicalChunkCandidatesQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/find-lexical-chunk-candidates.query.handler.ts'
+import { FindRetrievalChunkCandidatesQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/find-retrieval-chunk-candidates.query.handler.ts'
+import type { ChunkVectorSimilarityQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/chunk.query-object.ts'
+import { Chunk } from '../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
+import { ChunkLexicalSearchMatchMissingException } from '../../../src/DocumentIndexes/Domain/Exceptions/chunk-lexical-search-match-missing.exception.ts'
 
 const createCandidateChunk = (id: string): Chunk =>
   new Chunk({
@@ -118,7 +118,7 @@ test('retrieval queries scoped entities in sequence and combines overlapping ran
       ]
     },
   }
-  const lexicalCandidates: FindLexicalChunkCandidatesUseCaseContract = {
+  const lexicalCandidates: FindLexicalChunkCandidatesQueryHandlerContract = {
     execute: async (findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDTO) => {
       assert.equal(candidateQueryCalls.length, 0)
       candidateQueryCalls.push({ channel: 'lexical', candidateQuery: findLexicalChunkCandidatesDTO })
@@ -129,7 +129,7 @@ test('retrieval queries scoped entities in sequence and combines overlapping ran
       ]
     },
   }
-  const candidates = await new FindRetrievalChunkCandidatesUseCase(
+  const candidates = await new FindRetrievalChunkCandidatesQueryHandler(
     chunkRepository as ChunkRepository,
     lexicalCandidates,
   ).execute({
@@ -176,7 +176,7 @@ test('retrieval keeps first entity identity, measurement, original channel rank 
       return [semanticShared, createSemanticCandidateChunk('shared', queryVector, 0.8), semanticOnly]
     },
   }
-  const lexicalCandidates: FindLexicalChunkCandidatesUseCaseContract = {
+  const lexicalCandidates: FindLexicalChunkCandidatesQueryHandlerContract = {
     execute: async () => [
       createLexicalCandidateChunk('shared', queryText, 0.6),
       createLexicalCandidateChunk('shared', queryText, 0.99),
@@ -184,7 +184,7 @@ test('retrieval keeps first entity identity, measurement, original channel rank 
       createLexicalCandidateChunk('lexical-only', queryText, 0.8),
     ],
   }
-  const candidates = await new FindRetrievalChunkCandidatesUseCase(
+  const candidates = await new FindRetrievalChunkCandidatesQueryHandler(
     chunkRepository as ChunkRepository,
     lexicalCandidates,
   ).execute({ documentIndexIds: ['selected-index'], queryVector, queryText, limit: 7 })
@@ -210,12 +210,12 @@ test('retrieval rejects lexical evidence measured for a different query instead 
       chunkVectorSimilarityQO: ChunkVectorSimilarityQueryObject,
     ) => [createSemanticCandidateChunk('shared', chunkVectorSimilarityQO.queryVector, 0.1)],
   }
-  const lexicalCandidates: FindLexicalChunkCandidatesUseCaseContract = {
+  const lexicalCandidates: FindLexicalChunkCandidatesQueryHandlerContract = {
     execute: async () => [createLexicalCandidateChunk('shared', 'different-query', 0.6)],
   }
 
   await assert.rejects(
-    new FindRetrievalChunkCandidatesUseCase(chunkRepository as ChunkRepository, lexicalCandidates).execute({
+    new FindRetrievalChunkCandidatesQueryHandler(chunkRepository as ChunkRepository, lexicalCandidates).execute({
       documentIndexIds: ['selected-index'],
       queryVector,
       queryText: 'Deployments',
@@ -237,7 +237,7 @@ test('the lexical Application boundary delegates the unmodified query and return
       return [candidate]
     },
   }
-  const lexicalCandidates = new FindLexicalChunkCandidatesUseCase(repository as ChunkRepository)
+  const lexicalCandidates = new FindLexicalChunkCandidatesQueryHandler(repository as ChunkRepository)
 
   const result = await lexicalCandidates.execute(input)
 

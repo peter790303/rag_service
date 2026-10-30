@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core'
 import 'reflect-metadata'
 
-import { KnowledgeMaintenanceWorkerModule } from './Infrastructure/Providers/knowledge-maintenance-worker.module.ts'
+import { KnowledgeMaintenanceWorkerModule } from './Bootstrap/Nest/Providers/knowledge-maintenance-worker.module.ts'
 
 const bootstrap = async (): Promise<void> => {
   const workerApplicationContext = await NestFactory.createApplicationContext(KnowledgeMaintenanceWorkerModule)

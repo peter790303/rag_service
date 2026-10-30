@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { InvalidDocumentReferenceException } from '../../../../src/Domain/DocumentRelation/Exceptions/invalid-document-reference.exception.ts'
-import { DocumentReference } from '../../../../src/Domain/DocumentRelation/ValueObjects/document-reference.ts'
+import { InvalidDocumentReferenceException } from '../../../../src/Documents/Domain/Exceptions/invalid-document-reference.exception.ts'
+import { DocumentReference } from '../../../../src/Documents/Domain/ValueObjects/document-reference.ts'
 
 test('document reference equality uses its normalized path and anchor value', () => {
   const reference = new DocumentReference('Notes\\Guides\\../Setup.MD?view=compact', 'Heading%20One')

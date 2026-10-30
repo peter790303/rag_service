@@ -3,7 +3,7 @@ import { test } from 'node:test'
 
 import type { QueryRunner, Table } from 'typeorm'
 
-import { CreateDocumentIndexSuccessReceipts1729000000014 } from '../../../../database/migrations/1729000000014-create-document-index-success-receipts.ts'
+import { CreateDocumentIndexSuccessReceipts1729000000014 } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/Migrations/1729000000014-create-document-index-success-receipts.ts'
 
 test('success receipt migration creates project-scoped durable receipts with job-compatible checks', async () => {
   let createdTable: Table | undefined

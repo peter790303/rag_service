@@ -2,24 +2,24 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import type { ChunkRepository } from '../../../src/Application/Chunks/Contracts/chunk.repository.ts'
-import { InvalidRetrievalChunkContextInputException } from '../../../src/Application/Chunks/Exceptions/invalid-retrieval-chunk-context-input.exception.ts'
-import { InvalidRetrievalIndexChunksInputException } from '../../../src/Application/Chunks/Exceptions/invalid-retrieval-index-chunks-input.exception.ts'
-import { LoadRetrievalChunkContextUseCase } from '../../../src/Application/Chunks/UseCases/load-retrieval-chunk-context.use-case.ts'
-import { LoadRetrievalIndexChunksUseCase } from '../../../src/Application/Chunks/UseCases/load-retrieval-index-chunks.use-case.ts'
-import type { DocumentIndexRepository } from '../../../src/Application/DocumentIndexes/Contracts/document-index.repository.ts'
-import { InvalidRetrievalDocumentIndexesInputException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-retrieval-document-indexes-input.exception.ts'
-import { LoadRetrievalDocumentIndexesUseCase } from '../../../src/Application/DocumentIndexes/UseCases/load-retrieval-document-indexes.use-case.ts'
-import type { DocumentRevisionRepository } from '../../../src/Application/DocumentRevisions/Contracts/document-revision.repository.ts'
-import { InvalidRetrievalDocumentRevisionsInputException } from '../../../src/Application/DocumentRevisions/Exceptions/invalid-retrieval-document-revisions-input.exception.ts'
-import { LoadRetrievalDocumentRevisionsUseCase } from '../../../src/Application/DocumentRevisions/UseCases/load-retrieval-document-revisions.use-case.ts'
-import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
-import { InvalidRetrievalDocumentsInputException } from '../../../src/Application/Documents/Exceptions/invalid-retrieval-documents-input.exception.ts'
-import { LoadRetrievalDocumentsUseCase } from '../../../src/Application/Documents/UseCases/load-retrieval-documents.use-case.ts'
+import { InvalidRetrievalChunkContextInputException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-retrieval-chunk-context-input.exception.ts'
+import { InvalidRetrievalDocumentIndexesInputException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-retrieval-document-indexes-input.exception.ts'
+import { InvalidRetrievalIndexChunksInputException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-retrieval-index-chunks-input.exception.ts'
+import type { ChunkRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/chunk.repository.ts'
+import type { DocumentIndexRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
+import { LoadRetrievalChunkContextQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-chunk-context.query.handler.ts'
+import { LoadRetrievalDocumentIndexesQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-document-indexes.query.handler.ts'
+import { LoadRetrievalIndexChunksQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-index-chunks.query.handler.ts'
+import { InvalidRetrievalDocumentRevisionsInputException } from '../../../src/Documents/Application/Exceptions/invalid-retrieval-document-revisions-input.exception.ts'
+import { InvalidRetrievalDocumentsInputException } from '../../../src/Documents/Application/Exceptions/invalid-retrieval-documents-input.exception.ts'
+import type { DocumentRevisionRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
+import { LoadRetrievalDocumentRevisionsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-document-revisions.query.handler.ts'
+import { LoadRetrievalDocumentsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-documents.query.handler.ts'
 
 test('retrieval use cases reject malformed DTOs before accessing repositories', async () => {
   let documentRepositoryAccesses = 0
-  const documents = new LoadRetrievalDocumentsUseCase(
+  const documents = new LoadRetrievalDocumentsQueryHandler(
     createRepositoryStub<DocumentRepository>({
       findByDocumentIds: async () => {
         documentRepositoryAccesses += 1
@@ -29,7 +29,7 @@ test('retrieval use cases reject malformed DTOs before accessing repositories', 
     }),
   )
   let documentIndexRepositoryAccesses = 0
-  const documentIndexes = new LoadRetrievalDocumentIndexesUseCase(
+  const documentIndexes = new LoadRetrievalDocumentIndexesQueryHandler(
     createRepositoryStub<DocumentIndexRepository>({
       findByDocumentIdsOrderByCreatedAtAscAndIdAsc: async () => {
         documentIndexRepositoryAccesses += 1
@@ -39,7 +39,7 @@ test('retrieval use cases reject malformed DTOs before accessing repositories', 
     }),
   )
   let documentRevisionRepositoryAccesses = 0
-  const documentRevisions = new LoadRetrievalDocumentRevisionsUseCase(
+  const documentRevisions = new LoadRetrievalDocumentRevisionsQueryHandler(
     createRepositoryStub<DocumentRevisionRepository>({
       findByDocumentRevisionIds: async () => {
         documentRevisionRepositoryAccesses += 1
@@ -49,7 +49,7 @@ test('retrieval use cases reject malformed DTOs before accessing repositories', 
     }),
   )
   let chunkRepositoryAccesses = 0
-  const chunks = new LoadRetrievalIndexChunksUseCase(
+  const chunks = new LoadRetrievalIndexChunksQueryHandler(
     createRepositoryStub<ChunkRepository>({
       findByDocumentIndexIdsOrderByDocumentIndexIdAscAndOrdinalAsc: async () => {
         chunkRepositoryAccesses += 1
@@ -64,7 +64,7 @@ test('retrieval use cases reject malformed DTOs before accessing repositories', 
     }),
   )
   let chunkContextRepositoryAccesses = 0
-  const chunkContext = new LoadRetrievalChunkContextUseCase(
+  const chunkContext = new LoadRetrievalChunkContextQueryHandler(
     createRepositoryStub<ChunkRepository>({
       findByDocumentIndexIdAndOrdinals: async () => {
         chunkContextRepositoryAccesses += 1
@@ -201,7 +201,7 @@ test('valid empty retrieval scopes remain empty and preserve chunk repository ca
   let documentRepositoryAccesses = 0
   let documentIndexRepositoryAccesses = 0
   let documentRevisionRepositoryAccesses = 0
-  const documents = new LoadRetrievalDocumentsUseCase(
+  const documents = new LoadRetrievalDocumentsQueryHandler(
     createRepositoryStub<DocumentRepository>({
       findByDocumentIds: async () => {
         documentRepositoryAccesses += 1
@@ -210,7 +210,7 @@ test('valid empty retrieval scopes remain empty and preserve chunk repository ca
       },
     }),
   )
-  const documentIndexes = new LoadRetrievalDocumentIndexesUseCase(
+  const documentIndexes = new LoadRetrievalDocumentIndexesQueryHandler(
     createRepositoryStub<DocumentIndexRepository>({
       findByDocumentIdsOrderByCreatedAtAscAndIdAsc: async () => {
         documentIndexRepositoryAccesses += 1
@@ -219,7 +219,7 @@ test('valid empty retrieval scopes remain empty and preserve chunk repository ca
       },
     }),
   )
-  const documentRevisions = new LoadRetrievalDocumentRevisionsUseCase(
+  const documentRevisions = new LoadRetrievalDocumentRevisionsQueryHandler(
     createRepositoryStub<DocumentRevisionRepository>({
       findByDocumentRevisionIds: async () => {
         documentRevisionRepositoryAccesses += 1
@@ -230,7 +230,7 @@ test('valid empty retrieval scopes remain empty and preserve chunk repository ca
   )
   const fullContentQueriesQO: unknown[] = []
   const countedQueriesQO: unknown[] = []
-  const chunks = new LoadRetrievalIndexChunksUseCase(
+  const chunks = new LoadRetrievalIndexChunksQueryHandler(
     createRepositoryStub<ChunkRepository>({
       findByDocumentIndexIdsOrderByDocumentIndexIdAscAndOrdinalAsc: async (chunkIndexIdsQO) => {
         fullContentQueriesQO.push(chunkIndexIdsQO)
@@ -262,7 +262,7 @@ test('retrieval scope deduplication preserves first-occurrence order', async () 
   const documentRevisionQueriesQO: unknown[] = []
   const fullContentQueriesQO: unknown[] = []
   const countedQueriesQO: unknown[] = []
-  const documents = new LoadRetrievalDocumentsUseCase(
+  const documents = new LoadRetrievalDocumentsQueryHandler(
     createRepositoryStub<DocumentRepository>({
       findByDocumentIds: async (queryObject) => {
         documentQueriesQO.push(queryObject)
@@ -271,7 +271,7 @@ test('retrieval scope deduplication preserves first-occurrence order', async () 
       },
     }),
   )
-  const documentIndexes = new LoadRetrievalDocumentIndexesUseCase(
+  const documentIndexes = new LoadRetrievalDocumentIndexesQueryHandler(
     createRepositoryStub<DocumentIndexRepository>({
       findByDocumentIdsOrderByCreatedAtAscAndIdAsc: async (queryObject) => {
         documentIndexQueriesQO.push(queryObject)
@@ -280,7 +280,7 @@ test('retrieval scope deduplication preserves first-occurrence order', async () 
       },
     }),
   )
-  const documentRevisions = new LoadRetrievalDocumentRevisionsUseCase(
+  const documentRevisions = new LoadRetrievalDocumentRevisionsQueryHandler(
     createRepositoryStub<DocumentRevisionRepository>({
       findByDocumentRevisionIds: async (queryObject) => {
         documentRevisionQueriesQO.push(queryObject)
@@ -289,7 +289,7 @@ test('retrieval scope deduplication preserves first-occurrence order', async () 
       },
     }),
   )
-  const chunks = new LoadRetrievalIndexChunksUseCase(
+  const chunks = new LoadRetrievalIndexChunksQueryHandler(
     createRepositoryStub<ChunkRepository>({
       findByDocumentIndexIdsOrderByDocumentIndexIdAscAndOrdinalAsc: async (queryObject) => {
         fullContentQueriesQO.push(queryObject)

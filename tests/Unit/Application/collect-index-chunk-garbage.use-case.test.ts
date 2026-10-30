@@ -2,11 +2,11 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import type { ChunkRepository } from '../../../src/Application/Chunks/Contracts/chunk.repository.ts'
-import type { IndexChunkGarbageDTO } from '../../../src/Application/Chunks/DataTransferObjects/index-chunk-garbage.dto.ts'
-import { ChunkGarbageCollectionLockRequiredException } from '../../../src/Application/Chunks/Exceptions/chunk-garbage-collection-lock-required.exception.ts'
-import { IndexChunkGarbageCollectionNotEligibleException } from '../../../src/Application/Chunks/Exceptions/index-chunk-garbage-collection-not-eligible.exception.ts'
-import { CollectIndexChunkGarbageUseCase } from '../../../src/Application/Chunks/UseCases/collect-index-chunk-garbage.use-case.ts'
+import { CollectIndexChunkGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-index-chunk-garbage.command.handler.ts'
+import type { IndexChunkGarbageDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/index-chunk-garbage.dto.ts'
+import { ChunkGarbageCollectionLockRequiredException } from '../../../src/DocumentIndexes/Application/Exceptions/chunk-garbage-collection-lock-required.exception.ts'
+import { IndexChunkGarbageCollectionNotEligibleException } from '../../../src/DocumentIndexes/Application/Exceptions/index-chunk-garbage-collection-not-eligible.exception.ts'
+import type { ChunkRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/chunk.repository.ts'
 
 const eligibleGarbage: IndexChunkGarbageDTO = {
   documentIndexId: 'index',
@@ -17,7 +17,7 @@ const eligibleGarbage: IndexChunkGarbageDTO = {
 }
 
 test('chunk garbage collection requires the matching parent lock before removing chunks', async () => {
-  const useCase = new CollectIndexChunkGarbageUseCase(
+  const useCase = new CollectIndexChunkGarbageCommandHandler(
     createRepositoryStub<ChunkRepository>({
       removeByDocumentIndexId: async () => assert.fail('unlocked chunks must not be removed'),
     }),
@@ -30,7 +30,7 @@ test('chunk garbage collection requires the matching parent lock before removing
 })
 
 test('chunk garbage collection rejects referenced and unexpired indexes before removing chunks', async () => {
-  const useCase = new CollectIndexChunkGarbageUseCase(
+  const useCase = new CollectIndexChunkGarbageCommandHandler(
     createRepositoryStub<ChunkRepository>({
       removeByDocumentIndexId: async () => assert.fail('ineligible chunks must not be removed'),
     }),
@@ -48,7 +48,7 @@ test('chunk garbage collection rejects referenced and unexpired indexes before r
 
 test('chunk garbage collection removes an expired index once its parent is locked', async () => {
   const removedIndexes: string[] = []
-  const useCase = new CollectIndexChunkGarbageUseCase(
+  const useCase = new CollectIndexChunkGarbageCommandHandler(
     createRepositoryStub<ChunkRepository>({
       removeByDocumentIndexId: async (chunkIndexQO) => {
         removedIndexes.push(chunkIndexQO.documentIndexId)
@@ -66,7 +66,7 @@ test('chunk garbage collection awaits the scoped deletion and propagates persist
     finishDeletion = resolveDeletion
   })
   let collectionCompleted = false
-  const collectIndexChunkGarbage = new CollectIndexChunkGarbageUseCase(
+  const collectIndexChunkGarbage = new CollectIndexChunkGarbageCommandHandler(
     createRepositoryStub<ChunkRepository>({
       removeByDocumentIndexId: async (chunkIndexQO) => {
         assert.deepEqual(chunkIndexQO, { documentIndexId: eligibleGarbage.documentIndexId })
@@ -85,7 +85,7 @@ test('chunk garbage collection awaits the scoped deletion and propagates persist
   assert.equal(collectionCompleted, true)
 
   const persistenceFailure = new Error('scoped chunk deletion failed')
-  const collectFailingIndexChunkGarbage = new CollectIndexChunkGarbageUseCase(
+  const collectFailingIndexChunkGarbage = new CollectIndexChunkGarbageCommandHandler(
     createRepositoryStub<ChunkRepository>({
       removeByDocumentIndexId: async () => {
         throw persistenceFailure

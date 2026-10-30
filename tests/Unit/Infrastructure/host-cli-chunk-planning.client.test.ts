@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 
-import { ChunkPlanningUnavailableException } from '../../../src/Application/Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
-import { HostCliChunkPlanningClient } from '../../../src/Infrastructure/External/ChunkPlanning/host-cli-chunk-planning.client.ts'
+import { ChunkPlanningUnavailableException } from '../../../src/DocumentIndexes/Application/Exceptions/chunk-planning-unavailable.exception.ts'
+import { HostCliChunkPlanningClient } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/host-cli-chunk-planning.client.ts'
 
 const source = '# Title\r\n\r\nFirst paragraph.\r\n\r\nSecond paragraph.\r\n'
 const createFakeCli = async (body: string): Promise<{ directory: string; executable: string }> => {

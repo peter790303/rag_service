@@ -6,8 +6,8 @@ import {
   createGarbageCollectionListener,
   type GarbageCollectionTestDependencies,
 } from './document-retention-use-cases.fixture.ts'
-import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Application/Documents/Events/document-garbage-collection-requested.event.ts'
-import { InspectDocumentRetentionUseCase } from '../../../src/Application/Documents/UseCases/inspect-document-retention.use-case.ts'
+import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Documents/Application/Events/document-garbage-collection-requested.event.ts'
+import { InspectDocumentRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-retention.query.handler.ts'
 
 test('document retention checks technical references even when every business reference is absent', async (context) => {
   const document = createDocumentFixture()
@@ -18,7 +18,7 @@ test('document retention checks technical references even when every business re
       { executions: 0, failures: 0, protected: false },
     ].map((scenario) =>
       context.test(`executions=${scenario.executions}, failures=${scenario.failures}`, async () => {
-        const useCase = new InspectDocumentRetentionUseCase(
+        const useCase = new InspectDocumentRetentionQueryHandler(
           { execute: async () => null },
           { execute: async () => null },
           { execute: async () => null },

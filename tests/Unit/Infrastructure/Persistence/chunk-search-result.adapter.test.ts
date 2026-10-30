@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { Chunk } from '../../../../src/Domain/Chunk/chunk.ts'
-import { ChunkSearchResultAdapter } from '../../../../src/Infrastructure/Persistence/Adapters/chunk-search-result.adapter.ts'
-import type { ChunkSemanticQueryRowDTO } from '../../../../src/Infrastructure/Persistence/Adapters/chunk-search-result.adapter.ts'
-import { InvalidChunkEmbeddingException } from '../../../../src/Infrastructure/Persistence/Exceptions/invalid-chunk-embedding.exception.ts'
+import { Chunk } from '../../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
+import { InvalidChunkEmbeddingException } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Exceptions/invalid-chunk-embedding.exception.ts'
+import { ChunkSearchResultAdapter } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/chunk-search-result.adapter.ts'
+import type { ChunkSemanticQueryRowDTO } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/chunk-search-result.adapter.ts'
 
 const queryVector = Object.freeze([1, 0, 0])
 const createSemanticQueryRowDTO = (embedding: string | number[]): ChunkSemanticQueryRowDTO => ({

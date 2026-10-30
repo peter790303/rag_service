@@ -2,20 +2,20 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import type { DocumentRevisionRepository } from '../../../src/Application/DocumentRevisions/Contracts/document-revision.repository.ts'
-import type { DocumentRevisionSourceSnapshotDTO } from '../../../src/Application/DocumentRevisions/DataTransferObjects/prepare-document-revision-for-index-request.dto.ts'
-import { InvalidDocumentRevisionIndexRequestInputException } from '../../../src/Application/DocumentRevisions/Exceptions/invalid-document-revision-index-request-input.exception.ts'
-import type { CreateDocumentRevisionQueryObject } from '../../../src/Application/DocumentRevisions/QueryObjects/document-revision.query-object.ts'
-import { PrepareDocumentRevisionForIndexRequestUseCase } from '../../../src/Application/DocumentRevisions/UseCases/prepare-document-revision-for-index-request.use-case.ts'
-import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
-import { InvalidDocumentRevisionHashException } from '../../../src/Domain/DocumentRevision/Exceptions/invalid-document-revision-hash.exception.ts'
-import { InvalidDocumentRevisionIdentityException } from '../../../src/Domain/DocumentRevision/Exceptions/invalid-document-revision-identity.exception.ts'
+import { PrepareDocumentRevisionForIndexRequestCommandHandler } from '../../../src/Documents/Application/Commands/prepare-document-revision-for-index-request.command.handler.ts'
+import type { DocumentRevisionSourceSnapshotDTO } from '../../../src/Documents/Application/DataTransferObjects/prepare-document-revision-for-index-request.dto.ts'
+import { InvalidDocumentRevisionIndexRequestInputException } from '../../../src/Documents/Application/Exceptions/invalid-document-revision-index-request-input.exception.ts'
+import type { DocumentRevisionRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import type { CreateDocumentRevisionQueryObject } from '../../../src/Documents/Application/QueryObjects/document-revision.query-object.ts'
+import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
+import { InvalidDocumentRevisionHashException } from '../../../src/Documents/Domain/Exceptions/invalid-document-revision-hash.exception.ts'
+import { InvalidDocumentRevisionIdentityException } from '../../../src/Documents/Domain/Exceptions/invalid-document-revision-identity.exception.ts'
 
 const sourceDocument: DocumentRevisionSourceSnapshotDTO = {
   content: '',
 }
 const validInput = { sourceDocument, documentId: 'document-1', contentSha256: 'a'.repeat(64) }
-type PrepareRevisionInput = Parameters<PrepareDocumentRevisionForIndexRequestUseCase['execute']>[0]
+type PrepareRevisionInput = Parameters<PrepareDocumentRevisionForIndexRequestCommandHandler['execute']>[0]
 
 test('revision input omissions and invalid values fail before any repository call', async (context) => {
   const scenarios = [
@@ -75,7 +75,7 @@ test('revision input omissions and invalid values fail before any repository cal
   await Promise.all(
     scenarios.map(({ name, input, exception }) =>
       context.test(name, async () => {
-        const useCase = new PrepareDocumentRevisionForIndexRequestUseCase(
+        const useCase = new PrepareDocumentRevisionForIndexRequestCommandHandler(
           createRepositoryStub<DocumentRevisionRepository>({
             findByDocumentIdAndContentSha256: async () => assert.fail('invalid revision must not reach persistence'),
             create: async () => assert.fail('invalid revision must not be written'),
@@ -92,7 +92,7 @@ test('revision creation supplies validated identity and timestamps while preserv
     [undefined, null, ''].map((title) =>
       context.test(`title ${String(title)}`, async () => {
         const writes: CreateDocumentRevisionQueryObject[] = []
-        const useCase = new PrepareDocumentRevisionForIndexRequestUseCase(
+        const useCase = new PrepareDocumentRevisionForIndexRequestCommandHandler(
           createRepositoryStub<DocumentRevisionRepository>({
             findByDocumentIdAndContentSha256: async () => null,
             create: async (query) => {
@@ -125,7 +125,7 @@ test('an existing revision is returned unchanged without writing a fresh capture
     capturedAt: new Date('2026-10-01T00:00:00Z'),
     createdAt: new Date('2026-10-01T00:00:00Z'),
   })
-  const useCase = new PrepareDocumentRevisionForIndexRequestUseCase(
+  const useCase = new PrepareDocumentRevisionForIndexRequestCommandHandler(
     createRepositoryStub<DocumentRevisionRepository>({
       findByDocumentIdAndContentSha256: async () => existingRevision,
       create: async () => assert.fail('existing content revision must not be recreated'),

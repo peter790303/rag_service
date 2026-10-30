@@ -5,8 +5,8 @@ import test from 'node:test'
 import { UnauthorizedException, type ExecutionContext } from '@nestjs/common'
 
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import { HmacProjectServiceAuthenticator } from '../../../src/Infrastructure/Auth/hmac-project-service.authenticator.ts'
-import { ProjectServiceAuthGuard } from '../../../src/Interfaces/Http/Middleware/project-service-auth.guard.ts'
+import { HmacProjectServiceAuthenticator } from '../../../src/Shared/Infrastructure/Auth/hmac-project-service.authenticator.ts'
+import { ProjectServiceAuthGuard } from '../../../src/Shared/Interfaces/Nest/Middleware/project-service-auth.guard.ts'
 
 const secret = 'a-test-secret-that-is-at-least-32-characters-long'
 const requestBody = { projectId: 'project-a', documents: [] }

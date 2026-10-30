@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { DocumentIndex, type DocumentIndexState } from '../../../src/Domain/DocumentIndex/document-index.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { DocumentIndexIdentityRequiredException } from '../../../src/Domain/DocumentIndex/Exceptions/document-index-identity-required.exception.ts'
-import { InvalidDocumentIndexStateException } from '../../../src/Domain/DocumentIndex/Exceptions/invalid-document-index-state.exception.ts'
-import { InvalidDocumentIndexTimestampException } from '../../../src/Domain/DocumentIndex/Exceptions/invalid-document-index-timestamp.exception.ts'
-import { UnsupportedDocumentIndexStatusException } from '../../../src/Domain/DocumentIndex/Exceptions/unsupported-document-index-status.exception.ts'
+import { DocumentIndex, type DocumentIndexState } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { DocumentIndexIdentityRequiredException } from '../../../src/DocumentIndexes/Domain/Exceptions/document-index-identity-required.exception.ts'
+import { InvalidDocumentIndexStateException } from '../../../src/DocumentIndexes/Domain/Exceptions/invalid-document-index-state.exception.ts'
+import { InvalidDocumentIndexTimestampException } from '../../../src/DocumentIndexes/Domain/Exceptions/invalid-document-index-timestamp.exception.ts'
+import { UnsupportedDocumentIndexStatusException } from '../../../src/DocumentIndexes/Domain/Exceptions/unsupported-document-index-status.exception.ts'
 
 const indexIdentity = {
   documentId: 'document',

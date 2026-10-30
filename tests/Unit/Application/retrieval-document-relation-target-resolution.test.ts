@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { DateTime } from '../../../src/Domain/Document/ValueObjects/date-time.ts'
+import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
+import { DateTime } from '../../../src/Shared/Domain/ValueObjects/date-time.ts'
 
-const resolveRetrievalDocumentRelationTargets = RetrieveKnowledgeBaseContentUseCase.prototype[
+const resolveRetrievalDocumentRelationTargets = RetrieveKnowledgeBaseContentQueryHandler.prototype[
   'resolveRelationTargets'
-].bind(RetrieveKnowledgeBaseContentUseCase.prototype)
+].bind(RetrieveKnowledgeBaseContentQueryHandler.prototype)
 
 const resolveDocumentRelationTarget = (
   relationType: 'markdown_link' | 'wiki_link',

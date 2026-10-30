@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
+import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
 
 test('retrieval fuses scoped vector and lexical ranks with deterministic ties', () => {
-  const rankCandidates = RetrieveKnowledgeBaseContentUseCase.prototype['rankCandidates'].bind(
-    RetrieveKnowledgeBaseContentUseCase.prototype,
+  const rankCandidates = RetrieveKnowledgeBaseContentQueryHandler.prototype['rankCandidates'].bind(
+    RetrieveKnowledgeBaseContentQueryHandler.prototype,
   )
   const candidates = [
     { chunk: { id: 'outside', indexId: 'other-index' }, semanticRank: 1, lexicalRank: 1 },

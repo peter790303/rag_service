@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import { mapEmbeddingResponse } from '../../../src/Infrastructure/External/Embedding/Adapters/embedding-response.adapter.ts'
+import { mapEmbeddingResponse } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Adapters/embedding-response.adapter.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
 
 test('embedding response restores provider indices to input order and discards upstream fields', () => {
   const response = {

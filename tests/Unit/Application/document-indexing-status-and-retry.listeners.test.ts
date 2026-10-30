@@ -9,38 +9,38 @@ import {
   createRestoredDocumentIndexFixture,
   createRestoredKnowledgeBaseDocumentFixture,
 } from './document-index-lifecycle.fixture.ts'
-import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexFailureRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-failure-record.dto.ts'
-import type { DocumentIndexSuccessReceiptDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-success-receipt.dto.ts'
-import type { DocumentIndexingRetryContext } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-retry-context.dto.ts'
-import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
-import { DocumentIndexingTargetStateEnum } from '../../../src/Application/DocumentIndexes/Enums/document-indexing-target-state.enum.ts'
-import { ActiveDocumentIndexExecutionPreventsRetryException } from '../../../src/Application/DocumentIndexes/Exceptions/active-document-index-execution-prevents-retry.exception.ts'
-import { DocumentIndexingFailureAlreadyRetriedException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-failure-already-retried.exception.ts'
-import { DocumentIndexingFailureNotCurrentException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-failure-not-current.exception.ts'
-import { DocumentIndexingNotFoundException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-not-found.exception.ts'
-import { IndexRetrySourceChangedException } from '../../../src/Application/DocumentIndexes/Exceptions/index-retry-source-changed.exception.ts'
-import { InvalidIndexRetrySourceContextException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-index-retry-source-context.exception.ts'
-import { StaleDocumentIndexingFailureException } from '../../../src/Application/DocumentIndexes/Exceptions/stale-document-indexing-failure.exception.ts'
-import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { ReadDocumentIndexingStatusListener } from '../../../src/Application/DocumentIndexes/Listeners/read-document-indexing-status.listener.ts'
-import { RetryDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
-import type { EnqueueDocumentIndexingRetryQueryObject } from '../../../src/Application/DocumentIndexes/QueryObjects/document-index-execution.query-object.ts'
-import type { DocumentRevisionRepository } from '../../../src/Application/DocumentRevisions/Contracts/document-revision.repository.ts'
-import { GetDocumentRevisionForIndexRetryUseCase } from '../../../src/Application/DocumentRevisions/UseCases/get-document-revision-for-index-retry.use-case.ts'
-import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
-import { GetDocumentForIndexRetryUseCase } from '../../../src/Application/Documents/UseCases/get-document-for-index-retry.use-case.ts'
-import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
-import { GetKnowledgeBaseDocumentIndexingStateUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/get-knowledge-base-document-indexing-state.use-case.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
-import type { KnowledgeBaseRepository } from '../../../src/Application/KnowledgeBases/Contracts/knowledge-base.repository.ts'
-import { GetIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/get-indexing-knowledge-base.use-case.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
-import { KnowledgeBase } from '../../../src/Domain/KnowledgeBase/knowledge-base.ts'
+import { WriteRequestDocumentIndexesAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/write-request-document-indexes.assembler.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexFailureRecordDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-failure-record.dto.ts'
+import type { DocumentIndexSuccessReceiptDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-success-receipt.dto.ts'
+import type { DocumentIndexingRetryContext } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-retry-context.dto.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
+import { DocumentIndexingTargetStateEnum } from '../../../src/DocumentIndexes/Application/Enums/document-indexing-target-state.enum.ts'
+import { ActiveDocumentIndexExecutionPreventsRetryException } from '../../../src/DocumentIndexes/Application/Exceptions/active-document-index-execution-prevents-retry.exception.ts'
+import { DocumentIndexingFailureAlreadyRetriedException } from '../../../src/DocumentIndexes/Application/Exceptions/document-indexing-failure-already-retried.exception.ts'
+import { DocumentIndexingFailureNotCurrentException } from '../../../src/DocumentIndexes/Application/Exceptions/document-indexing-failure-not-current.exception.ts'
+import { DocumentIndexingNotFoundException } from '../../../src/DocumentIndexes/Application/Exceptions/document-indexing-not-found.exception.ts'
+import { IndexRetrySourceChangedException } from '../../../src/DocumentIndexes/Application/Exceptions/index-retry-source-changed.exception.ts'
+import { InvalidIndexRetrySourceContextException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-index-retry-source-context.exception.ts'
+import { StaleDocumentIndexingFailureException } from '../../../src/DocumentIndexes/Application/Exceptions/stale-document-indexing-failure.exception.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import { ReadDocumentIndexingStatusListener } from '../../../src/DocumentIndexes/Application/Listeners/read-document-indexing-status.listener.ts'
+import { RetryDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/retry-document-indexing.listener.ts'
+import type { EnqueueDocumentIndexingRetryQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-execution.query-object.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
+import type { DocumentRevisionRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
+import { GetDocumentForIndexRetryQueryHandler } from '../../../src/Documents/Application/Queries/get-document-for-index-retry.query.handler.ts'
+import { GetDocumentRevisionForIndexRetryQueryHandler } from '../../../src/Documents/Application/Queries/get-document-revision-for-index-retry.query.handler.ts'
+import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import type { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base.repository.ts'
+import { GetIndexingKnowledgeBaseQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/get-indexing-knowledge-base.query.handler.ts'
+import { GetKnowledgeBaseDocumentIndexingStateQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/get-knowledge-base-document-indexing-state.query.handler.ts'
+import { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'
 import { createKnowledgeServiceConfigFixture } from '../../Support/knowledge-service-config.fixture.ts'
 
 const latestContent = '# Knowledge\n\nCurrent document content.'
@@ -222,7 +222,7 @@ const createStatusScenario = (
     queries,
     useCase: new ReadDocumentIndexingStatusListener(
       jobRepository,
-      new GetKnowledgeBaseDocumentIndexingStateUseCase(knowledgeBaseDocumentRepository),
+      new GetKnowledgeBaseDocumentIndexingStateQueryHandler(knowledgeBaseDocumentRepository),
       documentIndexRepository,
       failedJobRepository,
       successReceiptRepository,
@@ -529,10 +529,10 @@ const createRetryJobScenario = (
   })
   const useCase = new RetryDocumentIndexingListener(
     persistenceTransaction,
-    new GetIndexingKnowledgeBaseUseCase(knowledgeBaseRepository),
-    new GetDocumentForIndexRetryUseCase(documentRepository),
-    new GetKnowledgeBaseDocumentIndexingStateUseCase(knowledgeBaseDocumentRepository),
-    new GetDocumentRevisionForIndexRetryUseCase(documentRevisionRepository),
+    new GetIndexingKnowledgeBaseQueryHandler(knowledgeBaseRepository),
+    new GetDocumentForIndexRetryQueryHandler(documentRepository),
+    new GetKnowledgeBaseDocumentIndexingStateQueryHandler(knowledgeBaseDocumentRepository),
+    new GetDocumentRevisionForIndexRetryQueryHandler(documentRevisionRepository),
     documentIndexRepository,
     jobRepository,
     failedJobRepository,
@@ -544,8 +544,8 @@ const createRetryJobScenario = (
     },
     createKnowledgeServiceConfigFixture({ embeddingDimensions, chunkingModel: 'test-chunker' }),
     writeRequestDocumentIndexesAssembler,
-    new ReserveDocumentForIndexingUseCase(documentRepository),
-    new ReserveKnowledgeBaseDocumentForIndexingUseCase(knowledgeBaseDocumentRepository),
+    new ReserveDocumentForIndexingCommandHandler(documentRepository),
+    new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(knowledgeBaseDocumentRepository),
   )
 
   return { useCase, events, queuedJobs }

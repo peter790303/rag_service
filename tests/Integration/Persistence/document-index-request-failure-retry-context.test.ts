@@ -5,64 +5,64 @@ import { test } from 'node:test'
 import { concatMap, firstValueFrom, from, toArray } from 'rxjs'
 
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import { ChunkPlanningProvider } from '../../../src/Application/Chunks/Contracts/chunk-planning-provider.ts'
-import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
-import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
-import { DocumentIndexingTargetStateEnum } from '../../../src/Application/DocumentIndexes/Enums/document-indexing-target-state.enum.ts'
-import { DocumentIndexingDispatchedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-dispatched.event.ts'
-import { DocumentIndexingRequestedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-requested.event.ts'
-import { DocumentIndexingNotFoundException } from '../../../src/Application/DocumentIndexes/Exceptions/document-indexing-not-found.exception.ts'
-import { IndexRetrySourceChangedException } from '../../../src/Application/DocumentIndexes/Exceptions/index-retry-source-changed.exception.ts'
-import { InvalidIndexRetrySourceContextException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-index-retry-source-context.exception.ts'
-import { StaleDocumentIndexingFailureException } from '../../../src/Application/DocumentIndexes/Exceptions/stale-document-indexing-failure.exception.ts'
-import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { DispatchDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/dispatch-document-indexing.listener.ts'
-import { DocumentIndexedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexed.listener.ts'
-import { DocumentIndexingFailedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-failed.listener.ts'
-import { DocumentIndexingRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-requested.listener.ts'
-import { ProcessDocumentIndexListener } from '../../../src/Application/DocumentIndexes/Listeners/process-document-index.listener.ts'
-import { RetryDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
-import { AuthorizeDocumentIndexChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/authorize-document-index-chunk-replacement.use-case.ts'
-import { StartDocumentIndexPruningRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/start-document-index-pruning-retention.use-case.ts'
-import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
-import type { GetDocumentRevisionForIndexRetryUseCaseContract } from '../../../src/Application/DocumentRevisions/Contracts/get-document-revision-for-index-retry.use-case.contract.ts'
-import { GetDocumentRevisionForIndexRetryUseCase } from '../../../src/Application/DocumentRevisions/UseCases/get-document-revision-for-index-retry.use-case.ts'
-import { LoadDocumentRevisionUseCase } from '../../../src/Application/DocumentRevisions/UseCases/load-document-revision.use-case.ts'
-import { PrepareDocumentRevisionForIndexRequestUseCase } from '../../../src/Application/DocumentRevisions/UseCases/prepare-document-revision-for-index-request.use-case.ts'
-import { GetDocumentForIndexRetryUseCase } from '../../../src/Application/Documents/UseCases/get-document-for-index-retry.use-case.ts'
-import { PrepareDocumentForIndexRequestUseCase } from '../../../src/Application/Documents/UseCases/prepare-document-for-index-request.use-case.ts'
-import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import { ActivateKnowledgeBaseDocumentIndexUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/activate-knowledge-base-document-index.use-case.ts'
-import { CompleteKnowledgeBaseDocumentIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/complete-knowledge-base-document-indexing.use-case.ts'
-import { GetKnowledgeBaseDocumentIndexingStateUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/get-knowledge-base-document-indexing-state.use-case.ts'
-import { InspectKnowledgeBaseDocumentRetentionUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/inspect-knowledge-base-document-retention.use-case.ts'
-import { PrepareKnowledgeBaseDocumentForIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prepare-knowledge-base-document-for-index-request.use-case.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
-import { SaveKnowledgeBaseDocumentIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/save-knowledge-base-document-index-request.use-case.ts'
-import { EmbeddingProvider } from '../../../src/Application/KnowledgeBases/Contracts/embedding-provider.ts'
-import { EnsureIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/ensure-indexing-knowledge-base.use-case.ts'
-import { GetIndexingKnowledgeBaseUseCase } from '../../../src/Application/KnowledgeBases/UseCases/get-indexing-knowledge-base.use-case.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
-import { DocumentIndexSuccessReceiptModel } from '../../../src/Infrastructure/Persistence/Models/document-index-success-receipt.model.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { FailedJobModel } from '../../../src/Infrastructure/Persistence/Models/failed-job.model.ts'
-import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
-import { DocumentIndexSuccessReceiptRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index-success-receipt.repository.ts'
-import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
-import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
-import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-revision.repository.ts'
-import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
-import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
-import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
-import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
-import { RetryFailedJobsCommand } from '../../../src/Interfaces/Console/Commands/retry-failed-jobs-command.ts'
+import { WriteRequestDocumentIndexesAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/write-request-document-indexes.assembler.ts'
+import { AuthorizeDocumentIndexChunkReplacementCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/authorize-document-index-chunk-replacement.command.handler.ts'
+import { ReplaceIndexChunkCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/replace-index-chunk.command.handler.ts'
+import { StartDocumentIndexPruningRetentionCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/start-document-index-pruning-retention.command.handler.ts'
+import { DocumentIndexingTargetStateEnum } from '../../../src/DocumentIndexes/Application/Enums/document-indexing-target-state.enum.ts'
+import { DocumentIndexingDispatchedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-dispatched.event.ts'
+import { DocumentIndexingRequestedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-requested.event.ts'
+import { DocumentIndexingNotFoundException } from '../../../src/DocumentIndexes/Application/Exceptions/document-indexing-not-found.exception.ts'
+import { IndexRetrySourceChangedException } from '../../../src/DocumentIndexes/Application/Exceptions/index-retry-source-changed.exception.ts'
+import { InvalidIndexRetrySourceContextException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-index-retry-source-context.exception.ts'
+import { StaleDocumentIndexingFailureException } from '../../../src/DocumentIndexes/Application/Exceptions/stale-document-indexing-failure.exception.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import { DispatchDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/dispatch-document-indexing.listener.ts'
+import { DocumentIndexedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexed.listener.ts'
+import { DocumentIndexingFailedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexing-failed.listener.ts'
+import { DocumentIndexingRequestedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexing-requested.listener.ts'
+import { ProcessDocumentIndexListener } from '../../../src/DocumentIndexes/Application/Listeners/process-document-index.listener.ts'
+import { RetryDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/retry-document-indexing.listener.ts'
+import { ChunkPlanningProvider } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/chunk-planning-provider.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { ChunkModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { DocumentIndexSuccessReceiptModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index-success-receipt.model.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { FailedJobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/failed-job.model.ts'
+import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
+import { ChunkRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { DocumentIndexSuccessReceiptRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index-success-receipt.repository.ts'
+import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { FailedJobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/failed-job.repository.ts'
+import { JobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { RetryFailedJobsCommand } from '../../../src/DocumentIndexes/Interfaces/Console/Commands/retry-failed-jobs-command.ts'
+import { PrepareDocumentForIndexRequestCommandHandler } from '../../../src/Documents/Application/Commands/prepare-document-for-index-request.command.handler.ts'
+import { PrepareDocumentRevisionForIndexRequestCommandHandler } from '../../../src/Documents/Application/Commands/prepare-document-revision-for-index-request.command.handler.ts'
+import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/Documents/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
+import type { GetDocumentRevisionForIndexRetryQueryHandlerContract } from '../../../src/Documents/Application/Contracts/get-document-revision-for-index-retry.query.handler.contract.ts'
+import { GetDocumentForIndexRetryQueryHandler } from '../../../src/Documents/Application/Queries/get-document-for-index-retry.query.handler.ts'
+import { GetDocumentRevisionForIndexRetryQueryHandler } from '../../../src/Documents/Application/Queries/get-document-revision-for-index-retry.query.handler.ts'
+import { LoadDocumentRevisionQueryHandler } from '../../../src/Documents/Application/Queries/load-document-revision.query.handler.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { DocumentRevisionModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { DocumentRelationRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'
+import { DocumentRevisionRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
+import { DocumentRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document.repository.ts'
+import { ActivateKnowledgeBaseDocumentIndexCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/activate-knowledge-base-document-index.command.handler.ts'
+import { CompleteKnowledgeBaseDocumentIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/complete-knowledge-base-document-indexing.command.handler.ts'
+import { EnsureIndexingKnowledgeBaseCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/ensure-indexing-knowledge-base.command.handler.ts'
+import { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/prepare-knowledge-base-document-for-index-request.command.handler.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import { SaveKnowledgeBaseDocumentIndexRequestCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/save-knowledge-base-document-index-request.command.handler.ts'
+import { GetIndexingKnowledgeBaseQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/get-indexing-knowledge-base.query.handler.ts'
+import { GetKnowledgeBaseDocumentIndexingStateQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/get-knowledge-base-document-indexing-state.query.handler.ts'
+import { InspectKnowledgeBaseDocumentRetentionQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/inspect-knowledge-base-document-retention.query.handler.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
+import { EmbeddingProvider } from '../../../src/Shared/Application/Ports/Out/Gateways/embedding-provider.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
@@ -94,8 +94,8 @@ const createArchivedRequest = async (
   context: Record<string, unknown>,
   createRetryRevisionReader?: (
     transaction: PersistenceTransaction,
-    reader: GetDocumentRevisionForIndexRetryUseCaseContract,
-  ) => GetDocumentRevisionForIndexRetryUseCaseContract,
+    reader: GetDocumentRevisionForIndexRetryQueryHandlerContract,
+  ) => GetDocumentRevisionForIndexRetryQueryHandlerContract,
 ) => {
   const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
   const persistenceTransaction = new PersistenceTransaction(dataSource)
@@ -130,22 +130,26 @@ const createArchivedRequest = async (
     const projectId = `context-project-${randomUUID()}`
     const request = await new DocumentIndexingRequestedListener(
       documentIndexPersistenceFixture.persistenceTransaction,
-      new EnsureIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
-      new PrepareDocumentForIndexRequestUseCase(documentIndexPersistenceFixture.documentRepository),
-      new PrepareKnowledgeBaseDocumentForIndexRequestUseCase(
+      new EnsureIndexingKnowledgeBaseCommandHandler(documentIndexPersistenceFixture.knowledgeBaseRepository),
+      new PrepareDocumentForIndexRequestCommandHandler(documentIndexPersistenceFixture.documentRepository),
+      new PrepareKnowledgeBaseDocumentForIndexRequestCommandHandler(
         documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
       ),
-      new PrepareDocumentRevisionForIndexRequestUseCase(documentIndexPersistenceFixture.documentRevisionRepository),
+      new PrepareDocumentRevisionForIndexRequestCommandHandler(
+        documentIndexPersistenceFixture.documentRevisionRepository,
+      ),
       documentIndexPersistenceFixture.documentIndexRepository,
       documentIndexPersistenceFixture.jobRepository,
       documentIndexPersistenceFixture.failedJobRepository,
       pipelineSettings,
       writeRequestDocumentIndexesAssembler,
-      new SaveKnowledgeBaseDocumentIndexRequestUseCase(documentIndexPersistenceFixture.knowledgeBaseDocumentRepository),
-      new StartDocumentIndexPruningRetentionUseCase(
+      new SaveKnowledgeBaseDocumentIndexRequestCommandHandler(
+        documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+      ),
+      new StartDocumentIndexPruningRetentionCommandHandler(
         documentIndexPersistenceFixture.documentIndexRepository,
         documentIndexPersistenceFixture.jobRepository,
-        new InspectKnowledgeBaseDocumentRetentionUseCase(
+        new InspectKnowledgeBaseDocumentRetentionQueryHandler(
           documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
         ),
       ),
@@ -166,22 +170,24 @@ const createArchivedRequest = async (
     assert.deepEqual(originalJob.payload, context)
     const claimNext = new DispatchDocumentIndexingListener(
       documentIndexPersistenceFixture.persistenceTransaction,
-      new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-      new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+      new ReserveDocumentForIndexingCommandHandler(documentIndexPersistenceFixture.documentRepository),
+      new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
         documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
       ),
       documentIndexPersistenceFixture.documentIndexRepository,
       documentIndexPersistenceFixture.jobRepository,
       documentIndexPersistenceFixture.failedJobRepository,
       config.workerLeaseSeconds,
-      new ActivateKnowledgeBaseDocumentIndexUseCase(documentIndexPersistenceFixture.knowledgeBaseDocumentRepository),
-      new GetIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
+      new ActivateKnowledgeBaseDocumentIndexCommandHandler(
+        documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
+      ),
+      new GetIndexingKnowledgeBaseQueryHandler(documentIndexPersistenceFixture.knowledgeBaseRepository),
       new DocumentIndexSuccessReceiptRepository(documentIndexPersistenceFixture.persistenceTransaction),
     )
     const failJob = new DocumentIndexingFailedListener(
       documentIndexPersistenceFixture.persistenceTransaction,
-      new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-      new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+      new ReserveDocumentForIndexingCommandHandler(documentIndexPersistenceFixture.documentRepository),
+      new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
         documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
       ),
       documentIndexPersistenceFixture.jobRepository,
@@ -214,7 +220,7 @@ const createArchivedRequest = async (
     assert.equal(archive.attempts, 4)
     assert.deepEqual(archive.retryPayload.input, context)
 
-    const retryRevisionReader = new GetDocumentRevisionForIndexRetryUseCase(
+    const retryRevisionReader = new GetDocumentRevisionForIndexRetryQueryHandler(
       documentIndexPersistenceFixture.documentRevisionRepository,
     )
 
@@ -234,9 +240,9 @@ const createArchivedRequest = async (
       projectId,
       retry: new RetryDocumentIndexingListener(
         documentIndexPersistenceFixture.persistenceTransaction,
-        new GetIndexingKnowledgeBaseUseCase(documentIndexPersistenceFixture.knowledgeBaseRepository),
-        new GetDocumentForIndexRetryUseCase(documentIndexPersistenceFixture.documentRepository),
-        new GetKnowledgeBaseDocumentIndexingStateUseCase(
+        new GetIndexingKnowledgeBaseQueryHandler(documentIndexPersistenceFixture.knowledgeBaseRepository),
+        new GetDocumentForIndexRetryQueryHandler(documentIndexPersistenceFixture.documentRepository),
+        new GetKnowledgeBaseDocumentIndexingStateQueryHandler(
           documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
         ),
         createRetryRevisionReader?.(persistenceTransaction, retryRevisionReader) ?? retryRevisionReader,
@@ -246,8 +252,8 @@ const createArchivedRequest = async (
         { modelId: config.embeddingModel, embed: async () => [] },
         config,
         writeRequestDocumentIndexesAssembler,
-        new ReserveDocumentForIndexingUseCase(documentIndexPersistenceFixture.documentRepository),
-        new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+        new ReserveDocumentForIndexingCommandHandler(documentIndexPersistenceFixture.documentRepository),
+        new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
           documentIndexPersistenceFixture.knowledgeBaseDocumentRepository,
         ),
       ),
@@ -401,8 +407,8 @@ test(
       assert.equal(claim.id, retry.jobId)
 
       const persistenceFixture = fixture.persistenceFixture
-      const reserveDocument = new ReserveDocumentForIndexingUseCase(persistenceFixture.documentRepository)
-      const reserveMembership = new ReserveKnowledgeBaseDocumentForIndexingUseCase(
+      const reserveDocument = new ReserveDocumentForIndexingCommandHandler(persistenceFixture.documentRepository)
+      const reserveMembership = new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
         persistenceFixture.knowledgeBaseDocumentRepository,
       )
       const completeJob = new DocumentIndexedListener(
@@ -411,8 +417,8 @@ test(
         reserveMembership,
         persistenceFixture.jobRepository,
         persistenceFixture.documentIndexRepository,
-        new CompleteKnowledgeBaseDocumentIndexingUseCase(persistenceFixture.knowledgeBaseDocumentRepository),
-        new GetIndexingKnowledgeBaseUseCase(persistenceFixture.knowledgeBaseRepository),
+        new CompleteKnowledgeBaseDocumentIndexingCommandHandler(persistenceFixture.knowledgeBaseDocumentRepository),
+        new GetIndexingKnowledgeBaseQueryHandler(persistenceFixture.knowledgeBaseRepository),
         new DocumentIndexSuccessReceiptRepository(persistenceFixture.persistenceTransaction),
       )
       const planner = {
@@ -432,16 +438,16 @@ test(
         reserveMembership,
         persistenceFixture.jobRepository,
         persistenceFixture.documentIndexRepository,
-        new ReplaceIndexChunkUseCase(
+        new ReplaceIndexChunkCommandHandler(
           persistenceFixture.persistenceTransaction,
-          new AuthorizeDocumentIndexChunkReplacementUseCase(
+          new AuthorizeDocumentIndexChunkReplacementCommandHandler(
             reserveDocument,
             reserveMembership,
             persistenceFixture.jobRepository,
             persistenceFixture.documentIndexRepository,
           ),
           persistenceFixture.chunkRepository,
-          new ReplacePlannedDocumentRelationsUseCase(persistenceFixture.documentRelationRepository),
+          new ReplacePlannedDocumentRelationsCommandHandler(persistenceFixture.documentRelationRepository),
         ),
         completeJob,
         new DocumentIndexingFailedListener(
@@ -455,7 +461,7 @@ test(
         embeddings,
         planner,
         config.workerLeaseSeconds,
-        new LoadDocumentRevisionUseCase(persistenceFixture.documentRevisionRepository),
+        new LoadDocumentRevisionQueryHandler(persistenceFixture.documentRevisionRepository),
       )
 
       await process.handle(new DocumentIndexingDispatchedEvent(claim))

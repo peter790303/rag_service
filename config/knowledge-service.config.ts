@@ -1,6 +1,6 @@
 import { resolve } from 'node:path'
 
-import { ServiceConfigurationException } from '../src/Application/KnowledgeBases/Exceptions/service-configuration.exception.ts'
+import { ServiceConfigurationException } from '../src/KnowledgeBases/Application/Exceptions/service-configuration.exception.ts'
 
 function invalidConfiguration(diagnostic: string): never {
   console.error(`[rag-config] ${diagnostic}`)

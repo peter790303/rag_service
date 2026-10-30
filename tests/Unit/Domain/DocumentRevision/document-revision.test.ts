@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { DateTime } from '../../../../src/Domain/Document/ValueObjects/date-time.ts'
 import {
   DocumentRevision,
   type DocumentRevisionState,
-} from '../../../../src/Domain/DocumentRevision/document-revision.ts'
-import { InvalidDocumentRevisionTimestampException } from '../../../../src/Domain/DocumentRevision/Exceptions/invalid-document-revision-timestamp.exception.ts'
+} from '../../../../src/Documents/Domain/Entities/document-revision.ts'
+import { InvalidDocumentRevisionTimestampException } from '../../../../src/Documents/Domain/Exceptions/invalid-document-revision-timestamp.exception.ts'
+import { DateTime } from '../../../../src/Shared/Domain/ValueObjects/date-time.ts'
 
 function createRevision(changes: Partial<DocumentRevisionState> = {}): DocumentRevision {
   return new DocumentRevision({

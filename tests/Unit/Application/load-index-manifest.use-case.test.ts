@@ -3,12 +3,12 @@ import { createHash } from 'node:crypto'
 import { test } from 'node:test'
 
 import { createManifestUseCase, manifestFixture } from './load-index-manifest.fixture.ts'
-import { LoadIndexManifestAssembler } from '../../../src/Application/KnowledgeBases/Assemblers/load-index-manifest.assembler.ts'
+import { IndexManifestResource } from '../../../src/DocumentIndexes/Interfaces/Nest/Resources/index-manifest.resource.ts'
+import { LoadIndexManifestAssembler } from '../../../src/KnowledgeBases/Application/Assemblers/load-index-manifest.assembler.ts'
 import {
   KnowledgeBaseIndexManifest,
   type IndexManifestDocument,
-} from '../../../src/Domain/KnowledgeBase/ValueObjects/knowledge-base-index-manifest.ts'
-import { IndexManifestResource } from '../../../src/Interfaces/Http/Resources/index-manifest.resource.ts'
+} from '../../../src/KnowledgeBases/Domain/ValueObjects/knowledge-base-index-manifest.ts'
 
 test('manifest enumerates all persisted memberships beyond the graph limit, including unindexed documents', async () => {
   const manifestSnapshotFixture = manifestFixture(105)

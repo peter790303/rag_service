@@ -25,11 +25,11 @@ import {
   createKnowledgeBaseDocumentPruningUseCase,
   type KnowledgeBaseDocumentPruningTestDependencies,
 } from './document-retention-use-cases.fixture.ts'
-import type { PruneKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prune-knowledge-base-documents.use-case.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { KnowledgeBase } from '../../../src/Domain/KnowledgeBase/knowledge-base.ts'
-import { KnowledgeBaseDocumentPruneConflictException } from '../../../src/Domain/KnowledgeBaseDocument/Exceptions/knowledge-base-document-prune-conflict.exception.ts'
-import { KnowledgeBaseDocument } from '../../../src/Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import type { PruneKnowledgeBaseDocumentsCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/prune-knowledge-base-documents.command.handler.ts'
+import { KnowledgeBaseDocument } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
+import { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'
+import { KnowledgeBaseDocumentPruneConflictException } from '../../../src/KnowledgeBases/Domain/Exceptions/knowledge-base-document-prune-conflict.exception.ts'
 
 class KnowledgeBaseDocumentPruningTestScenario {
   private transactionActive = false
@@ -52,7 +52,7 @@ class KnowledgeBaseDocumentPruningTestScenario {
     private readonly lockedJobOverrides: Partial<KnowledgeBaseDocumentPruneJobDTO> = {},
   ) {}
 
-  createUseCase(): PruneKnowledgeBaseDocumentsUseCase {
+  createUseCase(): PruneKnowledgeBaseDocumentsCommandHandler {
     return createKnowledgeBaseDocumentPruningUseCase(
       {
         run: async (operation) => {

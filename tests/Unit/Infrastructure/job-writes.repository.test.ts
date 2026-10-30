@@ -3,16 +3,16 @@ import test from 'node:test'
 
 import { DataSource, EntityManager } from 'typeorm'
 
-import type { DocumentIndexExecutionVerificationDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-verification.dto.ts'
-import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
-import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-verification.dto.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import type {
   DocumentIndexExecutionStatusFields,
   UpdateDocumentIndexExecutionQueryObject,
-} from '../../../src/Application/DocumentIndexes/QueryObjects/document-index-execution.query-object.ts'
-import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
+} from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-execution.query-object.ts'
+import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
+import { JobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 const createRepositoryManagerStub = (): EntityManager => new EntityManager(new DataSource({ type: 'postgres' }))
 

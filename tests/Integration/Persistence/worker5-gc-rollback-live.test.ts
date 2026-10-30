@@ -6,44 +6,44 @@ import { test } from 'node:test'
 
 import { DataSource } from 'typeorm'
 
-import { createDataSource } from '../../../database/data-source.ts'
-import { CollectIndexChunkGarbageUseCase } from '../../../src/Application/Chunks/UseCases/collect-index-chunk-garbage.use-case.ts'
-import { CollectDocumentIndexGarbageUseCaseContract } from '../../../src/Application/DocumentIndexes/Contracts/collect-document-index-garbage.use-case.contract.ts'
-import type { CollectDocumentIndexGarbageDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-garbage.dto.ts'
-import { CollectDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/collect-document-index-garbage.use-case.ts'
-import { InspectDocumentIndexRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/inspect-document-index-retention.use-case.ts'
-import { PlanDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/plan-document-index-garbage.use-case.ts'
-import { CollectDocumentRelationGarbageUseCase } from '../../../src/Application/DocumentRelations/UseCases/collect-document-relation-garbage.use-case.ts'
-import { InspectDocumentRelationRetentionUseCase } from '../../../src/Application/DocumentRelations/UseCases/inspect-document-relation-retention.use-case.ts'
-import { PlanDocumentRelationGarbageUseCase } from '../../../src/Application/DocumentRelations/UseCases/plan-document-relation-garbage.use-case.ts'
-import { CollectDocumentRevisionGarbageUseCaseContract } from '../../../src/Application/DocumentRevisions/Contracts/collect-document-revision-garbage.use-case.contract.ts'
-import type { CollectDocumentRevisionGarbageDTO } from '../../../src/Application/DocumentRevisions/DataTransferObjects/document-revision-garbage.dto.ts'
-import { CollectDocumentRevisionGarbageUseCase } from '../../../src/Application/DocumentRevisions/UseCases/collect-document-revision-garbage.use-case.ts'
-import { InspectDocumentRevisionRetentionUseCase } from '../../../src/Application/DocumentRevisions/UseCases/inspect-document-revision-retention.use-case.ts'
-import { PlanDocumentRevisionGarbageUseCase } from '../../../src/Application/DocumentRevisions/UseCases/plan-document-revision-garbage.use-case.ts'
-import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Application/Documents/Events/document-garbage-collection-requested.event.ts'
-import { DocumentGarbageCollectionRequestedListener } from '../../../src/Application/Documents/Listeners/document-garbage-collection-requested.listener.ts'
-import { InspectDocumentRetentionUseCase } from '../../../src/Application/Documents/UseCases/inspect-document-retention.use-case.ts'
-import { LockDocumentRetentionParentsUseCase } from '../../../src/Application/Documents/UseCases/lock-document-retention-parents.use-case.ts'
-import { InspectKnowledgeBaseDocumentRetentionUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/inspect-knowledge-base-document-retention.use-case.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import type { DocumentIndex } from '../../../src/Domain/DocumentIndex/document-index.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import type { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
-import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
-import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
-import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-revision.repository.ts'
-import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
-import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
-import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
-import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
-import { createRetrievalReadonlyDataSourceOptions } from '../../../src/Infrastructure/Providers/retrieval-readonly-data-source.options.ts'
+import { createRetrievalReadonlyDataSourceOptions } from '../../../src/Bootstrap/Nest/Providers/retrieval-readonly-data-source.options.ts'
+import { CollectDocumentIndexGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-document-index-garbage.command.handler.ts'
+import { CollectIndexChunkGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-index-chunk-garbage.command.handler.ts'
+import { CollectDocumentIndexGarbageCommandHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/collect-document-index-garbage.command.handler.contract.ts'
+import type { CollectDocumentIndexGarbageDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-garbage.dto.ts'
+import { InspectDocumentIndexRetentionQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/inspect-document-index-retention.query.handler.ts'
+import { PlanDocumentIndexGarbageQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/plan-document-index-garbage.query.handler.ts'
+import type { DocumentIndex } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { ChunkRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { FailedJobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/failed-job.repository.ts'
+import { JobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { CollectDocumentRelationGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-relation-garbage.command.handler.ts'
+import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-revision-garbage.command.handler.ts'
+import { LockDocumentRetentionParentsCommandHandler } from '../../../src/Documents/Application/Commands/lock-document-retention-parents.command.handler.ts'
+import { CollectDocumentRevisionGarbageCommandHandlerContract } from '../../../src/Documents/Application/Contracts/collect-document-revision-garbage.command.handler.contract.ts'
+import type { CollectDocumentRevisionGarbageDTO } from '../../../src/Documents/Application/DataTransferObjects/document-revision-garbage.dto.ts'
+import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Documents/Application/Events/document-garbage-collection-requested.event.ts'
+import { DocumentGarbageCollectionRequestedListener } from '../../../src/Documents/Application/Listeners/document-garbage-collection-requested.listener.ts'
+import { InspectDocumentRelationRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-relation-retention.query.handler.ts'
+import { InspectDocumentRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-retention.query.handler.ts'
+import { InspectDocumentRevisionRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-revision-retention.query.handler.ts'
+import { PlanDocumentRelationGarbageQueryHandler } from '../../../src/Documents/Application/Queries/plan-document-relation-garbage.query.handler.ts'
+import { PlanDocumentRevisionGarbageQueryHandler } from '../../../src/Documents/Application/Queries/plan-document-revision-garbage.query.handler.ts'
+import type { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { DocumentRevisionModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { DocumentRelationRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'
+import { DocumentRevisionRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
+import { DocumentRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document.repository.ts'
+import { InspectKnowledgeBaseDocumentRetentionQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/inspect-knowledge-base-document-retention.query.handler.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
+import { createDataSource } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/DataSource.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 
 const targetSchema = 'codex_live_20261019_w5_gc'
@@ -207,16 +207,16 @@ test('GC rollback restores collected indexes and a retry collects only in the de
     const beforeFault = await readCounts(dataSource)
     evidence.countsBeforeFault = beforeFault
 
-    const baseIndexCollector = new CollectDocumentIndexGarbageUseCase(
+    const baseIndexCollector = new CollectDocumentIndexGarbageCommandHandler(
       fixture.documentIndexRepository,
       fixture.jobRepository,
       fixture.failedJobRepository,
-      new InspectKnowledgeBaseDocumentRetentionUseCase(fixture.knowledgeBaseDocumentRepository),
-      new CollectDocumentRelationGarbageUseCase(fixture.documentRelationRepository),
-      new CollectIndexChunkGarbageUseCase(fixture.chunkRepository),
+      new InspectKnowledgeBaseDocumentRetentionQueryHandler(fixture.knowledgeBaseDocumentRepository),
+      new CollectDocumentRelationGarbageCommandHandler(fixture.documentRelationRepository),
+      new CollectIndexChunkGarbageCommandHandler(fixture.chunkRepository),
     )
     let indexCollectionCompleted = false
-    const trackingIndexCollector = new (class extends CollectDocumentIndexGarbageUseCaseContract {
+    const trackingIndexCollector = new (class extends CollectDocumentIndexGarbageCommandHandlerContract {
       override async execute(collectDocumentIndexGarbageDTO: CollectDocumentIndexGarbageDTO): Promise<DocumentIndex[]> {
         const collected = await baseIndexCollector.execute(collectDocumentIndexGarbageDTO)
         indexCollectionCompleted = collected.some((candidate) => candidate.id === index.id)
@@ -225,12 +225,12 @@ test('GC rollback restores collected indexes and a retry collects only in the de
       }
     })()
 
-    const baseRevisionCollector = new CollectDocumentRevisionGarbageUseCase(
+    const baseRevisionCollector = new CollectDocumentRevisionGarbageCommandHandler(
       fixture.documentRevisionRepository,
-      new InspectDocumentIndexRetentionUseCase(fixture.documentIndexRepository),
+      new InspectDocumentIndexRetentionQueryHandler(fixture.documentIndexRepository),
     )
     let injectFault = true
-    const faultingRevisionCollector = new (class extends CollectDocumentRevisionGarbageUseCaseContract {
+    const faultingRevisionCollector = new (class extends CollectDocumentRevisionGarbageCommandHandlerContract {
       override async execute(
         collectDocumentRevisionGarbageDTO: CollectDocumentRevisionGarbageDTO,
       ): Promise<DocumentRevision[]> {
@@ -251,17 +251,17 @@ test('GC rollback restores collected indexes and a retry collects only in the de
     const listener = new DocumentGarbageCollectionRequestedListener(
       fixture.persistenceTransaction,
       fixture.documentRepository,
-      new PlanDocumentIndexGarbageUseCase(fixture.documentIndexRepository),
+      new PlanDocumentIndexGarbageQueryHandler(fixture.documentIndexRepository),
       trackingIndexCollector,
-      new PlanDocumentRevisionGarbageUseCase(fixture.documentRevisionRepository),
+      new PlanDocumentRevisionGarbageQueryHandler(fixture.documentRevisionRepository),
       faultingRevisionCollector,
-      new PlanDocumentRelationGarbageUseCase(fixture.documentRelationRepository),
-      new LockDocumentRetentionParentsUseCase(fixture.documentRepository),
-      new InspectDocumentRetentionUseCase(
-        new InspectKnowledgeBaseDocumentRetentionUseCase(fixture.knowledgeBaseDocumentRepository),
-        new InspectDocumentRevisionRetentionUseCase(fixture.documentRevisionRepository),
-        new InspectDocumentIndexRetentionUseCase(fixture.documentIndexRepository),
-        new InspectDocumentRelationRetentionUseCase(fixture.documentRelationRepository),
+      new PlanDocumentRelationGarbageQueryHandler(fixture.documentRelationRepository),
+      new LockDocumentRetentionParentsCommandHandler(fixture.documentRepository),
+      new InspectDocumentRetentionQueryHandler(
+        new InspectKnowledgeBaseDocumentRetentionQueryHandler(fixture.knowledgeBaseDocumentRepository),
+        new InspectDocumentRevisionRetentionQueryHandler(fixture.documentRevisionRepository),
+        new InspectDocumentIndexRetentionQueryHandler(fixture.documentIndexRepository),
+        new InspectDocumentRelationRetentionQueryHandler(fixture.documentRelationRepository),
         fixture.documentRepository,
         fixture.jobRepository,
         fixture.failedJobRepository,

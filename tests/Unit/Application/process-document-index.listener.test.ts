@@ -9,31 +9,31 @@ import {
   createRestoredDocumentIndexFixture,
   createRestoredKnowledgeBaseDocumentFixture,
 } from './document-index-lifecycle.fixture.ts'
-import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
-import type { ReplaceIndexChunkInputDTO } from '../../../src/Application/Chunks/DataTransferObjects/replace-index-chunk-input.dto.ts'
-import { ChunkPlanningUnavailableException } from '../../../src/Application/Chunks/Exceptions/chunk-planning-unavailable.exception.ts'
-import type { DocumentIndexExecutionQueue } from '../../../src/Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
-import type { DocumentIndexRepository } from '../../../src/Application/DocumentIndexes/Contracts/document-index.repository.ts'
-import type { DocumentIndexExecutionLeaseDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-lease.dto.ts'
-import { type DocumentIndexingClaimDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
-import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
-import type { DocumentIndexedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexed.event.ts'
-import { DocumentIndexingDispatchedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-dispatched.event.ts'
-import type { DocumentIndexingFailedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-failed.event.ts'
-import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { ProcessDocumentIndexListener } from '../../../src/Application/DocumentIndexes/Listeners/process-document-index.listener.ts'
+import type { DocumentIndexExecutionLeaseDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-lease.dto.ts'
+import { type DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-claim.dto.ts'
+import type { MarkdownChunkPlan } from '../../../src/DocumentIndexes/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { ReplaceIndexChunkInputDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/replace-index-chunk-input.dto.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
+import type { DocumentIndexedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexed.event.ts'
+import { DocumentIndexingDispatchedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-dispatched.event.ts'
+import type { DocumentIndexingFailedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-failed.event.ts'
+import { ChunkPlanningUnavailableException } from '../../../src/DocumentIndexes/Application/Exceptions/chunk-planning-unavailable.exception.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import { ProcessDocumentIndexListener } from '../../../src/DocumentIndexes/Application/Listeners/process-document-index.listener.ts'
+import type { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
+import type { DocumentIndexRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
 import type {
   DocumentIndexExecutionIdQueryObject,
   RenewDocumentIndexExecutionLeaseQueryObject,
-} from '../../../src/Application/DocumentIndexes/QueryObjects/document-index-execution.query-object.ts'
-import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
-import type { DocumentIdQueryObject } from '../../../src/Application/Documents/QueryObjects/document.query-object.ts'
-import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
-import type { KnowledgeBaseDocumentSourceQueryObject } from '../../../src/Application/KnowledgeBaseDocuments/QueryObjects/knowledge-base-document.query-object.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
-import type { PersistenceTransaction } from '../../../src/Application/KnowledgeBases/Contracts/persistence-transaction.ts'
-import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
+} from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-execution.query-object.ts'
+import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
+import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
+import type { DocumentIdQueryObject } from '../../../src/Documents/Application/QueryObjects/document.query-object.ts'
+import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import type { KnowledgeBaseDocumentSourceQueryObject } from '../../../src/KnowledgeBases/Application/QueryObjects/knowledge-base-document.query-object.ts'
+import type { PersistenceTransaction } from '../../../src/Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 
 const createClaimedJobFixture: DocumentIndexingClaimDTO = {
@@ -226,8 +226,8 @@ const createProcessJobScenario = (
   return {
     useCase: new ProcessDocumentIndexListener(
       persistenceTransaction,
-      new ReserveDocumentForIndexingUseCase(documentRepository),
-      new ReserveKnowledgeBaseDocumentForIndexingUseCase(knowledgeBaseDocumentRepository),
+      new ReserveDocumentForIndexingCommandHandler(documentRepository),
+      new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(knowledgeBaseDocumentRepository),
       jobRepository,
       documentIndexRepository,
       replaceIndexPlan,

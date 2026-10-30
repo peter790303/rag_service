@@ -3,12 +3,12 @@ import test from 'node:test'
 
 import { DataSource, type EntityManager, In } from 'typeorm'
 
-import type { PlannedDocumentRelation } from '../../../src/Application/DocumentRelations/DataTransferObjects/planned-document-relation.dto.ts'
-import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
-import { DocumentRelation } from '../../../src/Domain/DocumentRelation/document-relation.ts'
-import { DocumentRelationModel } from '../../../src/Infrastructure/Persistence/Models/document-relation.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
+import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/Documents/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import type { PlannedDocumentRelation } from '../../../src/Documents/Application/DataTransferObjects/planned-document-relation.dto.ts'
+import { DocumentRelation } from '../../../src/Documents/Domain/Entities/document-relation.ts'
+import { DocumentRelationModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-relation.model.ts'
+import { DocumentRelationRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 const createRepositoryManagerStub = (): EntityManager => new DataSource({ type: 'postgres' }).manager
 
@@ -41,7 +41,7 @@ test('relation inserts whitelist planned fields and preserve the source index id
     affected: 1,
     raw: [],
   }))
-  await new ReplacePlannedDocumentRelationsUseCase(
+  await new ReplacePlannedDocumentRelationsCommandHandler(
     new DocumentRelationRepository(new PersistenceTransaction(manager.connection)),
   ).execute({ documentIndexId: 'owned-index', plannedDocumentRelations: [untrustedExtraFields] })
   assert.deepEqual(deleteRows.mock.calls[0]?.arguments, [{ sourceIndexId: 'owned-index' }])

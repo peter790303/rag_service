@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
-import { InvalidChunkReplacementTimestampException } from '../../../src/Application/Chunks/Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
-import { ProcessDocumentIndexAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/process-document-index.assembler.ts'
-import type { DocumentIndexingDeliveryDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
-import { ChunkDocumentIndexRequiredException } from '../../../src/Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
+import { ProcessDocumentIndexAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/process-document-index.assembler.ts'
+import type { DocumentIndexingDeliveryDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { MarkdownChunkPlan } from '../../../src/DocumentIndexes/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import { InvalidChunkReplacementTimestampException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
+import { ChunkDocumentIndexRequiredException } from '../../../src/DocumentIndexes/Domain/Exceptions/chunk-document-index-required.exception.ts'
 
 const emptyPlan: MarkdownChunkPlan = { chunks: [], relations: [] }
 const now = new Date('2026-10-16T00:00:00.000Z')

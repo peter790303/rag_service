@@ -3,11 +3,11 @@ import test from 'node:test'
 
 import { DataSource, type EntityManager, IsNull } from 'typeorm'
 
-import type { KnowledgeBaseDocumentActivationQueryObject } from '../../../src/Application/KnowledgeBaseDocuments/QueryObjects/knowledge-base-document.query-object.ts'
-import { KnowledgeBaseDocument } from '../../../src/Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
-import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
+import type { KnowledgeBaseDocumentActivationQueryObject } from '../../../src/KnowledgeBases/Application/QueryObjects/knowledge-base-document.query-object.ts'
+import { KnowledgeBaseDocument } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 const createRepositoryManagerStub = (): EntityManager => new DataSource({ type: 'postgres' }).manager
 

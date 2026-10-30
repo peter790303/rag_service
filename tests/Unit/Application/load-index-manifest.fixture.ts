@@ -5,7 +5,7 @@ import {
   createRetrievalSnapshotFixture,
   type RetrievalSnapshotFixture,
 } from './retrieve-knowledge-base-content.use-case.fixtures.ts'
-import { LoadIndexManifestUseCase } from '../../../src/Application/KnowledgeBases/UseCases/load-index-manifest.use-case.ts'
+import { LoadIndexManifestQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/load-index-manifest.query.handler.ts'
 
 export const manifestFixture = (count: number = 1): RetrievalSnapshotFixture => ({
   knowledgeBaseId: 'kb',
@@ -34,7 +34,7 @@ export const manifestFixture = (count: number = 1): RetrievalSnapshotFixture => 
 })
 
 type ManifestUseCaseFixture = {
-  useCase: LoadIndexManifestUseCase
+  useCase: LoadIndexManifestQueryHandler
   reads: { kind: string; request: unknown }[]
 }
 
@@ -50,8 +50,8 @@ export const createManifestUseCase = (
 
     return value
   }
-  type Dependencies = ConstructorParameters<typeof LoadIndexManifestUseCase>
-  const useCase = new LoadIndexManifestUseCase(
+  type Dependencies = ConstructorParameters<typeof LoadIndexManifestQueryHandler>
+  const useCase = new LoadIndexManifestQueryHandler(
     {
       run: async () => assert.fail('Manifest must never open a write transaction'),
       runReadOnlySnapshot: async (operation) => {
