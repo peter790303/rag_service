@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import { Module } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 
-import type { LoadKnowledgeGraphDTO } from '../../../src/KnowledgeBases/Application/DataTransferObjects/load-knowledge-graph.dto.ts'
+import type { LoadKnowledgeGraphDTO } from '../../../src/KnowledgeBases/Application/DTOs/load-knowledge-graph.dto.ts'
 import { ListKnowledgeGraphProjectsQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/list-knowledge-graph-projects.query.handler.ts'
 import { LoadKnowledgeGraphQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/load-knowledge-graph.query.handler.ts'
 import { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'

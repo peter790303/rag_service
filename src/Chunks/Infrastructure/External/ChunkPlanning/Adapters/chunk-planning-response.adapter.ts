@@ -1,8 +1,8 @@
 import { MarkdownChunkStartsAdapter } from './markdown-chunk-starts.adapter.ts'
 import { MarkdownDocumentLinksAdapter } from './markdown-document-links.adapter.ts'
 import type { MarkdownSourceScan } from './markdown-source.adapter.ts'
-import type { MarkdownSourceBlock } from '../../../../../DocumentIndexes/Application/DataTransferObjects/markdown-source-block.dto.ts'
-import type { MarkdownChunkPlan } from '../../../../Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { MarkdownSourceBlock } from '../../../../../DocumentIndexes/Application/DTOs/markdown-source-block.dto.ts'
+import type { MarkdownChunkPlan } from '../../../../Application/DTOs/markdown-chunk-plan.dto.ts'
 import { ChunkPlanningUnavailableException } from '../../../../Application/Exceptions/chunk-planning-unavailable.exception.ts'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

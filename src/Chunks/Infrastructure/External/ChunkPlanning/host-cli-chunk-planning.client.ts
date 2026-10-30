@@ -8,7 +8,7 @@ import {
   KNOWLEDGE_SERVICE_CONFIG,
   type KnowledgeServiceConfig,
 } from '../../../../../config/knowledge-service.config.ts'
-import type { MarkdownChunkPlan } from '../../../Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { MarkdownChunkPlan } from '../../../Application/DTOs/markdown-chunk-plan.dto.ts'
 import { ChunkPlanningUnavailableException } from '../../../Application/Exceptions/chunk-planning-unavailable.exception.ts'
 import { ChunkPlanningProvider } from '../../../Application/Ports/Out/Gateways/chunk-planning-provider.ts'
 

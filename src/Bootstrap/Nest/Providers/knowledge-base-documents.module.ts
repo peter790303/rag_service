@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 
+import { knowledgeBaseDocumentsProviders } from './knowledge-base-documents.providers.ts'
 import { PersistenceModule } from './persistence.module.ts'
 import { ActivateKnowledgeBaseDocumentIndexCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/activate-knowledge-base-document-index.command.handler.contract.ts'
 import { CompleteKnowledgeBaseDocumentIndexingCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/complete-knowledge-base-document-indexing.command.handler.contract.ts'
@@ -10,7 +11,6 @@ import { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandlerContract } fro
 import { ReserveKnowledgeBaseDocumentForIndexingCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/reserve-knowledge-base-document-for-indexing.command.handler.contract.ts'
 import { SaveKnowledgeBaseDocumentIndexRequestCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/save-knowledge-base-document-index-request.command.handler.contract.ts'
 import { KnowledgeBaseDocumentRepository as KnowledgeBaseDocumentRepositoryContract } from '../../../KnowledgeBaseDocuments/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
-import { knowledgeBaseDocumentsProviders } from '../../../KnowledgeBaseDocuments/Infrastructure/Nest/Providers/knowledge-base-documents.providers.ts'
 
 @Module({
   imports: [PersistenceModule],

@@ -5,8 +5,8 @@ import { createDocumentIndexRecordFixture } from './document-index-lifecycle.fix
 import { InvalidIndexChunkGarbageInputException } from '../../../src/Chunks/Application/Exceptions/invalid-index-chunk-garbage-input.exception.ts'
 import { ChunkDocumentIndexRequiredException } from '../../../src/Chunks/Domain/Exceptions/chunk-document-index-required.exception.ts'
 import { DocumentIndexGarbageAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/document-index-garbage.assembler.ts'
-import type { DocumentIndexRecordDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-record.dto.ts'
-import type { DocumentGarbageCollectionScopeDTO } from '../../../src/Documents/Application/DataTransferObjects/document-garbage-collection-scope.dto.ts'
+import type { DocumentIndexRecordDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-record.dto.ts'
+import type { DocumentGarbageCollectionScopeDTO } from '../../../src/Documents/Application/DTOs/document-garbage-collection-scope.dto.ts'
 
 const documentGarbageCollectionScopeDTO: DocumentGarbageCollectionScopeDTO = {
   retentionCutoff: new Date('2026-02-01T00:00:00.000Z'),

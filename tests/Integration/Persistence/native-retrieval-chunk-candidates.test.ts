@@ -4,7 +4,7 @@ import { test } from 'node:test'
 
 import type { DataSource, EntityManager } from 'typeorm'
 
-import type { FindLexicalChunkCandidatesDTO } from '../../../src/Chunks/Application/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
+import type { FindLexicalChunkCandidatesDTO } from '../../../src/Chunks/Application/DTOs/find-lexical-chunk-candidates.dto.ts'
 import { FindLexicalChunkCandidatesQueryHandler } from '../../../src/Chunks/Application/Queries/find-lexical-chunk-candidates.query.handler.ts'
 import type {
   ChunkLexicalSearchQO,

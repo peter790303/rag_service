@@ -1,4 +1,4 @@
-import type { MarkdownChunkPlan } from '../../../DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { MarkdownChunkPlan } from '../../../DTOs/markdown-chunk-plan.dto.ts'
 
 /** Produces source-grounded chunk boundaries for an entire Markdown document. */
 export abstract class ChunkPlanningProvider {

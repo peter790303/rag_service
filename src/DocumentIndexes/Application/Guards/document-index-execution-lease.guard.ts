@@ -1,5 +1,5 @@
-import type { DocumentIndexExecutionLeaseDTO } from '../DataTransferObjects/document-index-execution-lease.dto.ts'
-import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexExecutionLeaseDTO } from '../DTOs/document-index-execution-lease.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../DTOs/document-indexing-delivery.dto.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../Exceptions/invalid-document-index-execution-lease.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../Helpers/document-index-execution-lifecycle.helper.ts'
 

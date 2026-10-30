@@ -6,7 +6,7 @@ import type { CollectDocumentRevisionGarbageCommand } from '../../../DocumentRev
 import type { PlanDocumentRevisionGarbageQuery } from '../../../DocumentRevisions/Application/Queries/plan-document-revision-garbage.query.ts'
 import type { DocumentRevision } from '../../../DocumentRevisions/Domain/Entities/document-revision.ts'
 import type { LockDocumentRetentionParentsCommand } from '../Commands/lock-document-retention-parents.command.ts'
-import type { DocumentGarbageCollectionScopeDTO } from '../DataTransferObjects/document-garbage-collection-scope.dto.ts'
+import type { DocumentGarbageCollectionScopeDTO } from '../DTOs/document-garbage-collection-scope.dto.ts'
 import type { DocumentGarbageCandidatesQO } from '../QueryObjects/document.query-object.ts'
 
 export class GarbageCollectionDocumentAssembler {
@@ -19,7 +19,7 @@ export class GarbageCollectionDocumentAssembler {
         retentionCutoff: documentGarbageCollectionScopeDTO.retentionCutoff,
         lockedDocumentIds: documentGarbageCollectionScopeDTO.lockedDocumentIds,
       },
-      candidates: documentIndexes,
+      candidates: documentIndexes.map(({ id, documentId }) => ({ id, documentId })),
     }
   }
 
@@ -32,7 +32,7 @@ export class GarbageCollectionDocumentAssembler {
         retentionCutoff: documentGarbageCollectionScopeDTO.retentionCutoff,
         lockedDocumentIds: documentGarbageCollectionScopeDTO.lockedDocumentIds,
       },
-      candidates: documentRevisionCandidatesDTO,
+      candidates: documentRevisionCandidatesDTO.map(({ id, documentId }) => ({ id, documentId })),
     }
   }
 

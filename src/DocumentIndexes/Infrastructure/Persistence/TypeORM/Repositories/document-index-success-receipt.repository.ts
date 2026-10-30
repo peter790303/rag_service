@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 
 import { PersistenceTransaction } from '../../../../../Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
-import type { DocumentIndexSuccessReceiptDTO } from '../../../../Application/DataTransferObjects/document-index-success-receipt.dto.ts'
+import type { DocumentIndexSuccessReceiptDTO } from '../../../../Application/DTOs/document-index-success-receipt.dto.ts'
 import { DocumentIndexSuccessArchive } from '../../../../Application/Ports/Out/Gateways/document-index-success.archive.ts'
 import type {
   ArchiveDocumentIndexSuccessParams,

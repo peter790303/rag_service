@@ -9,11 +9,11 @@ import {
   createRestoredDocumentIndexFixture,
   createRestoredKnowledgeBaseDocumentFixture,
 } from './document-index-lifecycle.fixture.ts'
-import type { MarkdownChunkPlan } from '../../../src/Chunks/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
-import type { ReplaceIndexChunkInputDTO } from '../../../src/Chunks/Application/DataTransferObjects/replace-index-chunk-input.dto.ts'
+import type { MarkdownChunkPlan } from '../../../src/Chunks/Application/DTOs/markdown-chunk-plan.dto.ts'
+import type { ReplaceIndexChunkInputDTO } from '../../../src/Chunks/Application/DTOs/replace-index-chunk-input.dto.ts'
 import { ChunkPlanningUnavailableException } from '../../../src/Chunks/Application/Exceptions/chunk-planning-unavailable.exception.ts'
-import type { DocumentIndexExecutionLeaseDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-lease.dto.ts'
-import { type DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-claim.dto.ts'
+import type { DocumentIndexExecutionLeaseDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-execution-lease.dto.ts'
+import { type DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-indexing-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
 import type { DocumentIndexedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexed.event.ts'
 import { DocumentIndexingDispatchedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-dispatched.event.ts'

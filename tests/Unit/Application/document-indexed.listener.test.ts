@@ -10,9 +10,9 @@ import {
   createRestoredDocumentIndexFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
-import type { DocumentIndexExecutionLeaseDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-lease.dto.ts'
-import type { DocumentIndexLifecycleFact } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-lifecycle.dto.ts'
-import type { DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-claim.dto.ts'
+import type { DocumentIndexExecutionLeaseDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-execution-lease.dto.ts'
+import type { DocumentIndexLifecycleFact } from '../../../src/DocumentIndexes/Application/DTOs/document-index-lifecycle.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-indexing-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
 import { DocumentIndexedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexed.event.ts'
 import { DocumentIndexingNotFoundException } from '../../../src/DocumentIndexes/Application/Exceptions/document-indexing-not-found.exception.ts'

@@ -1,6 +1,6 @@
 import { IsArray, IsString, MinLength } from 'class-validator'
 
-import type { PruneKnowledgeBaseDocumentsDTO } from '../../../Application/DataTransferObjects/prune-knowledge-base-documents.dto.ts'
+import type { PruneKnowledgeBaseDocumentsDTO } from '../../../Application/DTOs/prune-knowledge-base-documents.dto.ts'
 
 export class PruneKnowledgeBaseDocumentsRequest {
   @IsString() @MinLength(1) projectId!: string

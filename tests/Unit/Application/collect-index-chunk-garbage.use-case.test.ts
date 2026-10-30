@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
 import { CollectIndexChunkGarbageCommandHandler } from '../../../src/Chunks/Application/Commands/collect-index-chunk-garbage.command.handler.ts'
-import type { IndexChunkGarbageDTO } from '../../../src/Chunks/Application/DataTransferObjects/index-chunk-garbage.dto.ts'
+import type { IndexChunkGarbageDTO } from '../../../src/Chunks/Application/DTOs/index-chunk-garbage.dto.ts'
 import { ChunkGarbageCollectionLockRequiredException } from '../../../src/Chunks/Application/Exceptions/chunk-garbage-collection-lock-required.exception.ts'
 import { IndexChunkGarbageCollectionNotEligibleException } from '../../../src/Chunks/Application/Exceptions/index-chunk-garbage-collection-not-eligible.exception.ts'
 import type { ChunkRepository } from '../../../src/Chunks/Application/Ports/Out/Repositories/chunk.repository.ts'

@@ -9,11 +9,11 @@ import {
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
 import { ReplaceIndexChunkCommandHandler } from '../../../src/Chunks/Application/Commands/replace-index-chunk.command.handler.ts'
-import type { MarkdownChunkPlan } from '../../../src/Chunks/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { MarkdownChunkPlan } from '../../../src/Chunks/Application/DTOs/markdown-chunk-plan.dto.ts'
 import type { InsertChunksQO } from '../../../src/Chunks/Application/QueryObjects/insert-chunks.query-object.ts'
 import { AuthorizeDocumentIndexChunkReplacementCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/authorize-document-index-chunk-replacement.command.handler.ts'
 import type { AuthorizeDocumentIndexChunkReplacementCommandHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/authorize-document-index-chunk-replacement.command.handler.contract.ts'
-import type { DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-claim.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-indexing-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
 import { IndexDisappearedBeforeCompletionException } from '../../../src/DocumentIndexes/Application/Exceptions/index-disappeared-before-completion.exception.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease.exception.ts'

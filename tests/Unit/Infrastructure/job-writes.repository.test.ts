@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { DataSource, EntityManager } from 'typeorm'
 
-import type { DocumentIndexExecutionVerificationDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-execution-verification.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import type {

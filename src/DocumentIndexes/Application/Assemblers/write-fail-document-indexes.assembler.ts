@@ -1,6 +1,6 @@
 import { ReadLeaseDocumentIndexesAssembler } from './read-lease-document-indexes.assembler.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
-import type { ExpiredDocumentIndexExecutionDTO } from '../DataTransferObjects/expired-document-index-execution.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../DTOs/document-index-execution-record.dto.ts'
+import type { ExpiredDocumentIndexExecutionDTO } from '../DTOs/expired-document-index-execution.dto.ts'
 import type { DOCUMENT_INDEX_EXECUTION_STATUS } from '../Helpers/document-index-execution-lifecycle.helper.ts'
 import type { DocumentIndexExecutionRetryFields } from '../Ports/Out/Gateways/document-index-execution.params.ts'
 import type { ArchiveDocumentIndexFailureParams } from '../Ports/Out/Gateways/document-index-failure.params.ts'

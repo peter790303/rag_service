@@ -2,7 +2,7 @@ import type { MarkdownRelationSourceBlock } from './markdown-source.adapter.ts'
 import type {
   PlannedDocumentRelation,
   PlannedDocumentRelationType,
-} from '../../../../../DocumentRelations/Application/DataTransferObjects/planned-document-relation.dto.ts'
+} from '../../../../../DocumentRelations/Application/DTOs/planned-document-relation.dto.ts'
 
 const wikiLink = /\[\[([^\]|#]+)(?:#([^\]|]+))?(?:\|[^\]]+)?\]\]/g
 const markdownLink = /\[[^\]]*\]\(([^)#]+)(?:#([^)]*))?\)/g

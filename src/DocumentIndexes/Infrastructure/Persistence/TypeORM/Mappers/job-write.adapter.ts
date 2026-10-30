@@ -1,7 +1,7 @@
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.d.ts'
 
 import { JobExecutionVerificationAdapter } from './job-execution-verification.adapter.ts'
-import type { DocumentIndexExecutionVerificationDTO } from '../../../../Application/DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../../../../Application/DTOs/document-index-execution-verification.dto.ts'
 import type {
   EnqueueDocumentIndexExecutionParams,
   EnqueueDocumentIndexingRetryParams,

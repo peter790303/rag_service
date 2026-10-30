@@ -1,5 +1,5 @@
-import type { DocumentIndexExecutionLeaseDTO } from '../DataTransferObjects/document-index-execution-lease.dto.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionLeaseDTO } from '../DTOs/document-index-execution-lease.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../DTOs/document-index-execution-record.dto.ts'
 
 /** Restores domain facts from whitelisted persisted fields without performing I/O. */
 export class ReadLeaseDocumentIndexesAssembler {

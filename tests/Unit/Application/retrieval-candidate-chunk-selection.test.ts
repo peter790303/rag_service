@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { RetrievalCandidateChunkAssembler } from '../../../src/Chunks/Application/Assemblers/retrieval-candidate-chunk.assembler.ts'
 import type { FindLexicalChunkCandidatesQueryHandlerContract } from '../../../src/Chunks/Application/Contracts/find-lexical-chunk-candidates.query.handler.contract.ts'
-import type { FindLexicalChunkCandidatesDTO } from '../../../src/Chunks/Application/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
+import type { FindLexicalChunkCandidatesDTO } from '../../../src/Chunks/Application/DTOs/find-lexical-chunk-candidates.dto.ts'
 import type { ChunkRepository } from '../../../src/Chunks/Application/Ports/Out/Repositories/chunk.repository.ts'
 import { FindLexicalChunkCandidatesQueryHandler } from '../../../src/Chunks/Application/Queries/find-lexical-chunk-candidates.query.handler.ts'
 import { FindRetrievalChunkCandidatesQueryHandler } from '../../../src/Chunks/Application/Queries/find-retrieval-chunk-candidates.query.handler.ts'

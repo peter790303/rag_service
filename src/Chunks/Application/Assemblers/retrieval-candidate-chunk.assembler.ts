@@ -1,5 +1,5 @@
 import type { Chunk } from '../../Domain/Entities/chunk.ts'
-import type { RetrievalCandidateChunkMatchDTO } from '../DataTransferObjects/retrieval-candidate-chunk-match.dto.ts'
+import type { RetrievalCandidateChunkMatchDTO } from '../DTOs/retrieval-candidate-chunk-match.dto.ts'
 import type { FindLexicalChunkCandidatesQuery } from '../Queries/find-lexical-chunk-candidates.query.ts'
 import type { FindRetrievalChunkCandidatesQuery } from '../Queries/find-retrieval-chunk-candidates.query.ts'
 import type { ChunkLexicalSearchQO, ChunkVectorSimilarityQO } from '../QueryObjects/chunk.query-object.ts'

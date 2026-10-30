@@ -3,9 +3,9 @@ import type { Document } from '../../../Documents/Domain/Entities/document.ts'
 import type { KnowledgeBaseDocument } from '../../../KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
 import type { KnowledgeBase } from '../../../KnowledgeBases/Domain/Entities/knowledge-base.ts'
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexFailureRecordDTO } from '../DataTransferObjects/document-index-failure-record.dto.ts'
-import type { DocumentIndexingRetryContext } from '../DataTransferObjects/document-indexing-retry-context.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../DTOs/document-index-execution-record.dto.ts'
+import type { DocumentIndexFailureRecordDTO } from '../DTOs/document-index-failure-record.dto.ts'
+import type { DocumentIndexingRetryContext } from '../DTOs/document-indexing-retry-context.dto.ts'
 
 export class ReadRetryDocumentIndexesAssembler {
   static toDocumentIndexingRetryContext(retryContextRecords: {

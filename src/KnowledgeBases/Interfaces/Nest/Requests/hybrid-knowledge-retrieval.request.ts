@@ -11,7 +11,7 @@ import {
   ValidateIf,
 } from 'class-validator'
 
-import type { HybridRetrieveDTO } from '../../../Application/DataTransferObjects/hybrid-retrieve.dto.ts'
+import type { HybridRetrieveDTO } from '../../../Application/DTOs/hybrid-retrieve.dto.ts'
 
 const isPresent = (_object: unknown, value: unknown): boolean => value !== undefined
 

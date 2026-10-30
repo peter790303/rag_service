@@ -1,5 +1,5 @@
-import type { MarkdownSourceBlock } from '../../../../../DocumentIndexes/Application/DataTransferObjects/markdown-source-block.dto.ts'
-import type { PlannedMarkdownChunk } from '../../../../Application/DataTransferObjects/planned-markdown-chunk.dto.ts'
+import type { MarkdownSourceBlock } from '../../../../../DocumentIndexes/Application/DTOs/markdown-source-block.dto.ts'
+import type { PlannedMarkdownChunk } from '../../../../Application/DTOs/planned-markdown-chunk.dto.ts'
 import { EmptyMarkdownChunkStartsException } from '../Exceptions/empty-markdown-chunk-starts.exception.ts'
 import { MarkdownChunkStartOutOfBoundsException } from '../Exceptions/markdown-chunk-start-out-of-bounds.exception.ts'
 import { MarkdownChunkStartsNotIncreasingException } from '../Exceptions/markdown-chunk-starts-not-increasing.exception.ts'

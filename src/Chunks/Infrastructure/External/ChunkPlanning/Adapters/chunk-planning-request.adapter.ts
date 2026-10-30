@@ -1,4 +1,4 @@
-import type { MarkdownSourceBlock } from '../../../../../DocumentIndexes/Application/DataTransferObjects/markdown-source-block.dto.ts'
+import type { MarkdownSourceBlock } from '../../../../../DocumentIndexes/Application/DTOs/markdown-source-block.dto.ts'
 
 const SYSTEM_MESSAGE = [
   'Return only a JSON object with chunkStarts: an ordered array of block IDs. The first block must start a chunk.',

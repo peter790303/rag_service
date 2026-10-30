@@ -8,8 +8,8 @@ import {
   createJobRecordFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexingDeliveryDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-execution-record.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-indexing-delivery.dto.ts'
 import { DocumentIndexingFailedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-failed.event.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease.exception.ts'
 import { InvalidDocumentIndexingFailureDecisionException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-indexing-failure-decision.exception.ts'

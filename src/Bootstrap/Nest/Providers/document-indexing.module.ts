@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 
 import { DocumentIndexRetentionModule } from './document-index-retention.module.ts'
 import { DocumentIndexesModule } from './document-indexes.module.ts'
+import { documentIndexingProviders } from './document-indexing.providers.ts'
 import { DocumentRevisionsModule } from './document-revisions.module.ts'
 import { DocumentsModule } from './documents.module.ts'
 import { EmbeddingModule } from './embedding.module.ts'
@@ -17,7 +18,6 @@ import { DocumentIndexingFailedListener } from '../../../DocumentIndexes/Applica
 import { DocumentIndexingRequestedListener } from '../../../DocumentIndexes/Application/Listeners/document-indexing-requested.listener.ts'
 import { ReadDocumentIndexingStatusListener } from '../../../DocumentIndexes/Application/Listeners/read-document-indexing-status.listener.ts'
 import { RetryDocumentIndexingListener } from '../../../DocumentIndexes/Application/Listeners/retry-document-indexing.listener.ts'
-import { documentIndexingProviders } from '../../../DocumentIndexes/Infrastructure/Nest/Providers/document-indexing.providers.ts'
 
 @Module({
   imports: [

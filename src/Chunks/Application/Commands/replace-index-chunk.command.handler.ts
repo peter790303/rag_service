@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import type { ReplaceIndexChunkCommand } from './replace-index-chunk.command.ts'
 import type { AuthorizeDocumentIndexChunkReplacementCommandHandlerContract } from '../../../DocumentIndexes/Application/Contracts/authorize-document-index-chunk-replacement.command.handler.contract.ts'
-import { AuthorizeDocumentIndexChunkReplacementInputDTO } from '../../../DocumentIndexes/Application/DataTransferObjects/authorize-document-index-chunk-replacement-input.dto.ts'
+import { AuthorizeDocumentIndexChunkReplacementInputDTO } from '../../../DocumentIndexes/Application/DTOs/authorize-document-index-chunk-replacement-input.dto.ts'
 import type { ReplacePlannedDocumentRelationsCommandHandlerContract } from '../../../DocumentRelations/Application/Contracts/replace-planned-document-relations.command.handler.contract.ts'
 import type { PersistenceTransaction } from '../../../Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import { Chunk } from '../../Domain/Entities/chunk.ts'

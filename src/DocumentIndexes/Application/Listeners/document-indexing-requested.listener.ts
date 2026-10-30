@@ -4,7 +4,7 @@ import { concatMap, from, lastValueFrom, range, takeWhile } from 'rxjs'
 
 import type { PrepareDocumentRevisionForIndexRequestCommandHandlerContract } from '../../../DocumentRevisions/Application/Contracts/prepare-document-revision-for-index-request.command.handler.contract.ts'
 import type { PrepareDocumentForIndexRequestCommandHandlerContract } from '../../../Documents/Application/Contracts/prepare-document-for-index-request.command.handler.contract.ts'
-import type { SourceDocumentDTO } from '../../../Documents/Application/DataTransferObjects/source-document.dto.ts'
+import type { SourceDocumentDTO } from '../../../Documents/Application/DTOs/source-document.dto.ts'
 import type { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/prepare-knowledge-base-document-for-index-request.command.handler.contract.ts'
 import type { SaveKnowledgeBaseDocumentIndexRequestCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/save-knowledge-base-document-index-request.command.handler.contract.ts'
 import type { EnsureIndexingKnowledgeBaseCommandHandlerContract } from '../../../KnowledgeBases/Application/Contracts/ensure-indexing-knowledge-base.command.handler.contract.ts'
@@ -12,13 +12,14 @@ import type { PersistenceTransaction } from '../../../Shared/Application/Ports/O
 import { DocumentIndex } from '../../Domain/Entities/document-index.ts'
 import type { DocumentIndexStatus } from '../../Domain/Enums/document-index-status.enum.ts'
 import { DocumentIndexStatusEnum } from '../../Domain/Enums/document-index-status.enum.ts'
+import { IndexingKnowledgeBaseDocumentCommandAssembler } from '../Assemblers/indexing-knowledge-base-document-command.assembler.ts'
 import { WriteLifecycleDocumentIndexAssembler } from '../Assemblers/write-lifecycle-document-index.assembler.ts'
 import {
   WriteRequestDocumentIndexesAssembler,
   type DocumentIndexPipelineSettings,
 } from '../Assemblers/write-request-document-indexes.assembler.ts'
 import type { StartDocumentIndexPruningRetentionCommandHandlerContract } from '../Contracts/start-document-index-pruning-retention.command.handler.contract.ts'
-import type { DocumentIndexRequestResult } from '../DataTransferObjects/document-index-request.dto.ts'
+import type { DocumentIndexRequestResult } from '../DTOs/document-index-request.dto.ts'
 import { DOCUMENT_INDEX_REQUEST_OUTCOME_KINDS } from '../Enums/document-index-request-outcome-kind.ts'
 import { DocumentIndexTargetStateEnum } from '../Enums/document-index-target-state.enum.ts'
 import type { DocumentIndexingRequestedEvent } from '../Events/document-indexing-requested.event.ts'
@@ -206,11 +207,13 @@ export class DocumentIndexingRequestedListener {
     })
 
     if (documentIndexTargetDecision.targetState === DocumentIndexTargetStateEnum.READY) {
-      await this.saveKnowledgeBaseDocumentIndexRequest.execute({
-        knowledgeBaseDocument: requestKnowledgeBaseDocument,
-        generation: documentIndexTargetDecision.generation,
-        activeDocumentIndexId: lockedTargetDocumentIndex.id,
-      })
+      await this.saveKnowledgeBaseDocumentIndexRequest.execute(
+        IndexingKnowledgeBaseDocumentCommandAssembler.toSaveCommand(
+          requestKnowledgeBaseDocument,
+          documentIndexTargetDecision.generation,
+          lockedTargetDocumentIndex.id,
+        ),
+      )
       await this.documentIndexRepository.updateByDocumentIndexIdWithUnreferencedSince(
         WriteLifecycleDocumentIndexAssembler.toSetDocumentIndexUnreferencedSinceQO(
           lockedTargetDocumentIndex.markReferenced(),
@@ -316,11 +319,13 @@ export class DocumentIndexingRequestedListener {
 
     if (currentJob) await this.documentIndexExecutionQueue.releaseExecution({ jobId: currentJob.id })
 
-    await this.saveKnowledgeBaseDocumentIndexRequest.execute({
-      knowledgeBaseDocument: requestKnowledgeBaseDocument,
-      generation: jobEnqueueDecision.generation,
-      activeDocumentIndexId: requestKnowledgeBaseDocument.activeDocumentIndexId,
-    })
+    await this.saveKnowledgeBaseDocumentIndexRequest.execute(
+      IndexingKnowledgeBaseDocumentCommandAssembler.toSaveCommand(
+        requestKnowledgeBaseDocument,
+        jobEnqueueDecision.generation,
+        requestKnowledgeBaseDocument.activeDocumentIndexId,
+      ),
+    )
     const queuedJob = this.writeRequestDocumentIndexesAssembler.toQueuedDocumentIndexExecution(
       sourceDocumentDTO,
       documentId,

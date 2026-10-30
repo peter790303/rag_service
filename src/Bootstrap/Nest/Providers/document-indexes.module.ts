@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common'
 
+import { documentIndexesProviders } from './document-indexes.providers.ts'
 import { PersistenceModule } from './persistence.module.ts'
 import { InspectDocumentIndexRetentionQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/inspect-document-index-retention.query.handler.contract.ts'
 import { LoadRetrievalDocumentIndexesQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/load-retrieval-document-indexes.query.handler.contract.ts'
@@ -9,7 +10,6 @@ import { DocumentIndexExecutionQueue } from '../../../DocumentIndexes/Applicatio
 import { DocumentIndexFailureArchive } from '../../../DocumentIndexes/Application/Ports/Out/Gateways/document-index-failure.archive.ts'
 import { DocumentIndexSuccessArchive } from '../../../DocumentIndexes/Application/Ports/Out/Gateways/document-index-success.archive.ts'
 import { DocumentIndexRepository as DocumentIndexRepositoryContract } from '../../../DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
-import { documentIndexesProviders } from '../../../DocumentIndexes/Infrastructure/Nest/Providers/document-indexes.providers.ts'
 
 @Module({
   imports: [PersistenceModule],

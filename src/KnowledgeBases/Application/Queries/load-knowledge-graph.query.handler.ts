@@ -14,7 +14,7 @@ import type { PersistenceTransaction } from '../../../Shared/Application/Ports/O
 import type { KnowledgeBase } from '../../Domain/Entities/knowledge-base.ts'
 import type { KnowledgeGraphEdge } from '../../Domain/ValueObjects/knowledge-base-graph.ts'
 import { KnowledgeGraphAssembler } from '../Assemblers/knowledge-graph.assembler.ts'
-import type { LoadKnowledgeGraphDTO } from '../DataTransferObjects/load-knowledge-graph.dto.ts'
+import type { LoadKnowledgeGraphDTO } from '../DTOs/load-knowledge-graph.dto.ts'
 import { InvalidKnowledgeGraphQueryException } from '../Exceptions/invalid-knowledge-graph-query.exception.ts'
 import type { KnowledgeBaseRepository } from '../Ports/Out/Repositories/knowledge-base.repository.ts'
 

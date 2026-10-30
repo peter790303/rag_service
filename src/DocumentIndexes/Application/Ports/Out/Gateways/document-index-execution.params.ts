@@ -1,4 +1,4 @@
-import type { DocumentIndexExecutionVerificationDTO } from '../../../DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../../../DTOs/document-index-execution-verification.dto.ts'
 import type { DocumentIndexExecutionStatus } from '../../../Helpers/document-index-execution-lifecycle.helper.ts'
 
 export type DocumentIndexExecutionDocumentParams = {

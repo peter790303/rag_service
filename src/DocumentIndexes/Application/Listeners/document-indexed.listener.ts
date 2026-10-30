@@ -6,6 +6,7 @@ import type { ReserveKnowledgeBaseDocumentForIndexingCommandHandlerContract } fr
 import type { GetIndexingKnowledgeBaseQueryHandlerContract } from '../../../KnowledgeBases/Application/Contracts/get-indexing-knowledge-base.query.handler.contract.ts'
 import type { PersistenceTransaction } from '../../../Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
+import { IndexingKnowledgeBaseDocumentCommandAssembler } from '../Assemblers/indexing-knowledge-base-document-command.assembler.ts'
 import { ReadLeaseDocumentIndexesAssembler } from '../Assemblers/read-lease-document-indexes.assembler.ts'
 import { WriteLifecycleDocumentIndexAssembler } from '../Assemblers/write-lifecycle-document-index.assembler.ts'
 import type { DocumentIndexedEvent } from '../Events/document-indexed.event.ts'
@@ -88,11 +89,13 @@ export class DocumentIndexedListener {
         WriteLifecycleDocumentIndexAssembler.toSaveDocumentIndexLifecycleQO(readyDocumentIndex)
 
       await this.documentIndexRepository.updateByDocumentIndexIdWithLifecycleFields(readyDocumentIndexLifecycleQO)
-      await this.completeKnowledgeBaseDocumentIndexing.execute({
-        knowledgeBaseDocument: knowledgeBaseDocumentRecord,
-        generation: jobDelivery.generation,
-        documentIndexId: jobDelivery.documentIndexId,
-      })
+      await this.completeKnowledgeBaseDocumentIndexing.execute(
+        IndexingKnowledgeBaseDocumentCommandAssembler.toCompleteCommand(
+          knowledgeBaseDocumentRecord,
+          jobDelivery.generation,
+          jobDelivery.documentIndexId,
+        ),
+      )
 
       if (previousDocumentIndexId !== null && previousDocumentIndexId !== jobDelivery.documentIndexId) {
         const previousDocumentIndex = lockedDocumentIndexes.get(previousDocumentIndexId)

@@ -3,7 +3,7 @@ import { concatMap, filter, firstValueFrom, from, toArray } from 'rxjs'
 import type { CollectDocumentIndexGarbageCommand } from './collect-document-index-garbage.command.ts'
 import type { CollectIndexChunkGarbageCommandHandlerContract } from '../../../Chunks/Application/Contracts/collect-index-chunk-garbage.command.handler.contract.ts'
 import type { CollectDocumentRelationGarbageCommandHandlerContract } from '../../../DocumentRelations/Application/Contracts/collect-document-relation-garbage.command.handler.contract.ts'
-import type { DocumentGarbageCollectionScopeDTO } from '../../../Documents/Application/DataTransferObjects/document-garbage-collection-scope.dto.ts'
+import type { DocumentGarbageCollectionScopeDTO } from '../../../Documents/Application/DTOs/document-garbage-collection-scope.dto.ts'
 import type { InspectKnowledgeBaseDocumentRetentionQueryHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/inspect-knowledge-base-document-retention.query.handler.contract.ts'
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
 import { DocumentIndexGarbageAssembler } from '../Assemblers/document-index-garbage.assembler.ts'
@@ -26,7 +26,8 @@ export class CollectDocumentIndexGarbageCommandHandler implements CollectDocumen
   async execute({ scope, candidates }: CollectDocumentIndexGarbageCommand): Promise<DocumentIndex[]> {
     const orderedCandidates = [...candidates].sort((left, right) => left.id.localeCompare(right.id))
 
-    const collectCandidate = (candidate: DocumentIndex) => this.collectUnreferencedIndex(scope, candidate)
+    const collectCandidate = (candidate: CollectDocumentIndexGarbageCommand['candidates'][number]) =>
+      this.collectUnreferencedIndex(scope, candidate)
     const wasCollected = (index: DocumentIndex | null): index is DocumentIndex => index !== null
 
     return firstValueFrom(from(orderedCandidates).pipe(concatMap(collectCandidate), filter(wasCollected), toArray()))
@@ -34,7 +35,7 @@ export class CollectDocumentIndexGarbageCommandHandler implements CollectDocumen
 
   private async collectUnreferencedIndex(
     scope: DocumentGarbageCollectionScopeDTO,
-    candidate: DocumentIndex,
+    candidate: CollectDocumentIndexGarbageCommand['candidates'][number],
   ): Promise<DocumentIndex | null> {
     if (!scope.lockedDocumentIds.includes(candidate.documentId)) return null
 

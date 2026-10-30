@@ -6,7 +6,7 @@ import {
   createRestoredDocumentIndexFixture,
   createRestoredKnowledgeBaseDocumentFixture,
 } from './document-index-lifecycle.fixture.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-execution-record.dto.ts'
 import { DocumentIndexExecutionClaimConflictException } from '../../../src/DocumentIndexes/Application/Exceptions/document-index-execution-claim-conflict.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import { DispatchDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/dispatch-document-indexing.listener.ts'

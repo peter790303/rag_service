@@ -1,9 +1,9 @@
-import type { DocumentIndexExecutionRecordDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexRecordDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-record.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-execution-record.dto.ts'
+import type { DocumentIndexRecordDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-record.dto.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import { DocumentIndex, type DocumentIndexState } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
-import type { DocumentRecordDTO } from '../../../src/Documents/Application/DataTransferObjects/document-record.dto.ts'
+import type { DocumentRecordDTO } from '../../../src/Documents/Application/DTOs/document-record.dto.ts'
 import { Document, type DocumentState } from '../../../src/Documents/Domain/Entities/document.ts'
 import {
   KnowledgeBaseDocument,

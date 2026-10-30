@@ -4,7 +4,7 @@ import type { ReplacePlannedDocumentRelationsCommand } from './replace-planned-d
 import { DocumentRelation } from '../../Domain/Entities/document-relation.ts'
 import { WritePlannedDocumentRelationsAssembler } from '../Assemblers/write-planned-document-relations.assembler.ts'
 import type { ReplacePlannedDocumentRelationsCommandHandlerContract } from '../Contracts/replace-planned-document-relations.command.handler.contract.ts'
-import type { PlannedDocumentRelation } from '../DataTransferObjects/planned-document-relation.dto.ts'
+import type { PlannedDocumentRelation } from '../DTOs/planned-document-relation.dto.ts'
 import { InvalidDocumentRelationInputException } from '../Exceptions/invalid-document-relation-input.exception.ts'
 import { DocumentRelationInputGuard } from '../Guards/document-relation-input.guard.ts'
 import type { DocumentRelationRepository } from '../Ports/Out/Repositories/document-relation.repository.ts'

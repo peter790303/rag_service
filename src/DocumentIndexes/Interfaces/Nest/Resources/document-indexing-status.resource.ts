@@ -1,5 +1,5 @@
-import type { DocumentIndexExecutionVerificationDTO } from '../../../Application/DataTransferObjects/document-index-execution-verification.dto.ts'
-import type { DocumentIndexingStatusDTO } from '../../../Application/DataTransferObjects/document-indexing-status.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../../../Application/DTOs/document-index-execution-verification.dto.ts'
+import type { DocumentIndexingStatusDTO } from '../../../Application/DTOs/document-indexing-status.dto.ts'
 
 export class DocumentIndexingStatusResource {
   static toDocumentIndexingStatusResource(jobStatus: DocumentIndexingStatusDTO): DocumentIndexingStatusDTO {

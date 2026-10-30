@@ -9,8 +9,8 @@ import type {
   UnretriedDocumentIndexFailureTargetParams,
   UnretriedDocumentIndexFailuresParams,
 } from './document-index-failure.params.ts'
-import type { DocumentIndexFailureRecordDTO } from '../../../DataTransferObjects/document-index-failure-record.dto.ts'
-import type { ExpiredDocumentIndexFailureDTO } from '../../../DataTransferObjects/expired-document-index-failure.dto.ts'
+import type { DocumentIndexFailureRecordDTO } from '../../../DTOs/document-index-failure-record.dto.ts'
+import type { ExpiredDocumentIndexFailureDTO } from '../../../DTOs/expired-document-index-failure.dto.ts'
 
 /** Execution failure history owned by document-index listeners. */
 export abstract class DocumentIndexFailureArchive {

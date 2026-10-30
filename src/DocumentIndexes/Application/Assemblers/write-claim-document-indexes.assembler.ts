@@ -1,16 +1,16 @@
 import { ReadLeaseDocumentIndexesAssembler } from './read-lease-document-indexes.assembler.ts'
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
-import type { DocumentIndexExecutionFactsDTO } from '../DataTransferObjects/document-index-execution-facts.dto.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexExecutionVerificationDTO } from '../DataTransferObjects/document-index-execution-verification.dto.ts'
+import type { DocumentIndexExecutionFactsDTO } from '../DTOs/document-index-execution-facts.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../DTOs/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../DTOs/document-index-execution-verification.dto.ts'
 import type {
   DocumentIndexingClaimCandidateDTO,
   DocumentIndexingClaimExecutionDTO,
   DocumentIndexingClaimKnowledgeBaseDocumentDTO,
   DocumentIndexExecutionSiblingLeaseDTO,
-} from '../DataTransferObjects/document-indexing-claim-candidate.dto.ts'
-import type { DocumentIndexingClaimDTO } from '../DataTransferObjects/document-indexing-claim.dto.ts'
-import type { DocumentIndexingLeaseClaimDTO } from '../DataTransferObjects/document-indexing-lease-claim.dto.ts'
+} from '../DTOs/document-indexing-claim-candidate.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../DTOs/document-indexing-claim.dto.ts'
+import type { DocumentIndexingLeaseClaimDTO } from '../DTOs/document-indexing-lease-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../Enums/document-index-execution-stage.enum.ts'
 import type { DocumentIndexExecutionClaimFields } from '../Ports/Out/Gateways/document-index-execution.params.ts'
 

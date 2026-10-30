@@ -1,6 +1,6 @@
 import { IsBoolean, IsEnum, IsObject, IsString, IsUUID, MinLength, ValidateIf } from 'class-validator'
 
-import type { SourceDocumentDTO } from '../../../../Documents/Application/DataTransferObjects/source-document.dto.ts'
+import type { SourceDocumentDTO } from '../../../../Documents/Application/DTOs/source-document.dto.ts'
 import { DocumentSourceTypeEnum } from '../../../../Documents/Domain/Enums/document-source-type.enum.ts'
 
 const isPresent = (_object: unknown, value: unknown): boolean => value !== undefined

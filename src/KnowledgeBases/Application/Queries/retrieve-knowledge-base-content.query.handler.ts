@@ -3,7 +3,6 @@ import type { FindRetrievalChunkCandidatesQueryHandlerContract } from '../../../
 import type { LoadRetrievalChunkContextQueryHandlerContract } from '../../../Chunks/Application/Contracts/load-retrieval-chunk-context.query.handler.contract.ts'
 import type { LoadRetrievalIndexChunksQueryHandlerContract } from '../../../Chunks/Application/Contracts/load-retrieval-index-chunks.query.handler.contract.ts'
 import type { FindRetrievalChunkCandidatesQuery } from '../../../Chunks/Application/Queries/find-retrieval-chunk-candidates.query.ts'
-import type { LoadRetrievalChunkContextQuery } from '../../../Chunks/Application/Queries/load-retrieval-chunk-context.query.ts'
 import type { LoadRetrievalIndexChunksQuery } from '../../../Chunks/Application/Queries/load-retrieval-index-chunks.query.ts'
 import type { LoadRetrievalDocumentIndexesQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/load-retrieval-document-indexes.query.handler.contract.ts'
 import type { LoadRetrievalDocumentIndexesQuery } from '../../../DocumentIndexes/Application/Queries/load-retrieval-document-indexes.query.ts'
@@ -41,7 +40,7 @@ import {
   type RetrievalKnowledgeBaseContentAssemblerInput,
 } from '../Assemblers/retrieval-knowledge-base-content.assembler.ts'
 import { RetrievalSnapshotKnowledgeBaseAssembler } from '../Assemblers/retrieval-snapshot-knowledge-base.assembler.ts'
-import type { RetrievalProfileSettingsDTO } from '../DataTransferObjects/retrieval-profile-settings.dto.ts'
+import type { RetrievalProfileSettingsDTO } from '../DTOs/retrieval-profile-settings.dto.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../Exceptions/knowledge-embedding-unavailable.exception.ts'
 import type { KnowledgeBaseRepository } from '../Ports/Out/Repositories/knowledge-base.repository.ts'
 import type { KnowledgeBaseProjectQO } from '../QueryObjects/knowledge-base.query-object.ts'
@@ -120,11 +119,11 @@ export class RetrieveKnowledgeBaseContentQueryHandler {
       const candidateChunks = await this.findRetrievalChunkCandidates.execute(candidateQuery)
       const candidates = RetrievalKnowledgeBaseChunkAssembler.toHybridChunkCandidates(candidateChunks)
       const ranking = this.rankRetrievalCandidates(candidates, scope.retrievalIndexIds, [], retrievalMatchLimit)
-      const contextQuery: LoadRetrievalChunkContextQuery = {
-        candidates: candidateChunks,
-        rootChunkIds: ranking.fusedChunkRanking.map(({ candidate }) => candidate.id),
-        activeDocumentIndexIds: scope.retrievalIndexIds,
-      }
+      const contextQuery = RetrievalKnowledgeBaseChunkAssembler.toLoadRetrievalChunkContextQuery(
+        candidateChunks,
+        ranking.fusedChunkRanking.map(({ candidate }) => candidate.id),
+        scope.retrievalIndexIds,
+      )
       const neighboringChunks = await this.loadRetrievalChunkContext.execute(contextQuery)
       const fullContentIndexIds = [...scope.requiredIndexIds, ...scope.relationTargetIndexIds]
       const indexChunksQuery: LoadRetrievalIndexChunksQuery = {

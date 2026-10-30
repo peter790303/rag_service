@@ -1,4 +1,3 @@
-import type { Chunk } from '../../Domain/Entities/chunk.ts'
 import { InvalidRetrievalChunkContextInputException } from '../Exceptions/invalid-retrieval-chunk-context-input.exception.ts'
 import type { LoadRetrievalChunkContextQuery } from '../Queries/load-retrieval-chunk-context.query.ts'
 
@@ -39,7 +38,11 @@ export class RetrievalChunkContextAssembler {
         throw new InvalidRetrievalChunkContextInputException('candidates')
       }
 
-      return candidate as Chunk
+      return {
+        id: candidateChunk.id,
+        documentIndexId: candidateChunk.documentIndexId,
+        ordinal: Number(candidateChunk.ordinal),
+      }
     })
 
     const validatedRootChunkIds = this.toRequiredIdentifierArray(rootChunkIds, 'rootChunkIds')

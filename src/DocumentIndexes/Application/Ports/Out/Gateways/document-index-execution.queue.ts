@@ -18,8 +18,8 @@ import type {
   EnqueueDocumentIndexExecutionParams,
   TransitionDocumentIndexExecutionParams,
 } from './document-index-execution.params.ts'
-import type { DocumentIndexExecutionFactsDTO } from '../../../DataTransferObjects/document-index-execution-facts.dto.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../../../DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionFactsDTO } from '../../../DTOs/document-index-execution-facts.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../DTOs/document-index-execution-record.dto.ts'
 
 /** Durable delivery and lease capabilities owned by document-index listeners. */
 export abstract class DocumentIndexExecutionQueue {

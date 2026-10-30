@@ -1,6 +1,6 @@
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js'
 
-import type { DocumentIndexFailureRecordDTO } from '../../../../Application/DataTransferObjects/document-index-failure-record.dto.ts'
+import type { DocumentIndexFailureRecordDTO } from '../../../../Application/DTOs/document-index-failure-record.dto.ts'
 import type { ArchiveDocumentIndexFailureParams } from '../../../../Application/Ports/Out/Gateways/document-index-failure.params.ts'
 import type { FailedJobModel } from '../Models/failed-job.model.ts'
 

@@ -1,4 +1,4 @@
-import type { DocumentIndexRequestResult } from '../../../Application/DataTransferObjects/document-index-request.dto.ts'
+import type { DocumentIndexRequestResult } from '../../../Application/DTOs/document-index-request.dto.ts'
 
 export class DocumentIndexRequestResource {
   static toDocumentIndexRequestResource(

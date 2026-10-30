@@ -3,7 +3,6 @@ import { InvalidDocumentIndexExecutionLeaseException } from '../../../DocumentIn
 import { KnowledgeBaseDocument } from '../../Domain/Entities/knowledge-base-document.ts'
 import { IndexingKnowledgeBaseDocumentAssembler } from '../Assemblers/indexing-knowledge-base-document.assembler.ts'
 import type { CompleteKnowledgeBaseDocumentIndexingCommandHandlerContract } from '../Contracts/complete-knowledge-base-document-indexing.command.handler.contract.ts'
-import { InvalidKnowledgeBaseDocumentInputException } from '../Exceptions/invalid-knowledge-base-document-input.exception.ts'
 import { KnowledgeBaseDocumentInputGuard } from '../Guards/knowledge-base-document-input.guard.ts'
 import type { KnowledgeBaseDocumentRepository } from '../Ports/Out/Repositories/knowledge-base-document.repository.ts'
 
@@ -16,25 +15,21 @@ export class CompleteKnowledgeBaseDocumentIndexingCommandHandler implements Comp
   ): Promise<void> {
     KnowledgeBaseDocumentInputGuard.assertObject(completeKnowledgeBaseDocumentIndexingCommand)
 
-    if (!(completeKnowledgeBaseDocumentIndexingCommand.knowledgeBaseDocument instanceof KnowledgeBaseDocument)) {
-      throw new InvalidKnowledgeBaseDocumentInputException('knowledgeBaseDocument')
-    }
-
-    if (
-      completeKnowledgeBaseDocumentIndexingCommand.knowledgeBaseDocument.requestedGeneration !==
-      completeKnowledgeBaseDocumentIndexingCommand.generation
+    const knowledgeBaseDocument = new KnowledgeBaseDocument(
+      completeKnowledgeBaseDocumentIndexingCommand.knowledgeBaseDocument,
     )
+
+    if (knowledgeBaseDocument.requestedGeneration !== completeKnowledgeBaseDocumentIndexingCommand.generation)
       throw new InvalidDocumentIndexExecutionLeaseException()
 
-    const activatedKnowledgeBaseDocument =
-      completeKnowledgeBaseDocumentIndexingCommand.knowledgeBaseDocument.activateIndex(
-        completeKnowledgeBaseDocumentIndexingCommand.documentIndexId,
-        new Date(),
-      )
+    const activatedKnowledgeBaseDocument = knowledgeBaseDocument.activateIndex(
+      completeKnowledgeBaseDocumentIndexingCommand.documentIndexId,
+      new Date(),
+    )
     const knowledgeBaseDocumentActivationQO =
       IndexingKnowledgeBaseDocumentAssembler.toKnowledgeBaseDocumentActivationQO(
         activatedKnowledgeBaseDocument,
-        completeKnowledgeBaseDocumentIndexingCommand.knowledgeBaseDocument.activeDocumentIndexId,
+        knowledgeBaseDocument.activeDocumentIndexId,
         completeKnowledgeBaseDocumentIndexingCommand.documentIndexId,
       )
     const activated =

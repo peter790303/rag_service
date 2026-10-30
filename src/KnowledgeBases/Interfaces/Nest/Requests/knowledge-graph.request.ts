@@ -1,7 +1,7 @@
 import { Type } from 'class-transformer'
 import { IsInt, IsNumber, IsString, IsUUID, Max, MaxLength, Min, ValidateIf } from 'class-validator'
 
-import type { LoadKnowledgeGraphDTO } from '../../../Application/DataTransferObjects/load-knowledge-graph.dto.ts'
+import type { LoadKnowledgeGraphDTO } from '../../../Application/DTOs/load-knowledge-graph.dto.ts'
 
 const isPresent = (_object: unknown, value: unknown): boolean => value !== undefined
 

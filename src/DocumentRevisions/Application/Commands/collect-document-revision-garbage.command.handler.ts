@@ -5,7 +5,7 @@ import type { InspectDocumentIndexRetentionQueryHandlerContract } from '../../..
 import { DocumentRevision } from '../../Domain/Entities/document-revision.ts'
 import { GarbageDocumentRevisionAssembler } from '../Assemblers/garbage-document-revision.assembler.ts'
 import type { CollectDocumentRevisionGarbageCommandHandlerContract } from '../Contracts/collect-document-revision-garbage.command.handler.contract.ts'
-import type { DocumentRevisionGarbageScopeDTO } from '../DataTransferObjects/document-revision-garbage.dto.ts'
+import type { DocumentRevisionGarbageScopeDTO } from '../DTOs/document-revision-garbage.dto.ts'
 import { InvalidDocumentRevisionGarbageInputException } from '../Exceptions/invalid-document-revision-garbage-input.exception.ts'
 import type { DocumentRevisionRepository } from '../Ports/Out/Repositories/document-revision.repository.ts'
 
@@ -28,12 +28,21 @@ export class CollectDocumentRevisionGarbageCommandHandler implements CollectDocu
 
     if (
       !Array.isArray(candidates) ||
-      !Array.from(candidates).every((candidate) => candidate instanceof DocumentRevision)
+      !Array.from(candidates).every(
+        (candidate) =>
+          candidate !== null &&
+          typeof candidate === 'object' &&
+          typeof candidate.id === 'string' &&
+          Boolean(candidate.id.trim()) &&
+          typeof candidate.documentId === 'string' &&
+          Boolean(candidate.documentId.trim()),
+      )
     )
       throw new InvalidDocumentRevisionGarbageInputException('candidates')
 
-    const collectRevision = (candidate: DocumentRevision): Promise<DocumentRevision | null> =>
-      this.collectUnreferencedRevision(scope, candidate)
+    const collectRevision = (
+      candidate: CollectDocumentRevisionGarbageCommand['candidates'][number],
+    ): Promise<DocumentRevision | null> => this.collectUnreferencedRevision(scope, candidate)
     const isCollectedRevision = (revision: DocumentRevision | null): revision is DocumentRevision => revision !== null
 
     return firstValueFrom(from(candidates).pipe(concatMap(collectRevision), filter(isCollectedRevision), toArray()))
@@ -41,7 +50,7 @@ export class CollectDocumentRevisionGarbageCommandHandler implements CollectDocu
 
   private async collectUnreferencedRevision(
     scope: DocumentRevisionGarbageScopeDTO,
-    candidate: DocumentRevision,
+    candidate: CollectDocumentRevisionGarbageCommand['candidates'][number],
   ): Promise<DocumentRevision | null> {
     if (!scope.lockedDocumentIds.includes(candidate.documentId)) return null
 

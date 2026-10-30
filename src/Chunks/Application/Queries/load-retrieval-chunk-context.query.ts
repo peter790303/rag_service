@@ -1,7 +1,5 @@
-import type { Chunk } from '../../Domain/Entities/chunk.ts'
-
 export type LoadRetrievalChunkContextQuery = {
-  candidates: readonly Chunk[]
+  candidates: readonly { readonly id: string; readonly documentIndexId: string; readonly ordinal: number }[]
   rootChunkIds: readonly string[]
   activeDocumentIndexIds: readonly string[]
 }

@@ -1,5 +1,5 @@
-import type { DocumentIndexExecutionFactsDTO } from '../../../../Application/DataTransferObjects/document-index-execution-facts.dto.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../../../../Application/DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionFactsDTO } from '../../../../Application/DTOs/document-index-execution-facts.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../../Application/DTOs/document-index-execution-record.dto.ts'
 import type { JobModel } from '../Models/job.model.ts'
 
 /** Copies only persisted technical-record fields; never exposes ORM models or mutable references. */

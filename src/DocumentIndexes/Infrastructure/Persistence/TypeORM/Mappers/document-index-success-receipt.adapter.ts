@@ -1,6 +1,6 @@
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js'
 
-import type { DocumentIndexSuccessReceiptDTO } from '../../../../Application/DataTransferObjects/document-index-success-receipt.dto.ts'
+import type { DocumentIndexSuccessReceiptDTO } from '../../../../Application/DTOs/document-index-success-receipt.dto.ts'
 import type { ArchiveDocumentIndexSuccessParams } from '../../../../Application/Ports/Out/Gateways/document-index-success.params.ts'
 import { InvalidDocumentIndexSuccessReceiptException } from '../Exceptions/invalid-document-index-success-receipt.exception.ts'
 import type { DocumentIndexSuccessReceiptModel } from '../Models/document-index-success-receipt.model.ts'

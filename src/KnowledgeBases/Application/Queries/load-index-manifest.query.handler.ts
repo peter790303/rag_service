@@ -12,7 +12,7 @@ import {
   type IndexManifestIssue,
 } from '../../Domain/ValueObjects/knowledge-base-index-manifest.ts'
 import { LoadIndexManifestAssembler } from '../Assemblers/load-index-manifest.assembler.ts'
-import type { LoadIndexManifestDTO } from '../DataTransferObjects/load-index-manifest.dto.ts'
+import type { LoadIndexManifestDTO } from '../DTOs/load-index-manifest.dto.ts'
 import type { KnowledgeBaseRepository } from '../Ports/Out/Repositories/knowledge-base.repository.ts'
 
 export class LoadIndexManifestQueryHandler {

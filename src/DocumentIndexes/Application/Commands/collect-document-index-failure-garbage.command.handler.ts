@@ -2,7 +2,7 @@ import { concatMap, filter, firstValueFrom, from, toArray } from 'rxjs'
 
 import type { CollectDocumentIndexFailureGarbageCommand } from '../Commands/collect-document-index-failure-garbage.command.ts'
 import type { CollectDocumentIndexFailureGarbageCommandHandlerContract } from '../Contracts/collect-document-index-failure-garbage.command.handler.contract.ts'
-import type { ExpiredDocumentIndexFailureDTO } from '../DataTransferObjects/expired-document-index-failure.dto.ts'
+import type { ExpiredDocumentIndexFailureDTO } from '../DTOs/expired-document-index-failure.dto.ts'
 import type { DocumentIndexExecutionQueue } from '../Ports/Out/Gateways/document-index-execution.queue.ts'
 import type { DocumentIndexFailureArchive } from '../Ports/Out/Gateways/document-index-failure.archive.ts'
 

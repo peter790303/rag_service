@@ -1,10 +1,10 @@
-import type { Chunk } from '../../Domain/Entities/chunk.ts'
+import type { LoadRetrievalChunkContextQuery } from '../Queries/load-retrieval-chunk-context.query.ts'
 import type { ChunkIndexOrdinalsQO } from '../QueryObjects/chunk.query-object.ts'
 
 /** Groups query coordinates after the caller has selected eligible roots and the neighbor range. */
 export class QueryRetrievalNeighborChunkAssembler {
   static toChunkIndexOrdinalsQueryObjects(
-    retrievalRootChunks: readonly Chunk[],
+    retrievalRootChunks: LoadRetrievalChunkContextQuery['candidates'],
     neighboringOrdinalOffsets: readonly number[],
   ): ChunkIndexOrdinalsQO[] {
     const ordinalsByDocumentIndexId = retrievalRootChunks.reduce((groupedOrdinals, retrievalRootChunk) => {

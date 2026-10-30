@@ -1,7 +1,13 @@
-import type { KnowledgeBaseDocument } from '../../Domain/Entities/knowledge-base-document.ts'
-
 export type CompleteKnowledgeBaseDocumentIndexingCommand = {
-  readonly knowledgeBaseDocument: KnowledgeBaseDocument
+  readonly knowledgeBaseDocument: {
+    readonly knowledgeBaseId: string
+    readonly documentId: string
+    readonly requestedGeneration: string
+    readonly activeDocumentIndexId: string | null
+    readonly isEntry: boolean
+    readonly alwaysIncludeFullContent: boolean
+    readonly updatedAt: Date
+  }
   readonly generation: string
   readonly documentIndexId: string
 }

@@ -4,7 +4,7 @@ import { DocumentIndexingRequestedEvent } from '../../../../DocumentIndexes/Appl
 import { DocumentIndexingRequestedListener } from '../../../../DocumentIndexes/Application/Listeners/document-indexing-requested.listener.ts'
 import { ReadDocumentIndexingStatusListener } from '../../../../DocumentIndexes/Application/Listeners/read-document-indexing-status.listener.ts'
 import { RetryDocumentIndexingListener } from '../../../../DocumentIndexes/Application/Listeners/retry-document-indexing.listener.ts'
-import type { SourceDocumentDTO } from '../../../Application/DataTransferObjects/source-document.dto.ts'
+import type { SourceDocumentDTO } from '../../../Application/DTOs/source-document.dto.ts'
 
 export class DocumentIndexImportCommand {
   constructor(

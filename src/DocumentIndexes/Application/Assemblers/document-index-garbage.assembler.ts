@@ -2,10 +2,10 @@ import type { CollectIndexChunkGarbageCommand } from '../../../Chunks/Applicatio
 import { InvalidIndexChunkGarbageInputException } from '../../../Chunks/Application/Exceptions/invalid-index-chunk-garbage-input.exception.ts'
 import { ChunkDocumentIndexRequiredException } from '../../../Chunks/Domain/Exceptions/chunk-document-index-required.exception.ts'
 import type { CollectDocumentRelationGarbageCommand } from '../../../DocumentRelations/Application/Commands/collect-document-relation-garbage.command.ts'
-import type { DocumentGarbageCollectionScopeDTO } from '../../../Documents/Application/DataTransferObjects/document-garbage-collection-scope.dto.ts'
+import type { DocumentGarbageCollectionScopeDTO } from '../../../Documents/Application/DTOs/document-garbage-collection-scope.dto.ts'
 import type { InspectKnowledgeBaseDocumentRetentionQuery } from '../../../KnowledgeBaseDocuments/Application/Queries/inspect-knowledge-base-document-retention.query.ts'
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
-import type { DocumentIndexRecordDTO } from '../DataTransferObjects/document-index-record.dto.ts'
+import type { DocumentIndexRecordDTO } from '../DTOs/document-index-record.dto.ts'
 import type { PlanDocumentIndexGarbageQuery } from '../Queries/plan-document-index-garbage.query.ts'
 import type {
   DocumentIndexGarbageCandidatesQO,

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { ReadDocumentIndexAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/read-document-index.assembler.ts'
-import { DocumentIndexingStatusDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-status.dto.ts'
+import { DocumentIndexingStatusDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-indexing-status.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
 import { DocumentIndexingTargetStateEnum } from '../../../src/DocumentIndexes/Application/Enums/document-indexing-target-state.enum.ts'
 import { DocumentIndex } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'

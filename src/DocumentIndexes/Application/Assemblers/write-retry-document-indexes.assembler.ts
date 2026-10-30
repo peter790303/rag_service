@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 
-import type { DocumentIndexingRetryContext } from '../DataTransferObjects/document-indexing-retry-context.dto.ts'
-import type { DocumentIndexingRetryTarget } from '../DataTransferObjects/document-indexing-retry-target.dto.ts'
-import type { RetryDocumentIndexingResultDTO } from '../DataTransferObjects/retry-document-indexing-result.dto.ts'
+import type { DocumentIndexingRetryContext } from '../DTOs/document-indexing-retry-context.dto.ts'
+import type { DocumentIndexingRetryTarget } from '../DTOs/document-indexing-retry-target.dto.ts'
+import type { RetryDocumentIndexingResultDTO } from '../DTOs/retry-document-indexing-result.dto.ts'
 import { DocumentIndexingTargetStateEnum } from '../Enums/document-indexing-target-state.enum.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../Helpers/document-index-execution-lifecycle.helper.ts'
 import type { EnqueueDocumentIndexingRetryParams } from '../Ports/Out/Gateways/document-index-execution.params.ts'

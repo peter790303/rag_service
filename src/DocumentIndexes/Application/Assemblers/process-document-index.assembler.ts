@@ -1,8 +1,8 @@
 import type { ReplaceIndexChunkCommand } from '../../../Chunks/Application/Commands/replace-index-chunk.command.ts'
-import type { MarkdownChunkPlan } from '../../../Chunks/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { MarkdownChunkPlan } from '../../../Chunks/Application/DTOs/markdown-chunk-plan.dto.ts'
 import { InvalidChunkReplacementTimestampException } from '../../../Chunks/Application/Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
 import { ChunkDocumentIndexRequiredException } from '../../../Chunks/Domain/Exceptions/chunk-document-index-required.exception.ts'
-import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../DTOs/document-indexing-delivery.dto.ts'
 
 export class ProcessDocumentIndexAssembler {
   static toReplaceIndexChunkCommand(

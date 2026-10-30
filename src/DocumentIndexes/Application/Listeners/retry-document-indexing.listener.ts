@@ -12,11 +12,11 @@ import type { PersistenceTransaction } from '../../../Shared/Application/Ports/O
 import { ReadRetryDocumentIndexesAssembler } from '../Assemblers/read-retry-document-indexes.assembler.ts'
 import { WriteRequestDocumentIndexesAssembler } from '../Assemblers/write-request-document-indexes.assembler.ts'
 import { WriteRetryDocumentIndexesAssembler } from '../Assemblers/write-retry-document-indexes.assembler.ts'
-import type { DocumentIndexingRetryContext } from '../DataTransferObjects/document-indexing-retry-context.dto.ts'
-import type { DocumentIndexingRetryTarget } from '../DataTransferObjects/document-indexing-retry-target.dto.ts'
-import type { RetryDocumentIndexingResultDTO } from '../DataTransferObjects/retry-document-indexing-result.dto.ts'
-import type { RetryDocumentIndexingDTO } from '../DataTransferObjects/retry-document-indexing.dto.ts'
-import type { RetryUnretriedDocumentIndexFailuresResultDTO } from '../DataTransferObjects/retry-unretried-document-index-failures-result.dto.ts'
+import type { DocumentIndexingRetryContext } from '../DTOs/document-indexing-retry-context.dto.ts'
+import type { DocumentIndexingRetryTarget } from '../DTOs/document-indexing-retry-target.dto.ts'
+import type { RetryDocumentIndexingResultDTO } from '../DTOs/retry-document-indexing-result.dto.ts'
+import type { RetryDocumentIndexingDTO } from '../DTOs/retry-document-indexing.dto.ts'
+import type { RetryUnretriedDocumentIndexFailuresResultDTO } from '../DTOs/retry-unretried-document-index-failures-result.dto.ts'
 import {
   DOCUMENT_INDEX_FAILURE_RETRY_STATUS,
   type DocumentIndexingNotRetryableStatus,

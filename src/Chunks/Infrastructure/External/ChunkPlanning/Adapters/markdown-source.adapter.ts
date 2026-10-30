@@ -1,4 +1,4 @@
-import type { MarkdownSourceBlock } from '../../../../../DocumentIndexes/Application/DataTransferObjects/markdown-source-block.dto.ts'
+import type { MarkdownSourceBlock } from '../../../../../DocumentIndexes/Application/DTOs/markdown-source-block.dto.ts'
 import { InvalidMarkdownSourceBoundaryException } from '../Exceptions/invalid-markdown-source-boundary.exception.ts'
 
 interface SourceLine {

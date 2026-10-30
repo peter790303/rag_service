@@ -1,5 +1,5 @@
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
-import type { RetrievalDocumentIndexDTO } from '../DataTransferObjects/retrieval-document-index.dto.ts'
+import type { RetrievalDocumentIndexDTO } from '../DTOs/retrieval-document-index.dto.ts'
 
 export class RetrievalDocumentIndexAssembler {
   static toRetrievalDocumentIndexDTO(restoredDocumentIndexDTO: DocumentIndex): RetrievalDocumentIndexDTO {

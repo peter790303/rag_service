@@ -19,7 +19,7 @@ import { GetKnowledgeBaseDocumentIndexingStateQueryHandler } from '../../src/Kno
 import { LoadRetrievalKnowledgeBaseDocumentsQueryHandler } from '../../src/KnowledgeBaseDocuments/Application/Queries/load-retrieval-knowledge-base-documents.query.handler.ts'
 import { KnowledgeBaseDocumentRepository } from '../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
 import { RetrievalSnapshotKnowledgeBaseAssembler } from '../../src/KnowledgeBases/Application/Assemblers/retrieval-snapshot-knowledge-base.assembler.ts'
-import type { RetrievalProfileSettingsDTO } from '../../src/KnowledgeBases/Application/DataTransferObjects/retrieval-profile-settings.dto.ts'
+import type { RetrievalProfileSettingsDTO } from '../../src/KnowledgeBases/Application/DTOs/retrieval-profile-settings.dto.ts'
 import { RetrieveKnowledgeBaseContentQueryHandler } from '../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
 import type { RetrievalSnapshot } from '../../src/KnowledgeBases/Application/Types/retrieval-snapshot.ts'
 import { KnowledgeBaseRepository } from '../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'

@@ -1,4 +1,4 @@
-import type { RetryDocumentIndexingResultDTO } from '../../../Application/DataTransferObjects/retry-document-indexing-result.dto.ts'
+import type { RetryDocumentIndexingResultDTO } from '../../../Application/DTOs/retry-document-indexing-result.dto.ts'
 
 export class RetryDocumentIndexingResource {
   static toRetryDocumentIndexingResource(

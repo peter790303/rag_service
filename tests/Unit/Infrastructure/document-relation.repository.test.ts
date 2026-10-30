@@ -4,7 +4,7 @@ import test from 'node:test'
 import { DataSource, type EntityManager, In } from 'typeorm'
 
 import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/DocumentRelations/Application/Commands/replace-planned-document-relations.command.handler.ts'
-import type { PlannedDocumentRelation } from '../../../src/DocumentRelations/Application/DataTransferObjects/planned-document-relation.dto.ts'
+import type { PlannedDocumentRelation } from '../../../src/DocumentRelations/Application/DTOs/planned-document-relation.dto.ts'
 import { DocumentRelation } from '../../../src/DocumentRelations/Domain/Entities/document-relation.ts'
 import { DocumentRelationModel } from '../../../src/DocumentRelations/Infrastructure/Persistence/TypeORM/Models/document-relation.model.ts'
 import { DocumentRelationRepository } from '../../../src/DocumentRelations/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'

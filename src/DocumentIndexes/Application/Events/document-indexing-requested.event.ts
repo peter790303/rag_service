@@ -1,4 +1,4 @@
-import type { SourceDocumentDTO } from '../../../Documents/Application/DataTransferObjects/source-document.dto.ts'
+import type { SourceDocumentDTO } from '../../../Documents/Application/DTOs/source-document.dto.ts'
 import { InvalidDocumentIndexingPayloadException } from '../Exceptions/invalid-document-indexing-payload.exception.ts'
 
 /** A source document indexing request has been received. */

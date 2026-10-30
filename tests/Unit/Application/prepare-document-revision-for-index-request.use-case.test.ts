@@ -3,7 +3,7 @@ import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
 import { PrepareDocumentRevisionForIndexRequestCommandHandler } from '../../../src/DocumentRevisions/Application/Commands/prepare-document-revision-for-index-request.command.handler.ts'
-import type { DocumentRevisionSourceSnapshotDTO } from '../../../src/DocumentRevisions/Application/DataTransferObjects/prepare-document-revision-for-index-request.dto.ts'
+import type { DocumentRevisionSourceSnapshotDTO } from '../../../src/DocumentRevisions/Application/DTOs/prepare-document-revision-for-index-request.dto.ts'
 import { InvalidDocumentRevisionIndexRequestInputException } from '../../../src/DocumentRevisions/Application/Exceptions/invalid-document-revision-index-request-input.exception.ts'
 import type { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Application/Ports/Out/Repositories/document-revision.repository.ts'
 import type { CreateDocumentRevisionQO } from '../../../src/DocumentRevisions/Application/QueryObjects/document-revision.query-object.ts'

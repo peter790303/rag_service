@@ -1,4 +1,4 @@
-import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../DTOs/document-indexing-delivery.dto.ts'
 
 /** Document indexing was dispatched under the committed execution lease. */
 export class DocumentIndexingDispatchedEvent {

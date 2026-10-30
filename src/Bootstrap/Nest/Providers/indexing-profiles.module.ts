@@ -1,11 +1,8 @@
 import { Module } from '@nestjs/common'
 
 import { EmbeddingModule } from './embedding.module.ts'
+import { DOCUMENT_INDEX_PIPELINE_SETTINGS, indexingProfilesProviders } from './indexing-profiles.providers.ts'
 import { KnowledgeServiceConfigModule } from './knowledge-service-config.module.ts'
-import {
-  DOCUMENT_INDEX_PIPELINE_SETTINGS,
-  indexingProfilesProviders,
-} from '../../../DocumentIndexes/Infrastructure/Nest/Providers/indexing-profiles.providers.ts'
 
 @Module({
   imports: [KnowledgeServiceConfigModule, EmbeddingModule],

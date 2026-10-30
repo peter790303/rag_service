@@ -1,5 +1,5 @@
 import type { InspectDocumentIndexExecutionRetentionQueryHandlerContract } from '../Contracts/inspect-document-index-execution-retention.query.handler.contract.ts'
-import type { DocumentIndexExecutionRetentionDTO } from '../DataTransferObjects/document-index-execution-retention.dto.ts'
+import type { DocumentIndexExecutionRetentionDTO } from '../DTOs/document-index-execution-retention.dto.ts'
 import type { DocumentIndexExecutionQueue } from '../Ports/Out/Gateways/document-index-execution.queue.ts'
 import type { DocumentIndexFailureArchive } from '../Ports/Out/Gateways/document-index-failure.archive.ts'
 import type { InspectDocumentIndexExecutionRetentionQuery } from '../Queries/inspect-document-index-execution-retention.query.ts'

@@ -1,9 +1,9 @@
 import { Body, Controller, Get, HttpStatus, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common'
 
 import { ProjectServiceAuthGuard } from '../../../../Shared/Interfaces/Nest/Middleware/project-service-auth.guard.ts'
-import type { DocumentIndexRequestResult } from '../../../Application/DataTransferObjects/document-index-request.dto.ts'
-import type { DocumentIndexingStatusDTO } from '../../../Application/DataTransferObjects/document-indexing-status.dto.ts'
-import type { RetryDocumentIndexingResultDTO } from '../../../Application/DataTransferObjects/retry-document-indexing-result.dto.ts'
+import type { DocumentIndexRequestResult } from '../../../Application/DTOs/document-index-request.dto.ts'
+import type { DocumentIndexingStatusDTO } from '../../../Application/DTOs/document-indexing-status.dto.ts'
+import type { RetryDocumentIndexingResultDTO } from '../../../Application/DTOs/retry-document-indexing-result.dto.ts'
 import { DocumentIndexingRequestedEvent } from '../../../Application/Events/document-indexing-requested.event.ts'
 import { DocumentIndexingRequestedListener } from '../../../Application/Listeners/document-indexing-requested.listener.ts'
 import { ReadDocumentIndexingStatusListener } from '../../../Application/Listeners/read-document-indexing-status.listener.ts'

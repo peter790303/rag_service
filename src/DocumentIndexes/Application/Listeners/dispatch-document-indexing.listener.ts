@@ -12,14 +12,14 @@ import { DocumentIndexStatusEnum } from '../../Domain/Enums/document-index-statu
 import { WriteClaimDocumentIndexesAssembler } from '../Assemblers/write-claim-document-indexes.assembler.ts'
 import { WriteFailDocumentIndexesAssembler } from '../Assemblers/write-fail-document-indexes.assembler.ts'
 import { WriteLifecycleDocumentIndexAssembler } from '../Assemblers/write-lifecycle-document-index.assembler.ts'
-import { DOCUMENT_INDEXING_CLAIM_CANDIDATE_RESULT_KINDS } from '../DataTransferObjects/document-indexing-claim-candidate.dto.ts'
+import { DOCUMENT_INDEXING_CLAIM_CANDIDATE_RESULT_KINDS } from '../DTOs/document-indexing-claim-candidate.dto.ts'
 import type {
   DocumentIndexingClaimCandidateResultDTO,
   DocumentIndexingClaimExecutionDTO,
   DocumentIndexingClaimKnowledgeBaseDocumentDTO,
-} from '../DataTransferObjects/document-indexing-claim-candidate.dto.ts'
-import type { DocumentIndexingClaimDTO } from '../DataTransferObjects/document-indexing-claim.dto.ts'
-import type { ExpiredDocumentIndexExecutionDTO } from '../DataTransferObjects/expired-document-index-execution.dto.ts'
+} from '../DTOs/document-indexing-claim-candidate.dto.ts'
+import type { DocumentIndexingClaimDTO } from '../DTOs/document-indexing-claim.dto.ts'
+import type { ExpiredDocumentIndexExecutionDTO } from '../DTOs/expired-document-index-execution.dto.ts'
 import { DocumentIndexExecutionClaimConflictException } from '../Exceptions/document-index-execution-claim-conflict.exception.ts'
 import { DocumentIndexingNotFoundException } from '../Exceptions/document-indexing-not-found.exception.ts'
 import {

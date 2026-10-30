@@ -1,4 +1,4 @@
-import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../DTOs/document-indexing-delivery.dto.ts'
 
 /** The claimed document index finished producing and persisting its chunks. */
 export class DocumentIndexedEvent {

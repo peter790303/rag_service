@@ -1,4 +1,4 @@
-import type { ExpiredDocumentIndexFailureDTO } from '../../../../Application/DataTransferObjects/expired-document-index-failure.dto.ts'
+import type { ExpiredDocumentIndexFailureDTO } from '../../../../Application/DTOs/expired-document-index-failure.dto.ts'
 import type { FailedJobModel } from '../Models/failed-job.model.ts'
 
 type FailedJobRetentionProjection = Pick<FailedJobModel, 'id' | 'documentId' | 'failedAt'>

@@ -3,8 +3,8 @@ import type { Repository } from 'typeorm'
 import { In, IsNull, LessThanOrEqual, Not, type FindOptionsWhere } from 'typeorm'
 
 import { PersistenceTransaction } from '../../../../../Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
-import type { DocumentIndexExecutionFactsDTO } from '../../../../Application/DataTransferObjects/document-index-execution-facts.dto.ts'
-import type { DocumentIndexExecutionRecordDTO } from '../../../../Application/DataTransferObjects/document-index-execution-record.dto.ts'
+import type { DocumentIndexExecutionFactsDTO } from '../../../../Application/DTOs/document-index-execution-facts.dto.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../../Application/DTOs/document-index-execution-record.dto.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../../Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import type {
   ExpiredDocumentIndexExecutionParams,

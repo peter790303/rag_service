@@ -1,5 +1,5 @@
-import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
-import type { DocumentIndexingFailureDecision } from '../DataTransferObjects/document-indexing-failure-decision.dto.ts'
+import type { DocumentIndexingDeliveryDTO } from '../DTOs/document-indexing-delivery.dto.ts'
+import type { DocumentIndexingFailureDecision } from '../DTOs/document-indexing-failure-decision.dto.ts'
 import { InvalidDocumentIndexingFailureDecisionException } from '../Exceptions/invalid-document-indexing-failure-decision.exception.ts'
 
 /** Document indexing failed under this claim, with its failure time and retry outcome recorded. */

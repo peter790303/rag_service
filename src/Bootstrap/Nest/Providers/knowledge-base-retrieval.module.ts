@@ -8,10 +8,10 @@ import { DocumentsModule } from './documents.module.ts'
 import { EmbeddingModule } from './embedding.module.ts'
 import { IndexingProfilesModule } from './indexing-profiles.module.ts'
 import { KnowledgeBaseDocumentsModule } from './knowledge-base-documents.module.ts'
+import { knowledgeBaseRetrievalProviders } from './knowledge-base-retrieval.providers.ts'
 import { KnowledgeBasesModule } from './knowledge-bases.module.ts'
 import { PersistenceModule } from './persistence.module.ts'
 import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
-import { knowledgeBaseRetrievalProviders } from '../../../KnowledgeBases/Infrastructure/Nest/Providers/knowledge-base-retrieval.providers.ts'
 
 @Module({
   imports: [

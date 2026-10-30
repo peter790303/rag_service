@@ -1,5 +1,5 @@
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
-import type { DocumentIndexRecordDTO } from '../DataTransferObjects/document-index-record.dto.ts'
+import type { DocumentIndexRecordDTO } from '../DTOs/document-index-record.dto.ts'
 
 /** Maps restored domain lifecycle fields and persistence metadata to an application record. */
 export class ReadDocumentIndexAssembler {

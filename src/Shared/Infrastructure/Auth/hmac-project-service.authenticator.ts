@@ -3,7 +3,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { Inject, Injectable } from '@nestjs/common'
 
 import { KNOWLEDGE_SERVICE_CONFIG, type KnowledgeServiceConfig } from '../../../../config/knowledge-service.config.ts'
-import { type ServiceAuthCredentialsDTO } from '../../Application/DataTransferObjects/service-auth-credentials.dto.ts'
+import { type ServiceAuthCredentialsDTO } from '../../Application/DTOs/service-auth-credentials.dto.ts'
 import { ServiceAuthenticator } from '../../Application/Ports/Out/Gateways/service-authenticator.ts'
 
 const MAX_CLOCK_SKEW_MS = 300_000

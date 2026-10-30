@@ -12,7 +12,7 @@ import {
   createGarbageCollectionListener,
   type GarbageCollectionTestDependencies,
 } from './document-retention-use-cases.fixture.ts'
-import type { ExpiredDocumentIndexFailureDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/expired-document-index-failure.dto.ts'
+import type { ExpiredDocumentIndexFailureDTO } from '../../../src/DocumentIndexes/Application/DTOs/expired-document-index-failure.dto.ts'
 import type { DocumentIndexStatus } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
 import { DocumentRelation } from '../../../src/DocumentRelations/Domain/Entities/document-relation.ts'

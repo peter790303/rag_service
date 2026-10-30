@@ -1,8 +1,8 @@
 import type { AuthorizeDocumentIndexChunkReplacementCommand } from '../../../DocumentIndexes/Application/Commands/authorize-document-index-chunk-replacement.command.ts'
-import type { AuthorizeDocumentIndexChunkReplacementInputDTO } from '../../../DocumentIndexes/Application/DataTransferObjects/authorize-document-index-chunk-replacement-input.dto.ts'
+import type { AuthorizeDocumentIndexChunkReplacementInputDTO } from '../../../DocumentIndexes/Application/DTOs/authorize-document-index-chunk-replacement-input.dto.ts'
 import type { ReplacePlannedDocumentRelationsCommand } from '../../../DocumentRelations/Application/Commands/replace-planned-document-relations.command.ts'
 import type { Chunk } from '../../Domain/Entities/chunk.ts'
-import type { MarkdownChunkPlan } from '../DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { MarkdownChunkPlan } from '../DTOs/markdown-chunk-plan.dto.ts'
 import type { ChunkIndexQO } from '../QueryObjects/chunk.query-object.ts'
 import type { InsertChunksQO } from '../QueryObjects/insert-chunks.query-object.ts'
 

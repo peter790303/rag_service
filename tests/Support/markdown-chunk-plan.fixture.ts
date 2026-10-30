@@ -1,4 +1,4 @@
-import type { MarkdownChunkPlan } from '../../src/Chunks/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { MarkdownChunkPlan } from '../../src/Chunks/Application/DTOs/markdown-chunk-plan.dto.ts'
 import { MarkdownChunkStartsAdapter } from '../../src/Chunks/Infrastructure/External/ChunkPlanning/Adapters/markdown-chunk-starts.adapter.ts'
 import { MarkdownDocumentLinksAdapter } from '../../src/Chunks/Infrastructure/External/ChunkPlanning/Adapters/markdown-document-links.adapter.ts'
 import { MarkdownSourceAdapter } from '../../src/Chunks/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'

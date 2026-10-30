@@ -1,6 +1,6 @@
 import type { DocumentRevision } from '../../../DocumentRevisions/Domain/Entities/document-revision.ts'
 import type { Document } from '../../Domain/Entities/document.ts'
-import type { RetrievalFullContentDocumentView } from '../DataTransferObjects/retrieval-full-content-document.dto.ts'
+import type { RetrievalFullContentDocumentView } from '../DTOs/retrieval-full-content-document.dto.ts'
 
 export class RetrievalFullContentDocumentAssembler {
   static toRetrievalFullContentDocumentDTO(fullContentDocumentFacts: {

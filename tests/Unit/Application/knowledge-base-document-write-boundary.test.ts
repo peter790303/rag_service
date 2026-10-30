@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
+import { IndexingKnowledgeBaseDocumentCommandAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/indexing-knowledge-base-document-command.assembler.ts'
 import { ActivateKnowledgeBaseDocumentIndexCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/activate-knowledge-base-document-index.command.handler.ts'
 import { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/prepare-knowledge-base-document-for-index-request.command.handler.ts'
 import { SaveKnowledgeBaseDocumentIndexRequestCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/save-knowledge-base-document-index-request.command.handler.ts'
-import type { PrepareKnowledgeBaseDocumentForIndexRequestDTO } from '../../../src/KnowledgeBaseDocuments/Application/DataTransferObjects/prepare-knowledge-base-document-for-index-request.dto.ts'
+import type { PrepareKnowledgeBaseDocumentForIndexRequestDTO } from '../../../src/KnowledgeBaseDocuments/Application/DTOs/prepare-knowledge-base-document-for-index-request.dto.ts'
 import { InvalidKnowledgeBaseDocumentInputException } from '../../../src/KnowledgeBaseDocuments/Application/Exceptions/invalid-knowledge-base-document-input.exception.ts'
 import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
 import { KnowledgeBaseDocument } from '../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
@@ -93,7 +94,7 @@ test('a missing request generation or active index fails in Domain before assemb
   const useCase = new SaveKnowledgeBaseDocumentIndexRequestCommandHandler({
     updateByKnowledgeBaseIdAndDocumentId: write,
   } as unknown as KnowledgeBaseDocumentRepository)
-  const input = { knowledgeBaseDocument, generation: '0', activeDocumentIndexId: null }
+  const input = IndexingKnowledgeBaseDocumentCommandAssembler.toSaveCommand(knowledgeBaseDocument, '0', null)
   await assert.rejects(
     useCase.execute({ ...input, generation: undefined } as unknown as typeof input),
     InvalidKnowledgeBaseDocumentStateException,

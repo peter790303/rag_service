@@ -1,4 +1,4 @@
-import type { PlannedDocumentRelation } from '../DataTransferObjects/planned-document-relation.dto.ts'
+import type { PlannedDocumentRelation } from '../DTOs/planned-document-relation.dto.ts'
 
 export type ReplacePlannedDocumentRelationsCommand = {
   documentIndexId: string

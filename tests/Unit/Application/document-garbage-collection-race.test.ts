@@ -13,7 +13,7 @@ import type { DocumentIndexFailureArchive } from '../../../src/DocumentIndexes/A
 import type { DocumentIndexRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
 import type { DocumentIndex } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
 import type { CollectDocumentRelationGarbageCommandHandlerContract } from '../../../src/DocumentRelations/Application/Contracts/collect-document-relation-garbage.command.handler.contract.ts'
-import type { DocumentGarbageCollectionScopeDTO } from '../../../src/Documents/Application/DataTransferObjects/document-garbage-collection-scope.dto.ts'
+import type { DocumentGarbageCollectionScopeDTO } from '../../../src/Documents/Application/DTOs/document-garbage-collection-scope.dto.ts'
 import type { InspectKnowledgeBaseDocumentRetentionQueryHandlerContract } from '../../../src/KnowledgeBaseDocuments/Application/Contracts/inspect-knowledge-base-document-retention.query.handler.contract.ts'
 
 const retentionCutoff = new Date('2026-01-01T00:00:00.000Z')

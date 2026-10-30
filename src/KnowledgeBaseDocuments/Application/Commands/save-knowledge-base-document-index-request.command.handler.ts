@@ -2,7 +2,6 @@ import type { SaveKnowledgeBaseDocumentIndexRequestCommand } from './save-knowle
 import { KnowledgeBaseDocument } from '../../Domain/Entities/knowledge-base-document.ts'
 import { IndexingKnowledgeBaseDocumentAssembler } from '../Assemblers/indexing-knowledge-base-document.assembler.ts'
 import type { SaveKnowledgeBaseDocumentIndexRequestCommandHandlerContract } from '../Contracts/save-knowledge-base-document-index-request.command.handler.contract.ts'
-import { InvalidKnowledgeBaseDocumentInputException } from '../Exceptions/invalid-knowledge-base-document-input.exception.ts'
 import { KnowledgeBaseDocumentInputGuard } from '../Guards/knowledge-base-document-input.guard.ts'
 import type { KnowledgeBaseDocumentRepository } from '../Ports/Out/Repositories/knowledge-base-document.repository.ts'
 
@@ -15,18 +14,17 @@ export class SaveKnowledgeBaseDocumentIndexRequestCommandHandler implements Save
   ): Promise<void> {
     KnowledgeBaseDocumentInputGuard.assertObject(saveKnowledgeBaseDocumentIndexRequestCommand)
 
-    if (!(saveKnowledgeBaseDocumentIndexRequestCommand.knowledgeBaseDocument instanceof KnowledgeBaseDocument)) {
-      throw new InvalidKnowledgeBaseDocumentInputException('knowledgeBaseDocument')
-    }
+    const knowledgeBaseDocument = new KnowledgeBaseDocument(
+      saveKnowledgeBaseDocumentIndexRequestCommand.knowledgeBaseDocument,
+    )
 
-    const requestedKnowledgeBaseDocument =
-      saveKnowledgeBaseDocumentIndexRequestCommand.knowledgeBaseDocument.requestIndex(
-        {
-          generation: saveKnowledgeBaseDocumentIndexRequestCommand.generation,
-          activeDocumentIndexId: saveKnowledgeBaseDocumentIndexRequestCommand.activeDocumentIndexId,
-        },
-        new Date(),
-      )
+    const requestedKnowledgeBaseDocument = knowledgeBaseDocument.requestIndex(
+      {
+        generation: saveKnowledgeBaseDocumentIndexRequestCommand.generation,
+        activeDocumentIndexId: saveKnowledgeBaseDocumentIndexRequestCommand.activeDocumentIndexId,
+      },
+      new Date(),
+    )
     const updateKnowledgeBaseDocumentQO =
       IndexingKnowledgeBaseDocumentAssembler.toUpdateKnowledgeBaseDocumentQO(requestedKnowledgeBaseDocument)
     await this.knowledgeBaseDocumentRepository.updateByKnowledgeBaseIdAndDocumentId(updateKnowledgeBaseDocumentQO)

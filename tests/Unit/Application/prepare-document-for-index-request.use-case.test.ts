@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { PrepareDocumentForIndexRequestCommandHandler } from '../../../src/Documents/Application/Commands/prepare-document-for-index-request.command.handler.ts'
-import type { SourceDocumentDTO } from '../../../src/Documents/Application/DataTransferObjects/source-document.dto.ts'
+import type { SourceDocumentDTO } from '../../../src/Documents/Application/DTOs/source-document.dto.ts'
 import { IndexRequestDocumentUnavailableException } from '../../../src/Documents/Application/Exceptions/index-request-document-unavailable.exception.ts'
 import { InvalidDocumentSourceInputException } from '../../../src/Documents/Application/Exceptions/invalid-document-source-input.exception.ts'
 import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'

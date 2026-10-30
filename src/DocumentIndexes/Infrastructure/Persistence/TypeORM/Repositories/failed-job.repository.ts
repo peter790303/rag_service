@@ -3,8 +3,8 @@ import type { Repository } from 'typeorm'
 import { In, IsNull, LessThanOrEqual } from 'typeorm'
 
 import { PersistenceTransaction } from '../../../../../Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
-import type { DocumentIndexFailureRecordDTO } from '../../../../Application/DataTransferObjects/document-index-failure-record.dto.ts'
-import type { ExpiredDocumentIndexFailureDTO } from '../../../../Application/DataTransferObjects/expired-document-index-failure.dto.ts'
+import type { DocumentIndexFailureRecordDTO } from '../../../../Application/DTOs/document-index-failure-record.dto.ts'
+import type { ExpiredDocumentIndexFailureDTO } from '../../../../Application/DTOs/expired-document-index-failure.dto.ts'
 import { DocumentIndexFailureArchive } from '../../../../Application/Ports/Out/Gateways/document-index-failure.archive.ts'
 import type {
   ArchiveDocumentIndexFailureParams,

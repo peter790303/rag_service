@@ -1,7 +1,7 @@
-import type { PlannedDocumentRelation } from '../../../DocumentRelations/Application/DataTransferObjects/planned-document-relation.dto.ts'
+import type { PlannedDocumentRelation } from '../../../DocumentRelations/Application/DTOs/planned-document-relation.dto.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import type { MarkdownChunkPlan } from '../DataTransferObjects/markdown-chunk-plan.dto.ts'
-import type { PlannedMarkdownChunk } from '../DataTransferObjects/planned-markdown-chunk.dto.ts'
+import type { MarkdownChunkPlan } from '../DTOs/markdown-chunk-plan.dto.ts'
+import type { PlannedMarkdownChunk } from '../DTOs/planned-markdown-chunk.dto.ts'
 import { ChunkPlanningUnavailableException } from '../Exceptions/chunk-planning-unavailable.exception.ts'
 
 const plannedRelationTypes = new Set(['markdown_link', 'wiki_link', 'requires', 'applies_to', 'overrides'])
