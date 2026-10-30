@@ -2,19 +2,19 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { test } from 'node:test'
 
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { FailedJobModel } from '../../../src/Infrastructure/Persistence/Models/failed-job.model.ts'
-import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
-import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { FailedJobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/failed-job.model.ts'
+import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
+import { DocumentRevisionModel } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
 import {
   resetRagDatabase,
   type ImportManifestEntry,
-} from '../../../src/Infrastructure/Persistence/reset-rag-database.ts'
+} from '../../../src/Shared/Infrastructure/Persistence/TypeORM/reset-rag-database.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 test(

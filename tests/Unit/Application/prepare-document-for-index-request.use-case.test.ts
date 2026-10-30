@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
-import type { SourceDocumentDTO } from '../../../src/Application/Documents/DataTransferObjects/source-document.dto.ts'
-import { IndexRequestDocumentUnavailableException } from '../../../src/Application/Documents/Exceptions/index-request-document-unavailable.exception.ts'
-import { InvalidDocumentSourceInputException } from '../../../src/Application/Documents/Exceptions/invalid-document-source-input.exception.ts'
-import { PrepareDocumentForIndexRequestUseCase } from '../../../src/Application/Documents/UseCases/prepare-document-for-index-request.use-case.ts'
-import { Document } from '../../../src/Domain/Document/document.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { InvalidDocumentSourceException } from '../../../src/Domain/Document/Exceptions/invalid-document-source.exception.ts'
+import { PrepareDocumentForIndexRequestCommandHandler } from '../../../src/Documents/Application/Commands/prepare-document-for-index-request.command.handler.ts'
+import type { SourceDocumentDTO } from '../../../src/Documents/Application/DTOs/source-document.dto.ts'
+import { IndexRequestDocumentUnavailableException } from '../../../src/Documents/Application/Exceptions/index-request-document-unavailable.exception.ts'
+import { InvalidDocumentSourceInputException } from '../../../src/Documents/Application/Exceptions/invalid-document-source-input.exception.ts'
+import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
+import { Document } from '../../../src/Documents/Domain/Entities/document.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { InvalidDocumentSourceException } from '../../../src/Documents/Domain/Exceptions/invalid-document-source.exception.ts'
 
 const sourceDocument: SourceDocumentDTO = {
   knowledgeBaseId: 'kb-1',
@@ -30,7 +30,7 @@ test('source identity and title are validated before any document repository acc
     findBySourceTypeAndSourceKeyAndSourcePath: access,
     lockByDocumentId: access,
   } as unknown as DocumentRepository
-  const useCase = new PrepareDocumentForIndexRequestUseCase(repository)
+  const useCase = new PrepareDocumentForIndexRequestCommandHandler(repository)
 
   await Promise.all(
     ['sourceType', 'sourceKey', 'sourcePath'].map(async (field) => {
@@ -74,7 +74,7 @@ test('omitted, null, empty and supplied titles select explicit persistence opera
   )
   const find = context.mock.fn<DocumentRepository['findBySourceTypeAndSourceKeyAndSourcePath']>(async () => document)
   const lock = context.mock.fn<DocumentRepository['lockByDocumentId']>(async () => document)
-  const useCase = new PrepareDocumentForIndexRequestUseCase({
+  const useCase = new PrepareDocumentForIndexRequestCommandHandler({
     upsertBySourceTypeAndSourceKeyAndSourcePath: preserve,
     upsertTitleBySourceTypeAndSourceKeyAndSourcePath: replace,
     findBySourceTypeAndSourceKeyAndSourcePath: find,
@@ -127,7 +127,7 @@ test('omitted, null, empty and supplied titles select explicit persistence opera
 test('missing source after the write fails before locking a candidate document ID', async (context) => {
   const events: string[] = []
   const lock = context.mock.fn(async () => null)
-  const useCase = new PrepareDocumentForIndexRequestUseCase({
+  const useCase = new PrepareDocumentForIndexRequestCommandHandler({
     upsertBySourceTypeAndSourceKeyAndSourcePath: async () => {
       events.push('write')
     },
@@ -148,7 +148,7 @@ test('a failed source write propagates without reading or locking a document', a
   const failure = new Error('source write failed')
   const read = context.mock.fn(async () => null)
   const lock = context.mock.fn(async () => null)
-  const useCase = new PrepareDocumentForIndexRequestUseCase({
+  const useCase = new PrepareDocumentForIndexRequestCommandHandler({
     upsertBySourceTypeAndSourceKeyAndSourcePath: async () => {
       throw failure
     },

@@ -6,10 +6,10 @@ import {
   createRetrievalSnapshotFixture,
   type RetrievalSnapshotFixture,
 } from './retrieve-knowledge-base-content.use-case.fixtures.ts'
-import { InvalidKnowledgeGraphQueryException } from '../../../src/Application/KnowledgeBases/Exceptions/invalid-knowledge-graph-query.exception.ts'
-import { LoadKnowledgeGraphUseCase } from '../../../src/Application/KnowledgeBases/UseCases/load-knowledge-graph.use-case.ts'
-import type { KnowledgeGraphState } from '../../../src/Domain/KnowledgeBase/ValueObjects/knowledge-base-graph.ts'
-import { KnowledgeBaseGraph } from '../../../src/Domain/KnowledgeBase/ValueObjects/knowledge-base-graph.ts'
+import { InvalidKnowledgeGraphQueryException } from '../../../src/KnowledgeBases/Application/Exceptions/invalid-knowledge-graph-query.exception.ts'
+import { LoadKnowledgeGraphQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/load-knowledge-graph.query.handler.ts'
+import type { KnowledgeGraphState } from '../../../src/KnowledgeBases/Domain/ValueObjects/knowledge-base-graph.ts'
+import { KnowledgeBaseGraph } from '../../../src/KnowledgeBases/Domain/ValueObjects/knowledge-base-graph.ts'
 
 const graphFixture = (count = 4): RetrievalSnapshotFixture => ({
   knowledgeBaseId: 'kb',
@@ -54,8 +54,8 @@ const createGraphUseCase = (input: RetrievalSnapshotFixture) => {
   const samples: string[][] = []
   const candidateScopes: string[][] = []
   let snapshotActive = false
-  type Dependencies = ConstructorParameters<typeof LoadKnowledgeGraphUseCase>
-  const useCase = new LoadKnowledgeGraphUseCase(
+  type Dependencies = ConstructorParameters<typeof LoadKnowledgeGraphQueryHandler>
+  const useCase = new LoadKnowledgeGraphQueryHandler(
     {
       run: async () => assert.fail('Graph must use a read-only snapshot'),
       runReadOnlySnapshot: async (operation) => {

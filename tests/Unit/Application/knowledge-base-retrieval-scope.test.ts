@@ -5,13 +5,13 @@ import {
   createRetrievalSnapshotFixture,
   retrievalProfileFixtures,
 } from './retrieve-knowledge-base-content.use-case.fixtures.ts'
-import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { KnowledgeIndexPendingException } from '../../../src/Domain/DocumentIndex/Exceptions/knowledge-index-pending.exception.ts'
-import { KnowledgeRetrievalIncompleteException } from '../../../src/Domain/KnowledgeBase/Exceptions/knowledge-retrieval-incomplete.exception.ts'
+import { KnowledgeIndexPendingException } from '../../../src/DocumentIndexes/Domain/Exceptions/knowledge-index-pending.exception.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
+import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
+import { KnowledgeRetrievalIncompleteException } from '../../../src/KnowledgeBases/Domain/Exceptions/knowledge-retrieval-incomplete.exception.ts'
 
-const selectScope = RetrieveKnowledgeBaseContentUseCase.prototype['selectScope'].bind(
-  RetrieveKnowledgeBaseContentUseCase.prototype,
+const selectScope = RetrieveKnowledgeBaseContentQueryHandler.prototype['selectScope'].bind(
+  RetrieveKnowledgeBaseContentQueryHandler.prototype,
 )
 const selectKnowledgeBaseRetrievalScope = (
   facts: Omit<Parameters<typeof selectScope>[0], 'knowledgeBaseDocuments' | 'documents' | 'indexes' | 'revisions'> &

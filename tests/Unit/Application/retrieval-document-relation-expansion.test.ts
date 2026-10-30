@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
+import { DocumentReference } from '../../../src/Documents/Domain/ValueObjects/document-reference.ts'
 import {
-  RetrieveKnowledgeBaseContentUseCase,
+  RetrieveKnowledgeBaseContentQueryHandler,
   RELATION_EXPANSION_CHUNK_LIMIT,
   RELATION_EXPANSION_RELATION_LIMIT,
   RELATION_TARGET_CHUNK_LIMIT,
-} from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { DocumentReference } from '../../../src/Domain/DocumentRelation/ValueObjects/document-reference.ts'
+} from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
 
-const expandRetrievalDocumentRelationContext = RetrieveKnowledgeBaseContentUseCase.prototype['expandRelations'].bind(
-  RetrieveKnowledgeBaseContentUseCase.prototype,
-)
+const expandRetrievalDocumentRelationContext = RetrieveKnowledgeBaseContentQueryHandler.prototype[
+  'expandRelations'
+].bind(RetrieveKnowledgeBaseContentQueryHandler.prototype)
 
 test('uniquely resolved relation without an anchor expands a bounded set of target chunks', () => {
   const targetChunks = Array.from({ length: RELATION_TARGET_CHUNK_LIMIT + 3 }, (_, ordinal) => ({

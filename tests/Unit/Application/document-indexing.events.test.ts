@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import type { DocumentIndexingDeliveryDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-delivery.dto.ts'
-import { DocumentIndexedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexed.event.ts'
-import { DocumentIndexingDispatchedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-dispatched.event.ts'
-import { DocumentIndexingFailedEvent } from '../../../src/Application/DocumentIndexes/Events/document-indexing-failed.event.ts'
+import type { DocumentIndexingDeliveryDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-indexing-delivery.dto.ts'
+import { DocumentIndexedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexed.event.ts'
+import { DocumentIndexingDispatchedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-dispatched.event.ts'
+import { DocumentIndexingFailedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-failed.event.ts'
 
 function createDelivery(): DocumentIndexingDeliveryDTO {
   return {

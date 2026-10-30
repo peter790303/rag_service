@@ -2,24 +2,24 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createDocumentIndexRecordFixture } from './document-index-lifecycle.fixture.ts'
-import { InvalidIndexChunkGarbageInputException } from '../../../src/Application/Chunks/Exceptions/invalid-index-chunk-garbage-input.exception.ts'
-import { DocumentIndexGarbageAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/document-index-garbage.assembler.ts'
-import type { DocumentIndexRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-record.dto.ts'
-import type { DocumentGarbageCollectionScopeDTO } from '../../../src/Application/Documents/DataTransferObjects/document-garbage-collection-scope.dto.ts'
-import { ChunkDocumentIndexRequiredException } from '../../../src/Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
+import { InvalidIndexChunkGarbageInputException } from '../../../src/Chunks/Application/Exceptions/invalid-index-chunk-garbage-input.exception.ts'
+import { ChunkDocumentIndexRequiredException } from '../../../src/Chunks/Domain/Exceptions/chunk-document-index-required.exception.ts'
+import { DocumentIndexGarbageAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/document-index-garbage.assembler.ts'
+import type { DocumentIndexRecordDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-record.dto.ts'
+import type { DocumentGarbageCollectionScopeDTO } from '../../../src/Documents/Application/DTOs/document-garbage-collection-scope.dto.ts'
 
 const documentGarbageCollectionScopeDTO: DocumentGarbageCollectionScopeDTO = {
   retentionCutoff: new Date('2026-02-01T00:00:00.000Z'),
   lockedDocumentIds: ['document'],
 }
 
-test('chunk garbage DTO conversion rejects invalid required index IDs at the creation boundary', () => {
+test('chunk garbage command conversion rejects invalid required index IDs at the creation boundary', () => {
   const invalidIndexIds = [undefined, null, 42, '', ' ']
 
   invalidIndexIds.forEach((id) => {
     assert.throws(
       () =>
-        DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(
+        DocumentIndexGarbageAssembler.toCollectIndexChunkGarbageCommand(
           { ...createDocumentIndexRecordFixture(), id } as DocumentIndexRecordDTO,
           documentGarbageCollectionScopeDTO,
         ),
@@ -29,7 +29,7 @@ test('chunk garbage DTO conversion rejects invalid required index IDs at the cre
 
   assert.throws(
     () =>
-      DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(
+      DocumentIndexGarbageAssembler.toCollectIndexChunkGarbageCommand(
         undefined as unknown as DocumentIndexRecordDTO,
         documentGarbageCollectionScopeDTO,
       ),
@@ -37,7 +37,7 @@ test('chunk garbage DTO conversion rejects invalid required index IDs at the cre
   )
 })
 
-test('chunk garbage DTO conversion rejects malformed document and retention fields', () => {
+test('chunk garbage command conversion rejects malformed document and retention fields', () => {
   const invalidFields = [
     { field: 'documentId', values: [undefined, null, 42, '', ' '] },
     { field: 'unreferencedSince', values: [undefined, '2026-01-01', 0, new Date(NaN)] },
@@ -47,7 +47,7 @@ test('chunk garbage DTO conversion rejects malformed document and retention fiel
     values.forEach((value) => {
       assert.throws(
         () =>
-          DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(
+          DocumentIndexGarbageAssembler.toCollectIndexChunkGarbageCommand(
             { ...createDocumentIndexRecordFixture(), [field]: value },
             documentGarbageCollectionScopeDTO,
           ),
@@ -57,7 +57,7 @@ test('chunk garbage DTO conversion rejects malformed document and retention fiel
   })
 })
 
-test('chunk garbage DTO conversion rejects malformed scope and invalid dates', () => {
+test('chunk garbage command conversion rejects malformed scope and invalid dates', () => {
   const invalidFields = [
     { field: 'retentionCutoff', values: [undefined, null, '2026-02-01', 0, new Date(NaN)] },
     { field: 'lockedDocumentIds', values: [undefined, null, 'document', [42], [null], [' '], Array(1)] },
@@ -67,7 +67,7 @@ test('chunk garbage DTO conversion rejects malformed scope and invalid dates', (
     values.forEach((value) => {
       assert.throws(
         () =>
-          DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(createDocumentIndexRecordFixture(), {
+          DocumentIndexGarbageAssembler.toCollectIndexChunkGarbageCommand(createDocumentIndexRecordFixture(), {
             ...documentGarbageCollectionScopeDTO,
             [field]: value,
           }),
@@ -78,7 +78,7 @@ test('chunk garbage DTO conversion rejects malformed scope and invalid dates', (
 
   assert.throws(
     () =>
-      DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(
+      DocumentIndexGarbageAssembler.toCollectIndexChunkGarbageCommand(
         createDocumentIndexRecordFixture(),
         undefined as unknown as DocumentGarbageCollectionScopeDTO,
       ),
@@ -86,7 +86,7 @@ test('chunk garbage DTO conversion rejects malformed scope and invalid dates', (
   )
 })
 
-test('chunk garbage DTO conversion preserves null, timestamps and lock facts without deciding eligibility', () => {
+test('chunk garbage command conversion preserves null, timestamps and lock facts without deciding eligibility', () => {
   const retentionCutoff = documentGarbageCollectionScopeDTO.retentionCutoff
   const lockedDocumentIds = Object.freeze(['other-document', 'other-document'])
   const documentGarbageScopeDTO = Object.freeze({ retentionCutoff, lockedDocumentIds })
@@ -94,12 +94,12 @@ test('chunk garbage DTO conversion preserves null, timestamps and lock facts wit
 
   retentionTimestamps.forEach((unreferencedSince) => {
     const documentIndexRecordDTO = Object.freeze(createDocumentIndexRecordFixture({ unreferencedSince }))
-    const indexChunkGarbageDTO = DocumentIndexGarbageAssembler.toIndexChunkGarbageDTO(
+    const indexChunkGarbageCommand = DocumentIndexGarbageAssembler.toCollectIndexChunkGarbageCommand(
       documentIndexRecordDTO,
       documentGarbageScopeDTO,
     )
 
-    assert.deepEqual(indexChunkGarbageDTO, {
+    assert.deepEqual(indexChunkGarbageCommand, {
       documentIndexId: 'index',
       documentId: 'document',
       unreferencedSince,

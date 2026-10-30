@@ -5,15 +5,15 @@ import { test } from 'node:test'
 import { Module } from '@nestjs/common'
 import { NestFactory } from '@nestjs/core'
 
-import { ServiceAuthenticator } from '../../../src/Application/KnowledgeBases/Contracts/service-authenticator.ts'
-import type { LoadKnowledgeGraphDTO } from '../../../src/Application/KnowledgeBases/DataTransferObjects/load-knowledge-graph.dto.ts'
-import { KNOWLEDGE_GRAPH_CATALOG_SCOPE } from '../../../src/Application/KnowledgeBases/knowledge-graph-catalog-scope.ts'
-import { ListKnowledgeGraphProjectsUseCase } from '../../../src/Application/KnowledgeBases/UseCases/list-knowledge-graph-projects.use-case.ts'
-import { LoadKnowledgeGraphUseCase } from '../../../src/Application/KnowledgeBases/UseCases/load-knowledge-graph.use-case.ts'
-import { KnowledgeBase } from '../../../src/Domain/KnowledgeBase/knowledge-base.ts'
-import { HmacProjectServiceAuthenticator } from '../../../src/Infrastructure/Auth/hmac-project-service.authenticator.ts'
-import { KnowledgeGraphController } from '../../../src/Interfaces/Http/Controllers/knowledge-graph.controller.ts'
-import { createGlobalValidationPipe } from '../../../src/Interfaces/Http/Pipes/create-global-validation-pipe.ts'
+import type { LoadKnowledgeGraphDTO } from '../../../src/KnowledgeBases/Application/DTOs/load-knowledge-graph.dto.ts'
+import { ListKnowledgeGraphProjectsQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/list-knowledge-graph-projects.query.handler.ts'
+import { LoadKnowledgeGraphQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/load-knowledge-graph.query.handler.ts'
+import { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'
+import { KnowledgeGraphController } from '../../../src/KnowledgeBases/Interfaces/Nest/Controllers/knowledge-graph.controller.ts'
+import { KNOWLEDGE_GRAPH_CATALOG_SCOPE } from '../../../src/Shared/Application/Constants/knowledge-graph-catalog-scope.ts'
+import { ServiceAuthenticator } from '../../../src/Shared/Application/Ports/Out/Gateways/service-authenticator.ts'
+import { HmacProjectServiceAuthenticator } from '../../../src/Shared/Infrastructure/Auth/hmac-project-service.authenticator.ts'
+import { createGlobalValidationPipe } from '../../../src/Shared/Interfaces/Nest/Pipes/create-global-validation-pipe.ts'
 import { createKnowledgeServiceConfigFixture } from '../../Support/knowledge-service-config.fixture.ts'
 
 const secret = 'graph-test-secret-long-enough'
@@ -27,7 +27,7 @@ const requests: LoadKnowledgeGraphDTO[] = []
       useValue: new HmacProjectServiceAuthenticator(createKnowledgeServiceConfigFixture({ serviceAuthSecret: secret })),
     },
     {
-      provide: ListKnowledgeGraphProjectsUseCase,
+      provide: ListKnowledgeGraphProjectsQueryHandler,
       useValue: {
         execute: async () => [
           KnowledgeBase.create({
@@ -48,7 +48,7 @@ const requests: LoadKnowledgeGraphDTO[] = []
       },
     },
     {
-      provide: LoadKnowledgeGraphUseCase,
+      provide: LoadKnowledgeGraphQueryHandler,
       useValue: {
         execute: async (request: LoadKnowledgeGraphDTO) => {
           requests.push(request)

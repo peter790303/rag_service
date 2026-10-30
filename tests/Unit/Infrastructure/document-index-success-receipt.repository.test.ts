@@ -5,12 +5,12 @@ import 'reflect-metadata'
 import { DataSource, type EntityManager, type FindOptionsWhere } from 'typeorm'
 
 import { KNOWLEDGE_SERVICE_CONFIG, type KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import type { ArchiveDocumentIndexSuccessQueryObject } from '../../../src/Application/DocumentIndexes/QueryObjects/document-index-success.query-object.ts'
-import { InvalidDocumentIndexSuccessReceiptException } from '../../../src/Infrastructure/Persistence/Exceptions/invalid-document-index-success-receipt.exception.ts'
-import { DocumentIndexSuccessReceiptModel } from '../../../src/Infrastructure/Persistence/Models/document-index-success-receipt.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { DocumentIndexSuccessReceiptRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index-success-receipt.repository.ts'
-import { PersistenceModule } from '../../../src/Infrastructure/Providers/persistence.module.ts'
+import { PersistenceModule } from '../../../src/Bootstrap/Nest/Providers/persistence.module.ts'
+import type { ArchiveDocumentIndexSuccessParams } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-success.params.ts'
+import { InvalidDocumentIndexSuccessReceiptException } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Exceptions/invalid-document-index-success-receipt.exception.ts'
+import { DocumentIndexSuccessReceiptModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index-success-receipt.model.ts'
+import { DocumentIndexSuccessReceiptRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index-success-receipt.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 type TypeOrmOptionsProvider = {
   inject?: unknown[]
@@ -24,7 +24,7 @@ type DynamicModuleMetadata = {
 
 const createRepositoryManagerStub = (): EntityManager => new DataSource({ type: 'postgres' }).manager
 
-const successReceiptQuery: ArchiveDocumentIndexSuccessQueryObject = {
+const successReceiptQuery: ArchiveDocumentIndexSuccessParams = {
   projectId: 'env-smoke-20261018-dc8d4592',
   jobId: '6caa2a73-0360-4975-88bd-89d9df6a16ef',
   knowledgeBaseId: 'b610bd06-09e8-4e47-b836-0f4971af341f',
@@ -138,7 +138,7 @@ test('receipt archive rejects absent or invalid successful execution facts befor
   await Promise.all(
     invalid.map((receipt) =>
       assert.rejects(
-        repository.archiveSuccess(receipt as ArchiveDocumentIndexSuccessQueryObject),
+        repository.archiveSuccess(receipt as ArchiveDocumentIndexSuccessParams),
         InvalidDocumentIndexSuccessReceiptException,
       ),
     ),

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { InvalidDateTimeDisplayOptionsException } from '../../../../src/Domain/Document/Exceptions/invalid-date-time-display-options.exception.ts'
-import { InvalidDateTimeException } from '../../../../src/Domain/Document/Exceptions/invalid-date-time.exception.ts'
-import { DateTime, type DateTimeDisplayOptions } from '../../../../src/Domain/Document/ValueObjects/date-time.ts'
+import { InvalidDateTimeDisplayOptionsException } from '../../../../src/Shared/Domain/Exceptions/invalid-date-time-display-options.exception.ts'
+import { InvalidDateTimeException } from '../../../../src/Shared/Domain/Exceptions/invalid-date-time.exception.ts'
+import { DateTime, type DateTimeDisplayOptions } from '../../../../src/Shared/Domain/ValueObjects/date-time.ts'
 
 test('date time owns its timestamp and returns a fresh native date on every access', () => {
   const input = new Date('2026-10-16T12:34:56.789Z')

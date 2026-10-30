@@ -2,10 +2,10 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import type { ChunkRepository } from '../../../src/Application/Chunks/Contracts/chunk.repository.ts'
-import type { ChunkIndexIdsQueryObject } from '../../../src/Application/Chunks/QueryObjects/chunk.query-object.ts'
-import { LoadRetrievalIndexChunksUseCase } from '../../../src/Application/Chunks/UseCases/load-retrieval-index-chunks.use-case.ts'
-import { Chunk } from '../../../src/Domain/Chunk/chunk.ts'
+import type { ChunkRepository } from '../../../src/Chunks/Application/Ports/Out/Repositories/chunk.repository.ts'
+import { LoadRetrievalIndexChunksQueryHandler } from '../../../src/Chunks/Application/Queries/load-retrieval-index-chunks.query.handler.ts'
+import type { ChunkIndexIdsQO } from '../../../src/Chunks/Application/QueryObjects/chunk.query-object.ts'
+import { Chunk } from '../../../src/Chunks/Domain/Entities/chunk.ts'
 
 const createPersistedChunk = (id: string, documentIndexId: string, ordinal: number): Chunk =>
   new Chunk({
@@ -23,8 +23,8 @@ const createPersistedChunk = (id: string, documentIndexId: string, ordinal: numb
   })
 
 test('index loading returns complete entity union while preserving read scopes and repository ordering', async () => {
-  const fullContentQueriesQO: ChunkIndexIdsQueryObject[] = []
-  const countOnlyQueriesQO: ChunkIndexIdsQueryObject[] = []
+  const fullContentQueriesQO: ChunkIndexIdsQO[] = []
+  const countOnlyQueriesQO: ChunkIndexIdsQO[] = []
   const readEvents: string[] = []
   const firstFullChunk = createPersistedChunk('full-first', 'first-full-index', 0)
   const secondFullChunk = createPersistedChunk('full-second', 'second-full-index', 2)
@@ -47,7 +47,7 @@ test('index loading returns complete entity union while preserving read scopes a
     },
   })
 
-  const retrievedChunks = await new LoadRetrievalIndexChunksUseCase(chunkRepository).execute({
+  const retrievedChunks = await new LoadRetrievalIndexChunksQueryHandler(chunkRepository).execute({
     fullContentIndexIds,
     countedIndexIds,
   })
@@ -75,7 +75,7 @@ test('index loading deduplicates chunk identities and retains the first entity i
     findByDocumentIndexIds: async () => [repeatedChunk, distinctChunk, distinctChunk],
   })
 
-  const retrievedChunks = await new LoadRetrievalIndexChunksUseCase(chunkRepository).execute({
+  const retrievedChunks = await new LoadRetrievalIndexChunksQueryHandler(chunkRepository).execute({
     fullContentIndexIds: ['index'],
     countedIndexIds: ['other-index'],
   })
@@ -86,8 +86,8 @@ test('index loading deduplicates chunk identities and retains the first entity i
 })
 
 test('index loading preserves count-only entities and empty scopes without requesting a full-content index twice', async () => {
-  const fullContentQueriesQO: ChunkIndexIdsQueryObject[] = []
-  const countOnlyQueriesQO: ChunkIndexIdsQueryObject[] = []
+  const fullContentQueriesQO: ChunkIndexIdsQO[] = []
+  const countOnlyQueriesQO: ChunkIndexIdsQO[] = []
   const countedChunk = createPersistedChunk('counted', 'count-only-index', 0)
   const chunkRepository = createRepositoryStub<ChunkRepository>({
     findByDocumentIndexIdsOrderByDocumentIndexIdAscAndOrdinalAsc: async (chunkIndexIdsQO) => {
@@ -101,7 +101,7 @@ test('index loading preserves count-only entities and empty scopes without reque
       return chunkIndexIdsQO.documentIndexIds.includes('count-only-index') ? [countedChunk] : []
     },
   })
-  const loadRetrievalIndexChunks = new LoadRetrievalIndexChunksUseCase(chunkRepository)
+  const loadRetrievalIndexChunks = new LoadRetrievalIndexChunksQueryHandler(chunkRepository)
 
   assert.deepEqual(
     await loadRetrievalIndexChunks.execute({ fullContentIndexIds: [], countedIndexIds: ['count-only-index'] }),

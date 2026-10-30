@@ -8,24 +8,23 @@ import {
   createJobRecordFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
-import type { MarkdownChunkPlan } from '../../../src/Application/Chunks/DataTransferObjects/markdown-chunk-plan.dto.ts'
-import type { InsertChunksQueryObject } from '../../../src/Application/Chunks/QueryObjects/insert-chunks.query-object.ts'
-import { ReplaceIndexChunkUseCase } from '../../../src/Application/Chunks/UseCases/replace-index-chunk.use-case.ts'
-import type { AuthorizeDocumentIndexChunkReplacementUseCaseContract } from '../../../src/Application/DocumentIndexes/Contracts/authorize-document-index-chunk-replacement.use-case.contract.ts'
-import { AuthorizeDocumentIndexChunkReplacementInputDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/authorize-document-index-chunk-replacement-input.dto.ts'
-import type { DocumentIndexingClaimDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-indexing-claim.dto.ts'
-import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
-import { IndexDisappearedBeforeCompletionException } from '../../../src/Application/DocumentIndexes/Exceptions/index-disappeared-before-completion.exception.ts'
-import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
-import { AuthorizeDocumentIndexChunkReplacementUseCase } from '../../../src/Application/DocumentIndexes/UseCases/authorize-document-index-chunk-replacement.use-case.ts'
-import type { ReplacePlannedDocumentRelationsUseCaseContract } from '../../../src/Application/DocumentRelations/Contracts/replace-planned-document-relations.use-case.contract.ts'
-import type { PlannedDocumentRelationWrite } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
-import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
-import { ReserveDocumentForIndexingUseCase } from '../../../src/Application/Documents/UseCases/reserve-document-for-indexing.use-case.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/reserve-knowledge-base-document-for-indexing.use-case.ts'
-import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import type { DocumentIndex } from '../../../src/Domain/DocumentIndex/document-index.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
+import { ReplaceIndexChunkCommandHandler } from '../../../src/Chunks/Application/Commands/replace-index-chunk.command.handler.ts'
+import type { MarkdownChunkPlan } from '../../../src/Chunks/Application/DTOs/markdown-chunk-plan.dto.ts'
+import type { InsertChunksQO } from '../../../src/Chunks/Application/QueryObjects/insert-chunks.query-object.ts'
+import { AuthorizeDocumentIndexChunkReplacementCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/authorize-document-index-chunk-replacement.command.handler.ts'
+import type { AuthorizeDocumentIndexChunkReplacementCommandHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/authorize-document-index-chunk-replacement.command.handler.contract.ts'
+import type { DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-indexing-claim.dto.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
+import { IndexDisappearedBeforeCompletionException } from '../../../src/DocumentIndexes/Application/Exceptions/index-disappeared-before-completion.exception.ts'
+import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease.exception.ts'
+import type { DocumentIndex } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/DocumentRelations/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import type { ReplacePlannedDocumentRelationsCommandHandlerContract } from '../../../src/DocumentRelations/Application/Contracts/replace-planned-document-relations.command.handler.contract.ts'
+import type { PlannedDocumentRelationWriteQO } from '../../../src/DocumentRelations/Application/QueryObjects/document-relation.query-object.ts'
+import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
 
 const claimedJobFixture: DocumentIndexingClaimDTO = {
   id: 'job-1',
@@ -68,10 +67,10 @@ const chunkReplacementPlanFixture: MarkdownChunkPlan = {
 
 const createReplaceIndexChunkScenario = (index: DocumentIndex | null, requestedGeneration = 1) => {
   const events: string[] = []
-  const insertedChunks: InsertChunksQueryObject['chunks'][number][] = []
-  const savedRelations: PlannedDocumentRelationWrite[] = []
+  const insertedChunks: InsertChunksQO['chunks'][number][] = []
+  const savedRelations: PlannedDocumentRelationWriteQO[] = []
   let transactionCount = 0
-  const useCase = new ReplaceIndexChunkUseCase(
+  const useCase = new ReplaceIndexChunkCommandHandler(
     {
       runReadOnlySnapshot: async () => assert.fail('replacing chunks uses a write transaction'),
       run: async (replaceChunksOperation) => {
@@ -80,9 +79,9 @@ const createReplaceIndexChunkScenario = (index: DocumentIndex | null, requestedG
         return replaceChunksOperation()
       },
     },
-    new AuthorizeDocumentIndexChunkReplacementUseCase(
-      new ReserveDocumentForIndexingUseCase(
-        createRepositoryStub<ConstructorParameters<typeof ReserveDocumentForIndexingUseCase>[0]>({
+    new AuthorizeDocumentIndexChunkReplacementCommandHandler(
+      new ReserveDocumentForIndexingCommandHandler(
+        createRepositoryStub<ConstructorParameters<typeof ReserveDocumentForIndexingCommandHandler>[0]>({
           lockByDocumentId: async () => {
             events.push('lock-document')
 
@@ -90,8 +89,8 @@ const createReplaceIndexChunkScenario = (index: DocumentIndex | null, requestedG
           },
         }),
       ),
-      new ReserveKnowledgeBaseDocumentForIndexingUseCase(
-        createRepositoryStub<ConstructorParameters<typeof ReserveKnowledgeBaseDocumentForIndexingUseCase>[0]>({
+      new ReserveKnowledgeBaseDocumentForIndexingCommandHandler(
+        createRepositoryStub<ConstructorParameters<typeof ReserveKnowledgeBaseDocumentForIndexingCommandHandler>[0]>({
           lockByKnowledgeBaseIdAndDocumentId: async () => {
             events.push('lock-knowledgeBaseDocument')
 
@@ -99,7 +98,7 @@ const createReplaceIndexChunkScenario = (index: DocumentIndex | null, requestedG
           },
         }),
       ),
-      createRepositoryStub<ConstructorParameters<typeof AuthorizeDocumentIndexChunkReplacementUseCase>[2]>({
+      createRepositoryStub<ConstructorParameters<typeof AuthorizeDocumentIndexChunkReplacementCommandHandler>[2]>({
         lockExecution: async (jobIdQO) => {
           events.push('lock-job')
           assert.equal(jobIdQO.jobId, claimedJobFixture.id)
@@ -110,7 +109,7 @@ const createReplaceIndexChunkScenario = (index: DocumentIndex | null, requestedG
           })
         },
       }),
-      createRepositoryStub<ConstructorParameters<typeof AuthorizeDocumentIndexChunkReplacementUseCase>[3]>({
+      createRepositoryStub<ConstructorParameters<typeof AuthorizeDocumentIndexChunkReplacementCommandHandler>[3]>({
         lockByDocumentIndexId: async (documentIndexIdQO) => {
           events.push('lock-index')
           assert.equal(documentIndexIdQO.documentIndexId, claimedJobFixture.documentIndexId)
@@ -126,7 +125,7 @@ const createReplaceIndexChunkScenario = (index: DocumentIndex | null, requestedG
         },
       }),
     ),
-    createRepositoryStub<ConstructorParameters<typeof ReplaceIndexChunkUseCase>[2]>({
+    createRepositoryStub<ConstructorParameters<typeof ReplaceIndexChunkCommandHandler>[2]>({
       removeByDocumentIndexId: async (chunkIndexQO) => {
         events.push('delete-chunks')
         assert.equal(chunkIndexQO.documentIndexId, claimedJobFixture.documentIndexId)
@@ -136,8 +135,8 @@ const createReplaceIndexChunkScenario = (index: DocumentIndex | null, requestedG
         insertedChunks.push(...insertChunksQO.chunks)
       },
     }),
-    new ReplacePlannedDocumentRelationsUseCase(
-      createRepositoryStub<ConstructorParameters<typeof ReplacePlannedDocumentRelationsUseCase>[0]>({
+    new ReplacePlannedDocumentRelationsCommandHandler(
+      createRepositoryStub<ConstructorParameters<typeof ReplacePlannedDocumentRelationsCommandHandler>[0]>({
         removeBySourceIndexId: async (documentRelationSourceIndexQO) => {
           events.push('delete-relations')
           assert.equal(documentRelationSourceIndexQO.sourceIndexId, claimedJobFixture.documentIndexId)
@@ -179,19 +178,27 @@ const now = new Date('2026-10-14T00:00:00.000Z')
 test('orchestrates public feature contracts inside the chunk transaction without foreign repositories', async () => {
   const events: string[] = []
   let transactionActive = false
-  const prepareReplacement: AuthorizeDocumentIndexChunkReplacementUseCaseContract = {
-    execute: async (authorizeReplacementDTO) => {
+  const prepareReplacement: AuthorizeDocumentIndexChunkReplacementCommandHandlerContract = {
+    execute: async (authorizeReplacementCommand) => {
       assert.equal(transactionActive, true)
-      assert.ok(authorizeReplacementDTO instanceof AuthorizeDocumentIndexChunkReplacementInputDTO)
-      assert.deepEqual(authorizeReplacementDTO.delivery, claimedJobFixture)
-      assert.notEqual(authorizeReplacementDTO.delivery, claimedJobFixture)
-      assert.notEqual(authorizeReplacementDTO.delivery.leaseExpiresAt, claimedJobFixture.leaseExpiresAt)
+      assert.deepEqual(authorizeReplacementCommand.delivery, {
+        id: claimedJobFixture.id,
+        knowledgeBaseId: claimedJobFixture.knowledgeBaseId,
+        documentId: claimedJobFixture.documentId,
+        documentIndexId: claimedJobFixture.documentIndexId,
+        generation: claimedJobFixture.generation,
+        attempts: claimedJobFixture.attempts,
+        leaseToken: claimedJobFixture.leaseToken,
+        leaseExpiresAt: claimedJobFixture.leaseExpiresAt,
+      })
+      assert.notEqual(authorizeReplacementCommand.delivery, claimedJobFixture)
+      assert.notEqual(authorizeReplacementCommand.delivery.leaseExpiresAt, claimedJobFixture.leaseExpiresAt)
       events.push('prepare-replacement')
 
       return createBuildingDocumentIndexFixture()
     },
   }
-  const replaceRelations: ReplacePlannedDocumentRelationsUseCaseContract = {
+  const replaceRelations: ReplacePlannedDocumentRelationsCommandHandlerContract = {
     execute: async ({ documentIndexId, plannedDocumentRelations: plannedRelations }) => {
       assert.equal(transactionActive, true)
       assert.equal(documentIndexId, claimedJobFixture.documentIndexId)
@@ -200,7 +207,7 @@ test('orchestrates public feature contracts inside the chunk transaction without
       events.push('replace-relations')
     },
   }
-  const useCase = new ReplaceIndexChunkUseCase(
+  const useCase = new ReplaceIndexChunkCommandHandler(
     {
       runReadOnlySnapshot: async () => assert.fail('chunk replacement requires a write transaction'),
       run: async (replaceChunksOperation) => {
@@ -216,7 +223,7 @@ test('orchestrates public feature contracts inside the chunk transaction without
       },
     },
     prepareReplacement,
-    createRepositoryStub<ConstructorParameters<typeof ReplaceIndexChunkUseCase>[2]>({
+    createRepositoryStub<ConstructorParameters<typeof ReplaceIndexChunkCommandHandler>[2]>({
       removeByDocumentIndexId: async () => {
         assert.equal(transactionActive, true)
         events.push('delete-chunks')

@@ -2,11 +2,11 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createDocumentFixture, createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import type { DocumentRevisionRepository } from '../../../src/Application/DocumentRevisions/Contracts/document-revision.repository.ts'
-import { CollectDocumentRevisionGarbageUseCase } from '../../../src/Application/DocumentRevisions/UseCases/collect-document-revision-garbage.use-case.ts'
-import type { DocumentRepository } from '../../../src/Application/Documents/Contracts/document.repository.ts'
-import { LockDocumentRetentionParentsUseCase } from '../../../src/Application/Documents/UseCases/lock-document-retention-parents.use-case.ts'
-import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
+import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/DocumentRevisions/Application/Commands/collect-document-revision-garbage.command.handler.ts'
+import type { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import { DocumentRevision } from '../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
+import { LockDocumentRetentionParentsCommandHandler } from '../../../src/Documents/Application/Commands/lock-document-retention-parents.command.handler.ts'
+import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
 
 const createExpiredRevision = (id: string): DocumentRevision =>
   new DocumentRevision({
@@ -39,7 +39,7 @@ test('parent retention locks await each sorted unique ID and omit missing docume
       return documentIdQO.documentId === 'document-2' ? null : createDocumentFixture({ id: documentIdQO.documentId })
     },
   })
-  const useCase = new LockDocumentRetentionParentsUseCase(documentRepository)
+  const useCase = new LockDocumentRetentionParentsCommandHandler(documentRepository)
 
   const documents = await useCase.execute({
     documentIds: ['document-3', 'document-1', 'document-2', 'document-1'],
@@ -65,7 +65,7 @@ test('parent retention locks complete an empty batch without accessing persisten
       assert.fail('an empty parent batch must not lock documents')
     },
   })
-  const useCase = new LockDocumentRetentionParentsUseCase(documentRepository)
+  const useCase = new LockDocumentRetentionParentsCommandHandler(documentRepository)
 
   assert.deepEqual(await useCase.execute({ documentIds: [] }), [])
 })
@@ -85,7 +85,7 @@ test('parent retention lock failure stops later IDs and propagates the original 
       return createDocumentFixture({ id: documentIdQO.documentId })
     },
   })
-  const useCase = new LockDocumentRetentionParentsUseCase(documentRepository)
+  const useCase = new LockDocumentRetentionParentsCommandHandler(documentRepository)
 
   await assert.rejects(
     useCase.execute({ documentIds: ['document-3', 'document-2', 'document-1'] }),
@@ -122,7 +122,7 @@ test('revision garbage collection finishes each candidate in supplied order and 
       await recordOperation(`delete:${documentRevisionIdQO.revisionId}`)
     },
   })
-  const useCase = new CollectDocumentRevisionGarbageUseCase(documentRevisionRepository, {
+  const useCase = new CollectDocumentRevisionGarbageCommandHandler(documentRevisionRepository, {
     async execute(inspectDocumentIndexRetentionDTO) {
       assert.ok('revisionId' in inspectDocumentIndexRetentionDTO)
       await recordOperation(`retention:${inspectDocumentIndexRetentionDTO.revisionId}`)
@@ -178,7 +178,7 @@ test('revision garbage collection deletion failure stops later candidates and pr
       }
     },
   })
-  const useCase = new CollectDocumentRevisionGarbageUseCase(documentRevisionRepository, {
+  const useCase = new CollectDocumentRevisionGarbageCommandHandler(documentRevisionRepository, {
     async execute(inspectDocumentIndexRetentionDTO) {
       assert.ok('revisionId' in inspectDocumentIndexRetentionDTO)
       calls.push(`retention:${inspectDocumentIndexRetentionDTO.revisionId}`)

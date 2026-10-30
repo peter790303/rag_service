@@ -4,32 +4,32 @@ import { test } from 'node:test'
 
 import { QueryFailedError } from 'typeorm'
 
-import { EmbeddingProvider } from '../../../src/Application/KnowledgeBases/Contracts/embedding-provider.ts'
-import { KnowledgeEmbeddingUnavailableException } from '../../../src/Application/KnowledgeBases/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import type { KnowledgeBaseProjectQueryObject } from '../../../src/Application/KnowledgeBases/QueryObjects/knowledge-base.query-object.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
+import { ChunkModel } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { ChunkRepository } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
 import {
   LEXICAL_PROFILE_VERSION,
   LexicalSearchQueryAdapter,
-} from '../../../src/Infrastructure/Persistence/Adapters/lexical-search-query.adapter.ts'
-import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
-import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
-import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
-import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
-import { DocumentRevisionRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-revision.repository.ts'
-import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
-import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
-import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
-import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
-import { HybridKnowledgeRetrievalResource } from '../../../src/Interfaces/Http/Resources/hybrid-knowledge-retrieval.resource.ts'
+} from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Adapters/lexical-search-query.adapter.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { FailedJobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/failed-job.repository.ts'
+import { JobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { DocumentRelationRepository } from '../../../src/DocumentRelations/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'
+import { DocumentRevisionModel } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { DocumentRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document.repository.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
+import type { KnowledgeBaseProjectQO } from '../../../src/KnowledgeBases/Application/QueryObjects/knowledge-base.query-object.ts'
+import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
+import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
+import { HybridKnowledgeRetrievalResource } from '../../../src/KnowledgeBases/Interfaces/Nest/Resources/hybrid-knowledge-retrieval.resource.ts'
+import { EmbeddingProvider } from '../../../src/Shared/Application/Ports/Out/Gateways/embedding-provider.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
@@ -62,7 +62,7 @@ class TransactionInspectingKnowledgeBaseRepository extends KnowledgeBaseReposito
     super(testTransaction)
   }
 
-  override async findByProjectId(knowledgeBaseProjectQO: KnowledgeBaseProjectQueryObject) {
+  override async findByProjectId(knowledgeBaseProjectQO: KnowledgeBaseProjectQO) {
     const manager = this.testTransaction.manager
     const [setting] = await manager.query<
       {

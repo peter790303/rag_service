@@ -1,14 +1,14 @@
-import type { DocumentIndexExecutionRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-record.dto.ts'
-import type { DocumentIndexRecordDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-record.dto.ts'
-import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import type { DocumentRecordDTO } from '../../../src/Application/Documents/DataTransferObjects/document-record.dto.ts'
-import { Document, type DocumentState } from '../../../src/Domain/Document/document.ts'
-import { DocumentIndex, type DocumentIndexState } from '../../../src/Domain/DocumentIndex/document-index.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
+import type { DocumentIndexExecutionRecordDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-execution-record.dto.ts'
+import type { DocumentIndexRecordDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-record.dto.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import { DocumentIndex, type DocumentIndexState } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import type { DocumentRecordDTO } from '../../../src/Documents/Application/DTOs/document-record.dto.ts'
+import { Document, type DocumentState } from '../../../src/Documents/Domain/Entities/document.ts'
 import {
   KnowledgeBaseDocument,
   type KnowledgeBaseDocumentState,
-} from '../../../src/Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
+} from '../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
 
 const lifecycleFixtureCreatedAt = new Date('2020-01-01T00:00:00.000Z')
 

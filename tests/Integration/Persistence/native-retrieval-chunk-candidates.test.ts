@@ -4,22 +4,22 @@ import { test } from 'node:test'
 
 import type { DataSource, EntityManager } from 'typeorm'
 
-import type { FindLexicalChunkCandidatesDTO } from '../../../src/Application/Chunks/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
+import type { FindLexicalChunkCandidatesDTO } from '../../../src/Chunks/Application/DTOs/find-lexical-chunk-candidates.dto.ts'
+import { FindLexicalChunkCandidatesQueryHandler } from '../../../src/Chunks/Application/Queries/find-lexical-chunk-candidates.query.handler.ts'
 import type {
-  ChunkLexicalSearchQueryObject,
-  ChunkVectorSimilarityQueryObject,
-} from '../../../src/Application/Chunks/QueryObjects/chunk.query-object.ts'
-import { FindLexicalChunkCandidatesUseCase } from '../../../src/Application/Chunks/UseCases/find-lexical-chunk-candidates.use-case.ts'
-import { Chunk } from '../../../src/Domain/Chunk/chunk.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { LexicalSearchQueryAdapter } from '../../../src/Infrastructure/Persistence/Adapters/lexical-search-query.adapter.ts'
-import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
+  ChunkLexicalSearchQO,
+  ChunkVectorSimilarityQO,
+} from '../../../src/Chunks/Application/QueryObjects/chunk.query-object.ts'
+import { Chunk } from '../../../src/Chunks/Domain/Entities/chunk.ts'
+import { ChunkModel } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { ChunkRepository } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { LexicalSearchQueryAdapter } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Adapters/lexical-search-query.adapter.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { DocumentRevisionModel } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 const createEmbeddingVectorFixture = (x: number, y: number): number[] => [x, y, ...Array<number>(382).fill(0)]
@@ -207,14 +207,14 @@ test(
       const lexicalResult = await persistenceTransaction.runReadOnlySnapshot(async () => {
         const manager = persistenceTransaction.manager
         assert.ok(manager.queryRunner?.isTransactionActive)
-        const lexicalQueryObject: ChunkLexicalSearchQueryObject = {
+        const lexicalQO: ChunkLexicalSearchQO = {
           documentIndexIds: [scopeA],
           queryText: 'architecture',
           limit: 3,
         }
 
         return persistenceTransaction.bind(manager, () =>
-          chunkRepository.findByDocumentIndexIdsOrderByLexicalScoreDescAndIdAsc(lexicalQueryObject),
+          chunkRepository.findByDocumentIndexIdsOrderByLexicalScoreDescAndIdAsc(lexicalQO),
         )
       })
 
@@ -320,7 +320,7 @@ test(
       scopeB,
       outsideScope,
     } = await createCandidateFixture()
-    const semanticIn = (manager: EntityManager, chunkVectorSimilarityQO: ChunkVectorSimilarityQueryObject) =>
+    const semanticIn = (manager: EntityManager, chunkVectorSimilarityQO: ChunkVectorSimilarityQO) =>
       persistenceTransaction.bind(manager, () =>
         chunkRepository.findByDocumentIndexIdsOrderByVectorCosineDistanceAscAndIdAsc(chunkVectorSimilarityQO),
       )
@@ -541,7 +541,7 @@ test(
     } = await createCandidateFixture()
     const chineseText = '繁體中文 Hybrid 檢索'
     const lexicalFormatter = new LexicalSearchQueryAdapter()
-    const lexicalCandidates = new FindLexicalChunkCandidatesUseCase(chunkRepository)
+    const lexicalCandidates = new FindLexicalChunkCandidatesQueryHandler(chunkRepository)
     const lexicalIn = (manager: EntityManager, findLexicalChunkCandidatesDTO: FindLexicalChunkCandidatesDTO) =>
       persistenceTransaction.bind(manager, () => lexicalCandidates.execute(findLexicalChunkCandidatesDTO))
 

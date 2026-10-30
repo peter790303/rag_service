@@ -3,8 +3,8 @@ import { describe, it } from 'node:test'
 
 import type { DataSource, EntityManager } from 'typeorm'
 
-import { ReadonlyDataSourceRequiredException } from '../../../src/Infrastructure/Persistence/Exceptions/readonly-data-source-required.exception.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
+import { ReadonlyDataSourceRequiredException } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/Exceptions/readonly-data-source-required.exception.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 describe('PersistenceTransaction', () => {
   it('uses the same manager for nested operations and restores the default afterward', async () => {

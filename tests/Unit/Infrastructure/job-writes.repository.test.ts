@@ -3,16 +3,16 @@ import test from 'node:test'
 
 import { DataSource, EntityManager } from 'typeorm'
 
-import type { DocumentIndexExecutionVerificationDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/document-index-execution-verification.dto.ts'
-import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
-import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
+import type { DocumentIndexExecutionVerificationDTO } from '../../../src/DocumentIndexes/Application/DTOs/document-index-execution-verification.dto.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import type {
   DocumentIndexExecutionStatusFields,
-  UpdateDocumentIndexExecutionQueryObject,
-} from '../../../src/Application/DocumentIndexes/QueryObjects/document-index-execution.query-object.ts'
-import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
+  UpdateDocumentIndexExecutionParams,
+} from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.params.ts'
+import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
+import { JobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 const createRepositoryManagerStub = (): EntityManager => new EntityManager(new DataSource({ type: 'postgres' }))
 
@@ -162,7 +162,7 @@ test('saving a job persists the caller lease value without changing its query ob
   const jobRepository = new JobRepository(new PersistenceTransaction({ manager } as DataSource))
   const now = new Date('2026-10-14T00:00:00.000Z')
   const leaseExpiresAt = new Date(verification.leaseExpiresAt!)
-  const saveJobQO: UpdateDocumentIndexExecutionQueryObject = {
+  const saveJobQO: UpdateDocumentIndexExecutionParams = {
     id: 'job-1',
     createdAt: now,
     updatedAt: now,
@@ -191,7 +191,7 @@ test('saving a job persists the caller lease value without changing its query ob
   assert.notEqual(update.mock.calls[0]?.arguments[1]?.executionVerification, saveJobQO.executionVerification)
   assert.notEqual(update.mock.calls[0]?.arguments[1], saveJobQO)
 
-  const saveQueuedJobQO: UpdateDocumentIndexExecutionQueryObject = {
+  const saveQueuedJobQO: UpdateDocumentIndexExecutionParams = {
     ...saveJobQO,
     status: DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED,
     reservedAt: null,
@@ -219,7 +219,7 @@ test('saving a job does not derive lease expiry from malformed JSON', async (con
     raw: [],
   }))
   const now = new Date('2026-10-14T00:00:00.000Z')
-  const saveJobQO: UpdateDocumentIndexExecutionQueryObject = {
+  const saveJobQO: UpdateDocumentIndexExecutionParams = {
     id: 'job-1',
     createdAt: now,
     updatedAt: now,

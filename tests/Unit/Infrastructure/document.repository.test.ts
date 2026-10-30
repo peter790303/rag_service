@@ -3,10 +3,10 @@ import test, { type TestContext } from 'node:test'
 
 import { DataSource, EntityManager, In, IsNull, LessThanOrEqual } from 'typeorm'
 
-import { Document } from '../../../src/Domain/Document/document.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
+import { Document } from '../../../src/Documents/Domain/Entities/document.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { DocumentRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 const sourceIdentity = { sourceType: 'repository', sourceKey: 'repo-a', sourcePath: 'docs/page.md' }
 const candidateSource = { ...sourceIdentity, id: 'candidate-id', createdAt: new Date('2026-10-16T00:00:00.000Z') }

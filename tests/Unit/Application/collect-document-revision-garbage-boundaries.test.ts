@@ -2,12 +2,12 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import type { InspectDocumentIndexRetentionUseCaseContract } from '../../../src/Application/DocumentIndexes/Contracts/inspect-document-index-retention.use-case.contract.ts'
-import type { DocumentRevisionRepository } from '../../../src/Application/DocumentRevisions/Contracts/document-revision.repository.ts'
-import type { CollectDocumentRevisionGarbageDTO } from '../../../src/Application/DocumentRevisions/DataTransferObjects/document-revision-garbage.dto.ts'
-import { InvalidDocumentRevisionGarbageInputException } from '../../../src/Application/DocumentRevisions/Exceptions/invalid-document-revision-garbage-input.exception.ts'
-import { CollectDocumentRevisionGarbageUseCase } from '../../../src/Application/DocumentRevisions/UseCases/collect-document-revision-garbage.use-case.ts'
-import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
+import type { InspectDocumentIndexRetentionQueryHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/inspect-document-index-retention.query.handler.contract.ts'
+import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/DocumentRevisions/Application/Commands/collect-document-revision-garbage.command.handler.ts'
+import type { CollectDocumentRevisionGarbageDTO } from '../../../src/DocumentRevisions/Application/DTOs/document-revision-garbage.dto.ts'
+import { InvalidDocumentRevisionGarbageInputException } from '../../../src/DocumentRevisions/Application/Exceptions/invalid-document-revision-garbage-input.exception.ts'
+import type { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import { DocumentRevision } from '../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
 
 const revision = new DocumentRevision({
   id: 'revision-1',
@@ -35,12 +35,12 @@ test('revision collection rejects malformed batch inputs before acquiring locks 
   await Promise.all(
     scenarios.map(({ name, input }) =>
       context.test(name, async () => {
-        const useCase = new CollectDocumentRevisionGarbageUseCase(
+        const useCase = new CollectDocumentRevisionGarbageCommandHandler(
           createRepositoryStub<DocumentRevisionRepository>({
             lockByDocumentRevisionId: async () => assert.fail('invalid input must fail before locks'),
             deleteByDocumentRevisionId: async () => assert.fail('invalid input must fail before deletion'),
           }),
-          createRepositoryStub<InspectDocumentIndexRetentionUseCaseContract>({}),
+          createRepositoryStub<InspectDocumentIndexRetentionQueryHandlerContract>({}),
         )
 
         await assert.rejects(
@@ -53,12 +53,12 @@ test('revision collection rejects malformed batch inputs before acquiring locks 
 })
 
 test('revision collection preserves the empty batch and unheld-parent skip behavior', async () => {
-  const useCase = new CollectDocumentRevisionGarbageUseCase(
+  const useCase = new CollectDocumentRevisionGarbageCommandHandler(
     createRepositoryStub<DocumentRevisionRepository>({
       lockByDocumentRevisionId: async () => assert.fail('unheld parent must not acquire revision locks'),
       deleteByDocumentRevisionId: async () => assert.fail('unheld parent must not delete a revision'),
     }),
-    createRepositoryStub<InspectDocumentIndexRetentionUseCaseContract>({}),
+    createRepositoryStub<InspectDocumentIndexRetentionQueryHandlerContract>({}),
   )
 
   assert.deepEqual(await useCase.execute({ scope, candidates: [] }), [])

@@ -3,8 +3,8 @@ import { createHash, createHmac } from 'node:crypto'
 import test from 'node:test'
 
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
-import type { ServiceAuthCredentialsDTO } from '../../../src/Application/KnowledgeBases/DataTransferObjects/service-auth-credentials.dto.ts'
-import { HmacProjectServiceAuthenticator } from '../../../src/Infrastructure/Auth/hmac-project-service.authenticator.ts'
+import type { ServiceAuthCredentialsDTO } from '../../../src/Shared/Application/DTOs/service-auth-credentials.dto.ts'
+import { HmacProjectServiceAuthenticator } from '../../../src/Shared/Infrastructure/Auth/hmac-project-service.authenticator.ts'
 
 const secret = 'a-test-secret-that-is-at-least-32-characters-long'
 const body = { projectId: 'project-a', documents: [] }

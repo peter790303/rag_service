@@ -140,7 +140,7 @@ test('the collection syntax gate rejects all prohibited loop statements in Chunk
   const results = await Promise.all(
     samples.map((source) =>
       lintFixture(source, {
-        filePath: 'src/Application/Chunks/collection-gate-fixture.ts',
+        filePath: 'src/DocumentIndexes/Application/collection-gate-fixture.ts',
         ruleId: 'no-restricted-syntax',
       }),
     ),
@@ -152,13 +152,13 @@ test('the collection syntax gate rejects all prohibited loop statements in Chunk
   )
   assert.deepEqual(
     results.map((result) => result.messages.map((message) => message.message)),
-    samples.map(() => ['Chunks 集合處理請使用 map、filter、reduce 或 flatMap。']),
+    samples.map(() => ['Chunks collection handling must use map, filter, or flatMap.']),
   )
 })
 
 test('the collection syntax gate also covers source, tests, and ESLint configuration files', async () => {
   const filePaths = [
-    'src/Application/Documents/collection-gate-fixture.ts',
+    'src/Documents/Application/collection-gate-fixture.ts',
     'tests/Unit/Tooling/collection-gate-fixture.test.ts',
     'eslint.config.mjs',
   ]
@@ -182,14 +182,14 @@ test('the collection syntax gate also covers source, tests, and ESLint configura
   )
   assert.deepEqual(
     results.map((result) => result.messages.map((message) => message.message)),
-    fixtures.map(() => ['Collection handling must use map, filter, reduce, or flatMap.']),
+    fixtures.map(() => ['Collection handling must use map, filter, or flatMap.']),
   )
 })
 
 test('layout-only autofix leaves while and do-while statements for lint to reject', async () => {
   const source = 'while(condition){work()};do{work()}while(condition)\n'
   const { output, messages } = await lintFixture(source, {
-    filePath: 'src/Application/Chunks/collection-gate-fixture.ts',
+    filePath: 'src/DocumentIndexes/Application/collection-gate-fixture.ts',
     fix: true,
     ruleId: 'no-restricted-syntax',
   })
@@ -199,8 +199,8 @@ test('layout-only autofix leaves while and do-while statements for lint to rejec
   assert.deepEqual(
     messages.map((message) => message.message),
     [
-      'Chunks 集合處理請使用 map、filter、reduce 或 flatMap。',
-      'Chunks 集合處理請使用 map、filter、reduce 或 flatMap。',
+      'Chunks collection handling must use map, filter, or flatMap.',
+      'Chunks collection handling must use map, filter, or flatMap.',
     ],
   )
 })
@@ -218,8 +218,8 @@ test('layout-only autofix leaves acronym naming errors for lint to reject', asyn
 
 test('async reduce and forEach callbacks are rejected in source, Chunks, tests, and configuration', async () => {
   const filePaths = [
-    'src/Application/DocumentIndexes/collection-gate-fixture.ts',
-    'src/Application/Chunks/collection-gate-fixture.ts',
+    'src/DocumentIndexes/Application/collection-gate-fixture.ts',
+    'src/DocumentIndexes/Application/collection-gate-fixture.ts',
     'tests/Unit/Tooling/collection-gate-fixture.test.ts',
     'eslint.config.mjs',
   ]

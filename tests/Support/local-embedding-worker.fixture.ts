@@ -1,11 +1,11 @@
 import { parentPort, workerData } from 'node:worker_threads'
 
-import { serializeLocalEmbeddingFailure } from '../../src/Infrastructure/External/Embedding/Adapters/local-embedding-worker-protocol.adapter.ts'
-import { LocalEmbeddingSpecialTokensUnsupportedException } from '../../src/Infrastructure/External/Embedding/Exceptions/local-embedding-special-tokens-unsupported.exception.ts'
-import { LocalEmbeddingTokenWindowCapacityException } from '../../src/Infrastructure/External/Embedding/Exceptions/local-embedding-token-window-capacity.exception.ts'
-import { LocalEmbeddingTokenizerUnsupportedException } from '../../src/Infrastructure/External/Embedding/Exceptions/local-embedding-tokenizer-unsupported.exception.ts'
-import { LocalEmbeddingVectorMagnitudeException } from '../../src/Infrastructure/External/Embedding/Exceptions/local-embedding-vector-magnitude.exception.ts'
-import { LocalEmbeddingWindowVectorsException } from '../../src/Infrastructure/External/Embedding/Exceptions/local-embedding-window-vectors.exception.ts'
+import { serializeLocalEmbeddingFailure } from '../../src/Shared/Infrastructure/External/Embedding/Adapters/local-embedding-worker-protocol.adapter.ts'
+import { LocalEmbeddingSpecialTokensUnsupportedException } from '../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-special-tokens-unsupported.exception.ts'
+import { LocalEmbeddingTokenWindowCapacityException } from '../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-token-window-capacity.exception.ts'
+import { LocalEmbeddingTokenizerUnsupportedException } from '../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-tokenizer-unsupported.exception.ts'
+import { LocalEmbeddingVectorMagnitudeException } from '../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-vector-magnitude.exception.ts'
+import { LocalEmbeddingWindowVectorsException } from '../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-window-vectors.exception.ts'
 
 const request = workerData as { texts: string[] }
 const validationExceptions = [

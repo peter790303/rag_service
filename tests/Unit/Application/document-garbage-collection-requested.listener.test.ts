@@ -12,12 +12,12 @@ import {
   createGarbageCollectionListener,
   type GarbageCollectionTestDependencies,
 } from './document-retention-use-cases.fixture.ts'
-import type { ExpiredDocumentIndexFailureDTO } from '../../../src/Application/DocumentIndexes/DataTransferObjects/expired-document-index-failure.dto.ts'
-import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Application/Documents/Events/document-garbage-collection-requested.event.ts'
-import type { DocumentIndexStatus } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { DocumentRelation } from '../../../src/Domain/DocumentRelation/document-relation.ts'
-import { DocumentRevision } from '../../../src/Domain/DocumentRevision/document-revision.ts'
+import type { ExpiredDocumentIndexFailureDTO } from '../../../src/DocumentIndexes/Application/DTOs/expired-document-index-failure.dto.ts'
+import type { DocumentIndexStatus } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { DocumentRelation } from '../../../src/DocumentRelations/Domain/Entities/document-relation.ts'
+import { DocumentRevision } from '../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
+import { DocumentGarbageCollectionRequestedEvent } from '../../../src/Documents/Application/Events/document-garbage-collection-requested.event.ts'
 
 type GarbageDocumentIndexCandidateDTO = {
   documentIndexId: string
@@ -423,4 +423,94 @@ test('garbage collection locks candidates, rechecks references, and removes elig
   assert.ok(cutoffs.every((value) => value === cutoff))
   assert.ok(cutoff.getTime() >= startedAt - 60_000)
   assert.ok(cutoff.getTime() <= completedAt - 60_000)
+})
+
+test('garbage collection cleans and retains a failure-only document when there are no index candidates', async () => {
+  const calls: string[] = []
+  const failure: ExpiredDocumentIndexFailureDTO = {
+    failedJobId: 'failure-only',
+    documentId: 'failure-only-document',
+    failedAt: oldDate,
+  }
+  const useCase = createGarbageCollectionListener(
+    {
+      run: async (operation) => operation(),
+      runReadOnlySnapshot: async () => assert.fail('collecting document garbage uses a write transaction'),
+    },
+    createRepositoryStub<GarbageCollectionTestDependencies[1]>({
+      findByDocumentId: async ({ documentId }) => createDocumentFixture({ id: documentId }),
+      findByUnreferencedSinceLessThanOrEqual: async () => [],
+      lockByDocumentId: async (documentIdQO) => {
+        calls.push(`lock-document:${documentIdQO.documentId}`)
+
+        return createDocumentFixture({ id: documentIdQO.documentId })
+      },
+      updateUnreferencedSinceByDocumentIdAndUnreferencedSinceIsNull: async (documentIdQO) => {
+        calls.push(`mark-document-unreferenced:${documentIdQO.documentId}`)
+      },
+      deleteByDocumentId: async () => undefined,
+    }),
+    createRepositoryStub<GarbageCollectionTestDependencies[2]>({
+      findByActiveDocumentIndexId: async () => null,
+      findByDocumentId: async () => null,
+    }),
+    createRepositoryStub<GarbageCollectionTestDependencies[3]>({
+      countFailureRetries: async () => 0,
+      countIndexExecutions: async () => 0,
+      countDocumentExecutions: async () => 0,
+    }),
+    createRepositoryStub<GarbageCollectionTestDependencies[4]>({
+      findByUnreferencedSinceLessThanOrEqualOrderByIdAsc: async () => {
+        calls.push('find-index-candidates')
+
+        return []
+      },
+      lockByDocumentIndexId: async () => null,
+      findByRevisionId: async () => [],
+      findByDocumentId: async () => [],
+      deleteByDocumentIndexId: async () => undefined,
+    }),
+    createRepositoryStub<GarbageCollectionTestDependencies[5]>({
+      findByCreatedAtLessThanOrEqual: async () => [],
+      lockByDocumentRevisionId: async () => null,
+      findByDocumentIdOrderByCreatedAtDesc: async () => null,
+      deleteByDocumentRevisionId: async () => undefined,
+    }),
+    createRepositoryStub<GarbageCollectionTestDependencies[6]>({
+      findExpiredFailures: async () => [failure],
+      lockExpiredFailure: async (failedJobIdQO) => {
+        calls.push(`lock-failure:${failedJobIdQO.failedJobId}`)
+
+        return failure
+      },
+      countIndexFailures: async () => 0,
+      countDocumentFailures: async () => 0,
+      removeExpiredFailure: async (failedJobIdQO) => {
+        calls.push(`remove-failure:${failedJobIdQO.failedJobId}`)
+      },
+    }),
+    createRepositoryStub<GarbageCollectionTestDependencies[7]>({
+      removeByDocumentIndexId: async () => undefined,
+    }),
+    createRepositoryStub<GarbageCollectionTestDependencies[8]>({
+      findBySourceIndexIdsOrderByIdAsc: async () => [],
+      findByTargetDocumentId: async () => null,
+      removeBySourceIndexId: async () => undefined,
+    }),
+    { gcRetentionMs: 60_000 },
+  )
+
+  await useCase.handle(new DocumentGarbageCollectionRequestedEvent())
+
+  assert.ok(calls.includes('find-index-candidates'))
+  assert.ok(calls.includes('remove-failure:failure-only'))
+  assert.ok(calls.includes('mark-document-unreferenced:failure-only-document'))
+  assert.ok(
+    calls.indexOf('lock-document:failure-only-document') < calls.indexOf('lock-failure:failure-only'),
+    'the parent document must be locked before its failure row',
+  )
+  assert.ok(
+    calls.indexOf('remove-failure:failure-only') < calls.indexOf('mark-document-unreferenced:failure-only-document'),
+    'retention marking must follow failure cleanup',
+  )
 })

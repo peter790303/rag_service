@@ -3,9 +3,9 @@ import test from 'node:test'
 
 import { DataSource, EntityManager } from 'typeorm'
 
-import { FailedJobModel } from '../../../src/Infrastructure/Persistence/Models/failed-job.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
+import { FailedJobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/failed-job.model.ts'
+import { FailedJobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/failed-job.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 test('failed-job garbage collection locks only its candidate and skips contended rows', async (context) => {
   const manager = new EntityManager(new DataSource({ type: 'postgres' }))

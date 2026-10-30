@@ -4,13 +4,13 @@ import { test } from 'node:test'
 import { SELF_DECLARED_DEPS_METADATA } from '@nestjs/common/constants.js'
 import { getDataSourceToken } from '@nestjs/typeorm'
 
-import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
 import {
   createRetrievalReadonlyDataSourceOptions,
   RETRIEVAL_READONLY_DATA_SOURCE,
-} from '../../../src/Infrastructure/Providers/retrieval-readonly-data-source.options.ts'
+} from '../../../src/Bootstrap/Nest/Providers/retrieval-readonly-data-source.options.ts'
+import { ChunkRepository } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 test('retrieval uses a dedicated source without extension or schema writes', () => {
   const entities = [KnowledgeBaseModel]

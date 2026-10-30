@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import type { KnowledgeBaseDocumentRepository } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/knowledge-base-document.repository.ts'
-import type { PrepareKnowledgeBaseDocumentForIndexRequestDTO } from '../../../src/Application/KnowledgeBaseDocuments/DataTransferObjects/prepare-knowledge-base-document-for-index-request.dto.ts'
-import { InvalidKnowledgeBaseDocumentInputException } from '../../../src/Application/KnowledgeBaseDocuments/Exceptions/invalid-knowledge-base-document-input.exception.ts'
-import { ActivateKnowledgeBaseDocumentIndexUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/activate-knowledge-base-document-index.use-case.ts'
-import { PrepareKnowledgeBaseDocumentForIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/prepare-knowledge-base-document-for-index-request.use-case.ts'
-import { SaveKnowledgeBaseDocumentIndexRequestUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/save-knowledge-base-document-index-request.use-case.ts'
-import { InvalidKnowledgeBaseDocumentStateException } from '../../../src/Domain/KnowledgeBaseDocument/Exceptions/invalid-knowledge-base-document-state.exception.ts'
-import { KnowledgeBaseDocument } from '../../../src/Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
+import { IndexingKnowledgeBaseDocumentCommandAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/indexing-knowledge-base-document-command.assembler.ts'
+import { ActivateKnowledgeBaseDocumentIndexCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/activate-knowledge-base-document-index.command.handler.ts'
+import { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/prepare-knowledge-base-document-for-index-request.command.handler.ts'
+import { SaveKnowledgeBaseDocumentIndexRequestCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/save-knowledge-base-document-index-request.command.handler.ts'
+import type { PrepareKnowledgeBaseDocumentForIndexRequestDTO } from '../../../src/KnowledgeBaseDocuments/Application/DTOs/prepare-knowledge-base-document-for-index-request.dto.ts'
+import { InvalidKnowledgeBaseDocumentInputException } from '../../../src/KnowledgeBaseDocuments/Application/Exceptions/invalid-knowledge-base-document-input.exception.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import { KnowledgeBaseDocument } from '../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
+import { InvalidKnowledgeBaseDocumentStateException } from '../../../src/KnowledgeBaseDocuments/Domain/Exceptions/invalid-knowledge-base-document-state.exception.ts'
 
 const sourceDocument: PrepareKnowledgeBaseDocumentForIndexRequestDTO['sourceDocument'] = {
   knowledgeBaseId: 'kb-1',
@@ -25,7 +26,7 @@ const knowledgeBaseDocument = new KnowledgeBaseDocument({
 
 test('knowledgeBaseDocument source and supplied flags fail before persistence rather than taking the existing-row shortcut', async (context) => {
   const lock = context.mock.fn(async () => knowledgeBaseDocument)
-  const useCase = new PrepareKnowledgeBaseDocumentForIndexRequestUseCase({
+  const useCase = new PrepareKnowledgeBaseDocumentForIndexRequestCommandHandler({
     lockByKnowledgeBaseIdAndDocumentId: lock,
   } as unknown as KnowledgeBaseDocumentRepository)
   await assert.rejects(
@@ -65,7 +66,7 @@ test('knowledgeBaseDocument source and supplied flags fail before persistence ra
 
 test('omitted knowledgeBaseDocument configuration is a use-case no-op while false is a complete validated update', async (context) => {
   const update = context.mock.fn(async () => undefined)
-  const useCase = new PrepareKnowledgeBaseDocumentForIndexRequestUseCase({
+  const useCase = new PrepareKnowledgeBaseDocumentForIndexRequestCommandHandler({
     lockByKnowledgeBaseIdAndDocumentId: async () => knowledgeBaseDocument,
     updateByKnowledgeBaseIdAndDocumentId: update,
   } as unknown as KnowledgeBaseDocumentRepository)
@@ -90,10 +91,10 @@ test('omitted knowledgeBaseDocument configuration is a use-case no-op while fals
 
 test('a missing request generation or active index fails in Domain before assembling a write', async (context) => {
   const write = context.mock.fn(async () => undefined)
-  const useCase = new SaveKnowledgeBaseDocumentIndexRequestUseCase({
+  const useCase = new SaveKnowledgeBaseDocumentIndexRequestCommandHandler({
     updateByKnowledgeBaseIdAndDocumentId: write,
   } as unknown as KnowledgeBaseDocumentRepository)
-  const input = { knowledgeBaseDocument, generation: '0', activeDocumentIndexId: null }
+  const input = IndexingKnowledgeBaseDocumentCommandAssembler.toSaveCommand(knowledgeBaseDocument, '0', null)
   await assert.rejects(
     useCase.execute({ ...input, generation: undefined } as unknown as typeof input),
     InvalidKnowledgeBaseDocumentStateException,
@@ -107,7 +108,7 @@ test('a missing request generation or active index fails in Domain before assemb
 
 test('activation requires all input fields before a missing or stale knowledgeBaseDocument can return null', async (context) => {
   const find = context.mock.fn(async () => null)
-  const useCase = new ActivateKnowledgeBaseDocumentIndexUseCase({
+  const useCase = new ActivateKnowledgeBaseDocumentIndexCommandHandler({
     findByKnowledgeBaseIdAndDocumentId: find,
   } as unknown as KnowledgeBaseDocumentRepository)
   const input = {

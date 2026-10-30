@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { InvalidKnowledgeBaseDocumentIndexGenerationException } from '../../../../src/Domain/KnowledgeBaseDocument/Exceptions/invalid-knowledge-base-document-index-generation.exception.ts'
-import { InvalidKnowledgeBaseDocumentStateException } from '../../../../src/Domain/KnowledgeBaseDocument/Exceptions/invalid-knowledge-base-document-state.exception.ts'
 import {
   KnowledgeBaseDocument,
   type KnowledgeBaseDocumentState,
-} from '../../../../src/Domain/KnowledgeBaseDocument/knowledge-base-document.ts'
+} from '../../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
+import { InvalidKnowledgeBaseDocumentIndexGenerationException } from '../../../../src/KnowledgeBaseDocuments/Domain/Exceptions/invalid-knowledge-base-document-index-generation.exception.ts'
+import { InvalidKnowledgeBaseDocumentStateException } from '../../../../src/KnowledgeBaseDocuments/Domain/Exceptions/invalid-knowledge-base-document-state.exception.ts'
 
 const restoreKnowledgeBaseDocument = (requestedGeneration = '8'): KnowledgeBaseDocument =>
   new KnowledgeBaseDocument({

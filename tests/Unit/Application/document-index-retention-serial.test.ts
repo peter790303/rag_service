@@ -6,12 +6,12 @@ import {
   createRepositoryStub,
   createRestoredDocumentIndexFixture,
 } from './document-index-lifecycle.fixture.ts'
-import type { DocumentIndexExecutionQueue } from '../../../src/Application/DocumentIndexes/Contracts/document-index-execution.queue.ts'
-import type { DocumentIndexRepository } from '../../../src/Application/DocumentIndexes/Contracts/document-index.repository.ts'
-import { CancelKnowledgeBaseDocumentDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/cancel-knowledge-base-document-document-indexing.listener.ts'
-import { StartDocumentIndexPruningRetentionUseCase } from '../../../src/Application/DocumentIndexes/UseCases/start-document-index-pruning-retention.use-case.ts'
-import type { InspectKnowledgeBaseDocumentRetentionUseCaseContract } from '../../../src/Application/KnowledgeBaseDocuments/Contracts/inspect-knowledge-base-document-retention.use-case.contract.ts'
-import { KnowledgeBaseDocumentPruningStartedEvent } from '../../../src/Application/KnowledgeBaseDocuments/Events/knowledge-base-document-pruning-started.event.ts'
+import { StartDocumentIndexPruningRetentionCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/start-document-index-pruning-retention.command.handler.ts'
+import { CancelKnowledgeBaseDocumentDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/cancel-knowledge-base-document-document-indexing.listener.ts'
+import type { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
+import type { DocumentIndexRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
+import type { InspectKnowledgeBaseDocumentRetentionQueryHandlerContract } from '../../../src/KnowledgeBaseDocuments/Application/Contracts/inspect-knowledge-base-document-retention.query.handler.contract.ts'
+import { KnowledgeBaseDocumentPruningStartedEvent } from '../../../src/KnowledgeBaseDocuments/Application/Events/knowledge-base-document-pruning-started.event.ts'
 
 const createDeferred = (): { promise: Promise<void>; resolve: () => void } => {
   let resolvePromise = (): void => {}
@@ -172,15 +172,16 @@ test('index pruning retention awaits each sorted index lifecycle update before s
       return 0
     },
   })
-  const knowledgeBaseDocumentRetention = createRepositoryStub<InspectKnowledgeBaseDocumentRetentionUseCaseContract>({
-    async execute(query) {
-      assert.ok('documentIndexId' in query)
-      calls.push(`knowledgeBaseDocument:${query.documentIndexId}`)
+  const knowledgeBaseDocumentRetention =
+    createRepositoryStub<InspectKnowledgeBaseDocumentRetentionQueryHandlerContract>({
+      async execute(query) {
+        assert.ok('documentIndexId' in query)
+        calls.push(`knowledgeBaseDocument:${query.documentIndexId}`)
 
-      return null
-    },
-  })
-  const useCase = new StartDocumentIndexPruningRetentionUseCase(
+        return null
+      },
+    })
+  const useCase = new StartDocumentIndexPruningRetentionCommandHandler(
     documentIndexRepository,
     executionQueue,
     knowledgeBaseDocumentRetention,
@@ -236,15 +237,16 @@ test('index pruning retention stops at the first failed sorted lock', async () =
       return 0
     },
   })
-  const knowledgeBaseDocumentRetention = createRepositoryStub<InspectKnowledgeBaseDocumentRetentionUseCaseContract>({
-    async execute(query) {
-      assert.ok('documentIndexId' in query)
-      calls.push(`knowledgeBaseDocument:${query.documentIndexId}`)
+  const knowledgeBaseDocumentRetention =
+    createRepositoryStub<InspectKnowledgeBaseDocumentRetentionQueryHandlerContract>({
+      async execute(query) {
+        assert.ok('documentIndexId' in query)
+        calls.push(`knowledgeBaseDocument:${query.documentIndexId}`)
 
-      return null
-    },
-  })
-  const useCase = new StartDocumentIndexPruningRetentionUseCase(
+        return null
+      },
+    })
+  const useCase = new StartDocumentIndexPruningRetentionCommandHandler(
     documentIndexRepository,
     executionQueue,
     knowledgeBaseDocumentRetention,
@@ -272,12 +274,13 @@ test('index pruning retention completes an empty batch without accessing persist
       assert.fail('an empty index batch must not count executions')
     },
   })
-  const knowledgeBaseDocumentRetention = createRepositoryStub<InspectKnowledgeBaseDocumentRetentionUseCaseContract>({
-    async execute() {
-      assert.fail('an empty index batch must not inspect knowledgeBaseDocument retention')
-    },
-  })
-  const useCase = new StartDocumentIndexPruningRetentionUseCase(
+  const knowledgeBaseDocumentRetention =
+    createRepositoryStub<InspectKnowledgeBaseDocumentRetentionQueryHandlerContract>({
+      async execute() {
+        assert.fail('an empty index batch must not inspect knowledgeBaseDocument retention')
+      },
+    })
+  const useCase = new StartDocumentIndexPruningRetentionCommandHandler(
     documentIndexRepository,
     executionQueue,
     knowledgeBaseDocumentRetention,

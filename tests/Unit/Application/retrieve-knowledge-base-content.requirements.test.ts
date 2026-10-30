@@ -2,15 +2,15 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRetrievalKnowledgeBaseContentInputFixture } from './retrieval-knowledge-base-content.fixture.ts'
-import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { DocumentRelation } from '../../../src/Domain/DocumentRelation/document-relation.ts'
-import { RetrievalExactChunkCountMissingException } from '../../../src/Domain/KnowledgeBase/Exceptions/retrieval-exact-chunk-count-missing.exception.ts'
-import { RetrievalRelationResolutionMissingException } from '../../../src/Domain/KnowledgeBase/Exceptions/retrieval-relation-resolution-missing.exception.ts'
-import { RetrievalRevisionMissingException } from '../../../src/Domain/KnowledgeBase/Exceptions/retrieval-revision-missing.exception.ts'
+import { DocumentRelation } from '../../../src/DocumentRelations/Domain/Entities/document-relation.ts'
+import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
+import { RetrievalExactChunkCountMissingException } from '../../../src/KnowledgeBases/Domain/Exceptions/retrieval-exact-chunk-count-missing.exception.ts'
+import { RetrievalRelationResolutionMissingException } from '../../../src/KnowledgeBases/Domain/Exceptions/retrieval-relation-resolution-missing.exception.ts'
+import { RetrievalRevisionMissingException } from '../../../src/KnowledgeBases/Domain/Exceptions/retrieval-revision-missing.exception.ts'
 
-const validateResultFacts = RetrieveKnowledgeBaseContentUseCase.prototype['ensureRetrievalResultRequirements'].bind(
-  RetrieveKnowledgeBaseContentUseCase.prototype,
-)
+const validateResultFacts = RetrieveKnowledgeBaseContentQueryHandler.prototype[
+  'ensureRetrievalResultRequirements'
+].bind(RetrieveKnowledgeBaseContentQueryHandler.prototype)
 
 test('retrieval use case rejects a missing exact count instead of counting visible chunks', () => {
   const facts = createRetrievalKnowledgeBaseContentInputFixture()

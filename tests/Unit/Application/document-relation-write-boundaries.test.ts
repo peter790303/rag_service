@@ -2,14 +2,14 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import type { DocumentRelationRepository } from '../../../src/Application/DocumentRelations/Contracts/document-relation.repository.ts'
-import { InvalidDocumentRelationInputException } from '../../../src/Application/DocumentRelations/Exceptions/invalid-document-relation-input.exception.ts'
-import type { InsertPlannedDocumentRelationsQueryObject } from '../../../src/Application/DocumentRelations/QueryObjects/document-relation.query-object.ts'
-import { CollectDocumentRelationGarbageUseCase } from '../../../src/Application/DocumentRelations/UseCases/collect-document-relation-garbage.use-case.ts'
-import { ReplacePlannedDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/replace-planned-document-relations.use-case.ts'
-import { InvalidDocumentRelationStateException } from '../../../src/Domain/DocumentRelation/Exceptions/invalid-document-relation-state.exception.ts'
+import { CollectDocumentRelationGarbageCommandHandler } from '../../../src/DocumentRelations/Application/Commands/collect-document-relation-garbage.command.handler.ts'
+import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/DocumentRelations/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import { InvalidDocumentRelationInputException } from '../../../src/DocumentRelations/Application/Exceptions/invalid-document-relation-input.exception.ts'
+import type { DocumentRelationRepository } from '../../../src/DocumentRelations/Application/Ports/Out/Repositories/document-relation.repository.ts'
+import type { InsertPlannedDocumentRelationsQO } from '../../../src/DocumentRelations/Application/QueryObjects/document-relation.query-object.ts'
+import { InvalidDocumentRelationStateException } from '../../../src/DocumentRelations/Domain/Exceptions/invalid-document-relation-state.exception.ts'
 
-type ReplaceRelationsInput = Parameters<ReplacePlannedDocumentRelationsUseCase['execute']>[0]
+type ReplaceRelationsInput = Parameters<ReplacePlannedDocumentRelationsCommandHandler['execute']>[0]
 const plannedRelation = {
   targetReference: 'Target.md',
   targetAnchor: null,
@@ -50,7 +50,7 @@ test('relation replacement rejects missing scope or malformed plan before cleari
   await Promise.all(
     scenarios.map(({ name, input, exception }) =>
       context.test(name, async () => {
-        const useCase = new ReplacePlannedDocumentRelationsUseCase(
+        const useCase = new ReplacePlannedDocumentRelationsCommandHandler(
           createRepositoryStub<DocumentRelationRepository>({
             removeBySourceIndexId: async () => assert.fail('invalid replacement must not clear stored relations'),
             insertPlanned: async () => assert.fail('invalid replacement must not write relations'),
@@ -64,8 +64,8 @@ test('relation replacement rejects missing scope or malformed plan before cleari
 
 test('relation replacement preserves null, zero and empty evidence, and an empty plan clears the scoped relations', async () => {
   const removedIndexes: string[] = []
-  const writes: InsertPlannedDocumentRelationsQueryObject[] = []
-  const useCase = new ReplacePlannedDocumentRelationsUseCase(
+  const writes: InsertPlannedDocumentRelationsQO[] = []
+  const useCase = new ReplacePlannedDocumentRelationsCommandHandler(
     createRepositoryStub<DocumentRelationRepository>({
       removeBySourceIndexId: async ({ sourceIndexId }) => {
         removedIndexes.push(sourceIndexId)
@@ -110,7 +110,7 @@ test('relation garbage collection rejects missing scope and lock facts even when
   await Promise.all(
     scenarios.map(({ name, input, exception }) =>
       context.test(name, async () => {
-        const useCase = new CollectDocumentRelationGarbageUseCase(
+        const useCase = new CollectDocumentRelationGarbageCommandHandler(
           createRepositoryStub<DocumentRelationRepository>({
             findBySourceIndexIdsOrderByIdAsc: async () => assert.fail('invalid scope must fail before persistence'),
             removeBySourceIndexId: async () => assert.fail('invalid scope must not delete'),

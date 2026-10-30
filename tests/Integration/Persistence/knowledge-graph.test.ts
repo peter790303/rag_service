@@ -2,30 +2,30 @@ import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
 import { test } from 'node:test'
 
-import { FindGraphChunkCandidatesUseCase } from '../../../src/Application/Chunks/UseCases/find-graph-chunk-candidates.use-case.ts'
-import { LoadGraphChunksUseCase } from '../../../src/Application/Chunks/UseCases/load-graph-chunks.use-case.ts'
-import { LoadRetrievalDocumentIndexesUseCase } from '../../../src/Application/DocumentIndexes/UseCases/load-retrieval-document-indexes.use-case.ts'
-import { LoadRetrievalDocumentRelationsUseCase } from '../../../src/Application/DocumentRelations/UseCases/load-retrieval-document-relations.use-case.ts'
-import { LoadRetrievalDocumentsUseCase } from '../../../src/Application/Documents/UseCases/load-retrieval-documents.use-case.ts'
-import { LoadRetrievalKnowledgeBaseDocumentsUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/load-retrieval-knowledge-base-documents.use-case.ts'
-import type { KnowledgeBaseProjectQueryObject } from '../../../src/Application/KnowledgeBases/QueryObjects/knowledge-base.query-object.ts'
-import { LoadKnowledgeGraphUseCase } from '../../../src/Application/KnowledgeBases/UseCases/load-knowledge-graph.use-case.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { ChunkModel } from '../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRelationModel } from '../../../src/Infrastructure/Persistence/Models/document-relation.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
-import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
-import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
-import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
-import { DocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/document.repository.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
-import { KnowledgeBaseRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base.repository.ts'
+import { FindGraphChunkCandidatesQueryHandler } from '../../../src/Chunks/Application/Queries/find-graph-chunk-candidates.query.handler.ts'
+import { LoadGraphChunksQueryHandler } from '../../../src/Chunks/Application/Queries/load-graph-chunks.query.handler.ts'
+import { ChunkModel } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { ChunkRepository } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { LoadRetrievalDocumentIndexesQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-document-indexes.query.handler.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { LoadRetrievalDocumentRelationsQueryHandler } from '../../../src/DocumentRelations/Application/Queries/load-retrieval-document-relations.query.handler.ts'
+import { DocumentRelationModel } from '../../../src/DocumentRelations/Infrastructure/Persistence/TypeORM/Models/document-relation.model.ts'
+import { DocumentRelationRepository } from '../../../src/DocumentRelations/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'
+import { DocumentRevisionModel } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { LoadRetrievalDocumentsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-documents.query.handler.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { DocumentRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document.repository.ts'
+import { LoadRetrievalKnowledgeBaseDocumentsQueryHandler } from '../../../src/KnowledgeBaseDocuments/Application/Queries/load-retrieval-knowledge-base-documents.query.handler.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import { LoadKnowledgeGraphQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/load-knowledge-graph.query.handler.ts'
+import type { KnowledgeBaseProjectQO } from '../../../src/KnowledgeBases/Application/QueryObjects/knowledge-base.query-object.ts'
+import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
+import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 class SnapshotCheckingKnowledgeBaseRepository extends KnowledgeBaseRepository {
@@ -33,7 +33,7 @@ class SnapshotCheckingKnowledgeBaseRepository extends KnowledgeBaseRepository {
     super(transaction)
   }
 
-  override async findByProjectId(query: KnowledgeBaseProjectQueryObject) {
+  override async findByProjectId(query: KnowledgeBaseProjectQO) {
     const [settings] = await this.transaction.manager.query<{ readOnly: string; isolation: string }[]>(
       "SELECT current_setting('transaction_read_only') AS \"readOnly\", current_setting('transaction_isolation') AS isolation",
     )
@@ -50,15 +50,15 @@ test(
     const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const transaction = new PersistenceTransaction(dataSource, retrievalDataSource)
     const chunks = new ChunkRepository(transaction, retrievalDataSource)
-    const graphUseCase = new LoadKnowledgeGraphUseCase(
+    const graphUseCase = new LoadKnowledgeGraphQueryHandler(
       transaction,
       new SnapshotCheckingKnowledgeBaseRepository(transaction),
-      new LoadRetrievalKnowledgeBaseDocumentsUseCase(new KnowledgeBaseDocumentRepository(transaction)),
-      new LoadRetrievalDocumentsUseCase(new DocumentRepository(transaction)),
-      new LoadRetrievalDocumentIndexesUseCase(new DocumentIndexRepository(transaction)),
-      new LoadRetrievalDocumentRelationsUseCase(new DocumentRelationRepository(transaction)),
-      new LoadGraphChunksUseCase(chunks),
-      new FindGraphChunkCandidatesUseCase(chunks),
+      new LoadRetrievalKnowledgeBaseDocumentsQueryHandler(new KnowledgeBaseDocumentRepository(transaction)),
+      new LoadRetrievalDocumentsQueryHandler(new DocumentRepository(transaction)),
+      new LoadRetrievalDocumentIndexesQueryHandler(new DocumentIndexRepository(transaction)),
+      new LoadRetrievalDocumentRelationsQueryHandler(new DocumentRelationRepository(transaction)),
+      new LoadGraphChunksQueryHandler(chunks),
+      new FindGraphChunkCandidatesQueryHandler(chunks),
     )
     try {
       const bases = dataSource.getRepository(KnowledgeBaseModel)

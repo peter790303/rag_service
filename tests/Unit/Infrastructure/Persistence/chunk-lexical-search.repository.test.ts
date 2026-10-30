@@ -3,14 +3,14 @@ import test from 'node:test'
 
 import type { DataSource, EntityManager } from 'typeorm'
 
-import type { InsertChunksQueryObject } from '../../../../src/Application/Chunks/QueryObjects/insert-chunks.query-object.ts'
-import { Chunk } from '../../../../src/Domain/Chunk/chunk.ts'
-import type { ChunkLexicalQueryRowDTO } from '../../../../src/Infrastructure/Persistence/Adapters/chunk-search-result.adapter.ts'
-import { ReadTransactionDataSourceMismatchException } from '../../../../src/Infrastructure/Persistence/Exceptions/read-transaction-data-source-mismatch.exception.ts'
-import { ReadTransactionNotActiveException } from '../../../../src/Infrastructure/Persistence/Exceptions/read-transaction-not-active.exception.ts'
-import { ChunkModel } from '../../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
-import { PersistenceTransaction } from '../../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
+import type { InsertChunksQO } from '../../../../src/Chunks/Application/QueryObjects/insert-chunks.query-object.ts'
+import { Chunk } from '../../../../src/Chunks/Domain/Entities/chunk.ts'
+import type { ChunkLexicalQueryRowDTO } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Adapters/chunk-search-result.adapter.ts'
+import { ChunkModel } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { ChunkRepository } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { ReadTransactionDataSourceMismatchException } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/Exceptions/read-transaction-data-source-mismatch.exception.ts'
+import { ReadTransactionNotActiveException } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/Exceptions/read-transaction-not-active.exception.ts'
+import { PersistenceTransaction } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 const createRetrievalDataSourceStub = (): DataSource =>
   ({
@@ -41,13 +41,13 @@ test('chunk inserts derive the persisted lexical representation from original co
       ),
     ),
   })
-  const writes: (InsertChunksQueryObject['chunks'][number] & { searchVector: string })[][] = []
+  const writes: (InsertChunksQO['chunks'][number] & { searchVector: string })[][] = []
   const manager = {
     getRepository(model: typeof ChunkModel) {
       assert.equal(model, ChunkModel)
 
       return {
-        insert: async (values: (InsertChunksQueryObject['chunks'][number] & { searchVector: string })[]) =>
+        insert: async (values: (InsertChunksQO['chunks'][number] & { searchVector: string })[]) =>
           void writes.push(values),
         save() {
           assert.fail('new chunks must not overwrite an existing primary key through save')

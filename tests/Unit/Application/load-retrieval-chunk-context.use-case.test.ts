@@ -2,10 +2,10 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import type { ChunkRepository } from '../../../src/Application/Chunks/Contracts/chunk.repository.ts'
-import type { ChunkIndexOrdinalsQueryObject } from '../../../src/Application/Chunks/QueryObjects/chunk.query-object.ts'
-import { LoadRetrievalChunkContextUseCase } from '../../../src/Application/Chunks/UseCases/load-retrieval-chunk-context.use-case.ts'
-import { Chunk } from '../../../src/Domain/Chunk/chunk.ts'
+import type { ChunkRepository } from '../../../src/Chunks/Application/Ports/Out/Repositories/chunk.repository.ts'
+import { LoadRetrievalChunkContextQueryHandler } from '../../../src/Chunks/Application/Queries/load-retrieval-chunk-context.query.handler.ts'
+import type { ChunkIndexOrdinalsQO } from '../../../src/Chunks/Application/QueryObjects/chunk.query-object.ts'
+import { Chunk } from '../../../src/Chunks/Domain/Entities/chunk.ts'
 
 const createCandidateChunk = (id: string, documentIndexId: string, ordinal: number): Chunk =>
   new Chunk({
@@ -23,7 +23,7 @@ const createCandidateChunk = (id: string, documentIndexId: string, ordinal: numb
   })
 
 test('neighbor queries omit negative ordinals, deduplicate overlaps, group indexes and return repository entities', async () => {
-  const neighborQueriesQO: ChunkIndexOrdinalsQueryObject[] = []
+  const neighborQueriesQO: ChunkIndexOrdinalsQO[] = []
   const neighboringChunk = new Chunk({
     id: 'neighbor',
     documentIndexId: 'first-index',
@@ -44,7 +44,7 @@ test('neighbor queries omit negative ordinals, deduplicate overlaps, group index
       return chunkIndexOrdinalsQO.documentIndexId === 'first-index' ? [neighboringChunk] : []
     },
   })
-  const retrievedChunks = await new LoadRetrievalChunkContextUseCase(chunkRepository).execute({
+  const retrievedChunks = await new LoadRetrievalChunkContextQueryHandler(chunkRepository).execute({
     candidates: [
       createCandidateChunk('zero', 'first-index', 0),
       createCandidateChunk('zero', 'first-index', 0),
@@ -69,7 +69,7 @@ test('neighbor queries omit negative ordinals, deduplicate overlaps, group index
 })
 
 test('neighbor ordinal deduplication preserves the same ordinal in distinct indexes', async () => {
-  const neighborQueriesQO: ChunkIndexOrdinalsQueryObject[] = []
+  const neighborQueriesQO: ChunkIndexOrdinalsQO[] = []
   const chunkRepository = createRepositoryStub<ChunkRepository>({
     findByDocumentIndexIdAndOrdinals: async (chunkIndexOrdinalsQO) => {
       neighborQueriesQO.push(chunkIndexOrdinalsQO)
@@ -92,7 +92,7 @@ test('neighbor ordinal deduplication preserves the same ordinal in distinct inde
     },
   })
 
-  const neighboringChunks = await new LoadRetrievalChunkContextUseCase(chunkRepository).execute({
+  const neighboringChunks = await new LoadRetrievalChunkContextQueryHandler(chunkRepository).execute({
     candidates: [
       createCandidateChunk('first-root', 'first-index', 0),
       createCandidateChunk('first-root', 'first-index', 0),
@@ -119,7 +119,7 @@ test('empty candidates, absent roots and inactive indexes do not issue neighbor 
   const chunkRepository = createRepositoryStub<ChunkRepository>({
     findByDocumentIndexIdAndOrdinals: async () => assert.fail('no eligible neighbor query'),
   })
-  const loadRetrievalChunkContext = new LoadRetrievalChunkContextUseCase(chunkRepository)
+  const loadRetrievalChunkContext = new LoadRetrievalChunkContextQueryHandler(chunkRepository)
   const candidateChunk = createCandidateChunk('root', 'index', 0)
 
   assert.deepEqual(

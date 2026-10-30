@@ -1,0 +1,68 @@
+import { randomUUID } from 'node:crypto'
+
+import type { DocumentIndexingRetryContext } from '../DTOs/document-indexing-retry-context.dto.ts'
+import type { DocumentIndexingRetryTarget } from '../DTOs/document-indexing-retry-target.dto.ts'
+import type { RetryDocumentIndexingResultDTO } from '../DTOs/retry-document-indexing-result.dto.ts'
+import { DocumentIndexingTargetStateEnum } from '../Enums/document-indexing-target-state.enum.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../Helpers/document-index-execution-lifecycle.helper.ts'
+import type { EnqueueDocumentIndexingRetryParams } from '../Ports/Out/Gateways/document-index-execution.params.ts'
+
+/** Pure retry persistence and response mapping, without eligibility decisions. */
+export class WriteRetryDocumentIndexesAssembler {
+  static toDocumentIndexingRetryTarget(
+    failedJob: DocumentIndexingRetryContext['failedJob'],
+    sourceType: string,
+    revisionId: string,
+    retryKnowledgeBaseDocument: NonNullable<DocumentIndexingRetryContext['knowledgeBaseDocument']>,
+    pipelineHash: string,
+  ): DocumentIndexingRetryTarget {
+    const expectedKnowledgeBaseDocumentIdentity = {
+      requestedGeneration: retryKnowledgeBaseDocument.requestedGeneration,
+      activeDocumentIndexId: retryKnowledgeBaseDocument.activeDocumentIndexId,
+    }
+
+    return {
+      knowledgeBaseId: failedJob.knowledgeBaseId,
+      documentId: failedJob.documentId,
+      documentIndexId: failedJob.documentIndexId,
+      generation: failedJob.generation,
+      attempts: failedJob.attempts,
+      retriedAt: null,
+      sourceType,
+      revisionId,
+      pipelineHash,
+      knowledgeBaseDocument: expectedKnowledgeBaseDocumentIdentity,
+      activeJobId: null,
+    }
+  }
+
+  static toRetryableDocumentIndexExecution(
+    retryContext: DocumentIndexingRetryContext,
+    availableAt: Date,
+    idempotencyKey: string,
+    reusableExecutionState: Record<string, unknown> | null,
+  ): EnqueueDocumentIndexingRetryParams {
+    return {
+      id: randomUUID(),
+      knowledgeBaseId: retryContext.failedJob.knowledgeBaseId,
+      documentId: retryContext.failedJob.documentId,
+      documentIndexId: retryContext.failedJob.documentIndexId,
+      generation: retryContext.failedJob.generation,
+      status: DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED,
+      attempts: 0,
+      availableAt,
+      reservedAt: null,
+      leaseToken: null,
+      leaseExpiresAt: null,
+      idempotencyKey,
+      retryOfFailedJobId: null,
+      payload: retryContext.failedJob.retryPayload.input,
+      executionState: reusableExecutionState,
+      executionVerification: null,
+    }
+  }
+
+  static toRetryDocumentIndexingResult(jobId: string, failedJobId: string): RetryDocumentIndexingResultDTO {
+    return { jobId, failedJobId, status: DocumentIndexingTargetStateEnum.QUEUED, retryOfFailedJobId: failedJobId }
+  }
+}

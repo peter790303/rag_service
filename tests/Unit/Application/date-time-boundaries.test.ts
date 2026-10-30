@@ -3,15 +3,15 @@ import test from 'node:test'
 
 import { createRestoredDocumentIndexFixture } from './document-index-lifecycle.fixture.ts'
 import { createRetrievalKnowledgeBaseContentInputFixture } from './retrieval-knowledge-base-content.fixture.ts'
-import { ReplacementChunkAssembler } from '../../../src/Application/Chunks/Assemblers/replacement-chunk.assembler.ts'
-import { ReadDocumentIndexAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/read-document-index.assembler.ts'
-import { WriteLifecycleDocumentIndexAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-lifecycle-document-index.assembler.ts'
-import { WriteRequestDocumentIndexesAssembler } from '../../../src/Application/DocumentIndexes/Assemblers/write-request-document-indexes.assembler.ts'
-import { IndexingDocumentRevisionAssembler } from '../../../src/Application/DocumentRevisions/Assemblers/indexing-document-revision.assembler.ts'
-import { IndexingDocumentAssembler } from '../../../src/Application/Documents/Assemblers/indexing-document.assembler.ts'
-import { RetentionDocumentAssembler } from '../../../src/Application/Documents/Assemblers/retention-document.assembler.ts'
-import { IndexingKnowledgeBaseDocumentAssembler } from '../../../src/Application/KnowledgeBaseDocuments/Assemblers/indexing-knowledge-base-document.assembler.ts'
-import type { DateTime } from '../../../src/Domain/Document/ValueObjects/date-time.ts'
+import { ReplacementChunkAssembler } from '../../../src/Chunks/Application/Assemblers/replacement-chunk.assembler.ts'
+import { ReadDocumentIndexAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/read-document-index.assembler.ts'
+import { WriteLifecycleDocumentIndexAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/write-lifecycle-document-index.assembler.ts'
+import { WriteRequestDocumentIndexesAssembler } from '../../../src/DocumentIndexes/Application/Assemblers/write-request-document-indexes.assembler.ts'
+import { IndexingDocumentRevisionAssembler } from '../../../src/DocumentRevisions/Application/Assemblers/indexing-document-revision.assembler.ts'
+import { IndexingDocumentAssembler } from '../../../src/Documents/Application/Assemblers/indexing-document.assembler.ts'
+import { RetentionDocumentAssembler } from '../../../src/Documents/Application/Assemblers/retention-document.assembler.ts'
+import { IndexingKnowledgeBaseDocumentAssembler } from '../../../src/KnowledgeBaseDocuments/Application/Assemblers/indexing-knowledge-base-document.assembler.ts'
+import type { DateTime } from '../../../src/Shared/Domain/ValueObjects/date-time.ts'
 
 test('entity dates cross persistence and application record boundaries as independent native dates', () => {
   const { snapshot } = createRetrievalKnowledgeBaseContentInputFixture()
@@ -21,13 +21,13 @@ test('entity dates cross persistence and application record boundaries as indepe
   const knowledgeBaseDocument = snapshot.knowledgeBaseDocuments[0]!
   const chunk = snapshot.chunks[0]!
   const documentWrite = IndexingDocumentAssembler.toUpsertDocumentSourceQO(document)
-  const revisionWrite = IndexingDocumentRevisionAssembler.toCreateDocumentRevisionQueryObject(revision)
+  const revisionWrite = IndexingDocumentRevisionAssembler.toCreateDocumentRevisionQO(revision)
   const indexWrite = new WriteRequestDocumentIndexesAssembler(index).toBuildingDocumentIndex(index)
   const lifecycleWrite = WriteLifecycleDocumentIndexAssembler.toSaveDocumentIndexLifecycleQO(index)
   const indexRecord = ReadDocumentIndexAssembler.toDocumentIndexRecordDTO(index)
   const knowledgeBaseDocumentWrite =
     IndexingKnowledgeBaseDocumentAssembler.toUpdateKnowledgeBaseDocumentQO(knowledgeBaseDocument)
-  const chunkWrite = ReplacementChunkAssembler.toInsertChunksQueryObject([chunk]).chunks[0]!
+  const chunkWrite = ReplacementChunkAssembler.toInsertChunksQO([chunk]).chunks[0]!
   const boundaryDates: readonly [Date, DateTime][] = [
     [documentWrite.createdAt, document.createdAt],
     [revisionWrite.capturedAt, revision.capturedAt],

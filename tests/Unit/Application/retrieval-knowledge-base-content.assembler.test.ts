@@ -6,7 +6,7 @@ import {
   createRetrievalChunkFixture,
   createRetrievalSnapshotFixture,
 } from './retrieve-knowledge-base-content.use-case.fixtures.ts'
-import { RetrievalKnowledgeBaseContentAssembler } from '../../../src/Application/KnowledgeBases/Assemblers/retrieval-knowledge-base-content.assembler.ts'
+import { RetrievalKnowledgeBaseContentAssembler } from '../../../src/KnowledgeBases/Application/Assemblers/retrieval-knowledge-base-content.assembler.ts'
 
 test('retrieval assembler preserves exact counts, nullable token counts and the original entities', () => {
   const facts = createRetrievalKnowledgeBaseContentInputFixture()

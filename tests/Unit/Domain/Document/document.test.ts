@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { Document, type DocumentState } from '../../../../src/Domain/Document/document.ts'
+import { Document, type DocumentState } from '../../../../src/Documents/Domain/Entities/document.ts'
 
 function createDocument(documentState: Pick<DocumentState, 'id' | 'unreferencedSince'>): Document {
   return new Document({

@@ -6,13 +6,13 @@ import {
   createRetrievalPersistenceFixture,
   retrievalProfileFixtures,
 } from './retrieve-knowledge-base-content.use-case.fixtures.ts'
-import type { ChunkIndexOrdinalsQueryObject } from '../../../src/Application/Chunks/QueryObjects/chunk.query-object.ts'
-import { RetrieveKnowledgeBaseContentUseCase } from '../../../src/Application/KnowledgeBases/UseCases/retrieve-knowledge-base-content.use-case.ts'
-import { KnowledgeIndexPendingException } from '../../../src/Domain/DocumentIndex/Exceptions/knowledge-index-pending.exception.ts'
-import { HybridKnowledgeRetrievalResource } from '../../../src/Interfaces/Http/Resources/hybrid-knowledge-retrieval.resource.ts'
+import type { ChunkIndexOrdinalsQO } from '../../../src/Chunks/Application/QueryObjects/chunk.query-object.ts'
+import { KnowledgeIndexPendingException } from '../../../src/DocumentIndexes/Domain/Exceptions/knowledge-index-pending.exception.ts'
+import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
+import { HybridKnowledgeRetrievalResource } from '../../../src/KnowledgeBases/Interfaces/Nest/Resources/hybrid-knowledge-retrieval.resource.ts'
 
 test('retrieve returns the established pending-index conflict contract', async () => {
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(emptyRetrievalSnapshotFixture).dependencies,
     { embed: async () => [[1]], modelId: 'test' },
     retrievalProfileFixtures,
@@ -33,7 +33,7 @@ test('retrieve reads project facts inside the readonly snapshot before validatin
   const persistence = createRetrievalPersistenceFixture(emptyRetrievalSnapshotFixture, (knowledgeBaseProjectQO) => {
     receivedCriteria = knowledgeBaseProjectQO
   })
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...persistence.dependencies,
     { embed: async () => [[1]], modelId: 'test' },
     retrievalProfileFixtures,
@@ -65,7 +65,7 @@ test('retrieve reads project facts inside the readonly snapshot before validatin
 })
 
 test('retrieve ranks Chinese lexical keywords and queries context only for the selected topK roots', async () => {
-  const contextQueries: ChunkIndexOrdinalsQueryObject[] = []
+  const contextQueries: ChunkIndexOrdinalsQO[] = []
   const snapshot = {
     knowledgeBaseId: 'kb',
     knowledgeBaseDocuments: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
@@ -126,7 +126,7 @@ test('retrieve ranks Chinese lexical keywords and queries context only for the s
   const persistence = createRetrievalPersistenceFixture(snapshot, undefined, (chunkIndexOrdinalsQO) => {
     contextQueries.push(chunkIndexOrdinalsQO)
   })
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...persistence.dependencies,
     { embed: async () => [[1, 0]], modelId: 'embed-v1' },
     retrievalProfileFixtures,
@@ -165,7 +165,7 @@ test('retrieve ranks Chinese lexical keywords and queries context only for the s
 })
 
 test('retrieve groups neighboring ordinals per index and keeps each root context in its own document', async () => {
-  const contextQueries: ChunkIndexOrdinalsQueryObject[] = []
+  const contextQueries: ChunkIndexOrdinalsQO[] = []
   const snapshot = {
     knowledgeBaseId: 'kb',
     knowledgeBaseDocuments: ['a', 'b'].map((suffix) => ({
@@ -206,7 +206,7 @@ test('retrieve groups neighboring ordinals per index and keeps each root context
   const persistence = createRetrievalPersistenceFixture(snapshot, undefined, (chunkIndexOrdinalsQO) => {
     contextQueries.push(chunkIndexOrdinalsQO)
   })
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...persistence.dependencies,
     { embed: async () => [[1, 0]], modelId: 'embed-v1' },
     retrievalProfileFixtures,
@@ -276,7 +276,7 @@ test('retrieve includes required full-content documents beyond topK', async () =
     ],
     relations: [],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1, 0]], modelId: 'embed-v1' },
     retrievalProfileFixtures,
@@ -365,7 +365,7 @@ test('isEntry alone does not add full content or displace a ranked topK match', 
     ],
     relations: [],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1, 0]], modelId: 'embed-v1' },
     retrievalProfileFixtures,
@@ -433,7 +433,7 @@ test('retrieve serializes matches using the HTTP adapter contract', async () => 
       },
     ],
   }
-  const service = new RetrieveKnowledgeBaseContentUseCase(
+  const service = new RetrieveKnowledgeBaseContentQueryHandler(
     ...createRetrievalPersistenceFixture(snapshot).dependencies,
     { embed: async () => [[1, 0]], modelId: 'embed-v1' },
     retrievalProfileFixtures,

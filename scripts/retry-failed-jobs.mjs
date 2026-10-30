@@ -4,27 +4,32 @@ import process from 'node:process'
 import { NestFactory } from '@nestjs/core'
 import 'reflect-metadata'
 
-import { RetryFailedJobsCommand } from '../dist/src/Interfaces/Console/Commands/retry-failed-jobs-command.js'
-import { RetryFailedJobsModule } from '../dist/src/Interfaces/Console/Commands/retry-failed-jobs.module.js'
+import { RetryFailedJobsCommand } from '../dist/src/DocumentIndexes/Interfaces/Console/Commands/retry-failed-jobs-command.js'
+import { RetryFailedJobsModule } from '../dist/src/DocumentIndexes/Interfaces/Console/Commands/retry-failed-jobs.module.js'
 
 const parseOptions = (args) => {
   if (args.length % 2 !== 0) throw new Error(`Missing value for ${args.at(-1)}`)
 
-  const options = args.reduce((parsed, option, index) => {
-    if (index % 2 !== 0) return parsed
+  const optionPairs = Array.from({ length: args.length / 2 }, (_, pairIndex) => {
+    const index = pairIndex * 2
+    const option = args[index]
 
     if (option !== '--id' && option !== '--project') throw new Error(`Unknown option: ${option}`)
-
-    if (parsed[option] !== undefined) throw new Error(`Duplicate option: ${option}`)
 
     const value = args[index + 1]
 
     if (!value || value.startsWith('--')) throw new Error(`${option} requires a value`)
 
-    parsed[option] = value
+    return [option, value]
+  })
+  const optionNames = optionPairs.map(([option]) => option)
 
-    return parsed
-  }, {})
+  if (new Set(optionNames).size !== optionNames.length) {
+    const duplicate = optionNames.find((option, index) => optionNames.indexOf(option) !== index)
+    throw new Error(`Duplicate option: ${duplicate}`)
+  }
+
+  const options = Object.fromEntries(optionPairs)
 
   return { failedJobId: options['--id'], projectId: options['--project'] }
 }

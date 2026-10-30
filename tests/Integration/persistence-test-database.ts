@@ -2,8 +2,8 @@ import { randomUUID } from 'node:crypto'
 
 import { DataSource } from 'typeorm'
 
-import { createDataSource } from '../../database/data-source.ts'
-import { createRetrievalReadonlyDataSourceOptions } from '../../src/Infrastructure/Providers/retrieval-readonly-data-source.options.ts'
+import { createRetrievalReadonlyDataSourceOptions } from '../../src/Bootstrap/Nest/Providers/retrieval-readonly-data-source.options.ts'
+import { createDataSource } from '../../src/Bootstrap/Persistence/TypeORM/DataSource.ts'
 
 export interface PersistenceTestDatabaseContext {
   schema: string

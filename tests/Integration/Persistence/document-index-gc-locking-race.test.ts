@@ -6,29 +6,29 @@ import { concatMap, filter, firstValueFrom, from, interval, take, throwError, ti
 import { EntitySchema, type DataSource, type QueryRunner } from 'typeorm'
 import { ConnectionMetadataBuilder } from 'typeorm/connection/ConnectionMetadataBuilder.js'
 
-import { CollectIndexChunkGarbageUseCase } from '../../../src/Application/Chunks/UseCases/collect-index-chunk-garbage.use-case.ts'
-import { DocumentIndexExecutionStageEnum } from '../../../src/Application/DocumentIndexes/Enums/document-index-execution-stage.enum.ts'
-import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
-import { CollectDocumentIndexGarbageUseCase } from '../../../src/Application/DocumentIndexes/UseCases/collect-document-index-garbage.use-case.ts'
-import { CollectDocumentRelationGarbageUseCase } from '../../../src/Application/DocumentRelations/UseCases/collect-document-relation-garbage.use-case.ts'
-import { InspectKnowledgeBaseDocumentRetentionUseCase } from '../../../src/Application/KnowledgeBaseDocuments/UseCases/inspect-knowledge-base-document-retention.use-case.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { DocumentIndexStatusEnum } from '../../../src/Domain/DocumentIndex/Enums/document-index-status.enum.ts'
-import { JobExecutionVerificationAdapter } from '../../../src/Infrastructure/Persistence/Adapters/job-execution-verification.adapter.ts'
-import { DocumentIndexModel } from '../../../src/Infrastructure/Persistence/Models/document-index.model.ts'
-import { DocumentRevisionModel } from '../../../src/Infrastructure/Persistence/Models/document-revision.model.ts'
-import { DocumentModel } from '../../../src/Infrastructure/Persistence/Models/document.model.ts'
-import { FailedJobModel } from '../../../src/Infrastructure/Persistence/Models/failed-job.model.ts'
-import { JobModel } from '../../../src/Infrastructure/Persistence/Models/job.model.ts'
-import { KnowledgeBaseDocumentModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base-document.model.ts'
-import { KnowledgeBaseModel } from '../../../src/Infrastructure/Persistence/Models/knowledge-base.model.ts'
-import { PersistenceTransaction } from '../../../src/Infrastructure/Persistence/persistence-transaction.ts'
-import { ChunkRepository } from '../../../src/Infrastructure/Persistence/Repositories/chunk.repository.ts'
-import { DocumentIndexRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-index.repository.ts'
-import { DocumentRelationRepository } from '../../../src/Infrastructure/Persistence/Repositories/document-relation.repository.ts'
-import { FailedJobRepository } from '../../../src/Infrastructure/Persistence/Repositories/failed-job.repository.ts'
-import { JobRepository } from '../../../src/Infrastructure/Persistence/Repositories/job.repository.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/Infrastructure/Persistence/Repositories/knowledge-base-document.repository.ts'
+import { CollectIndexChunkGarbageCommandHandler } from '../../../src/Chunks/Application/Commands/collect-index-chunk-garbage.command.handler.ts'
+import { ChunkRepository } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { CollectDocumentIndexGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-document-index-garbage.command.handler.ts'
+import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
+import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { JobExecutionVerificationAdapter } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Adapters/job-execution-verification.adapter.ts'
+import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
+import { FailedJobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/failed-job.model.ts'
+import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
+import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
+import { FailedJobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/failed-job.repository.ts'
+import { JobRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/job.repository.ts'
+import { CollectDocumentRelationGarbageCommandHandler } from '../../../src/DocumentRelations/Application/Commands/collect-document-relation-garbage.command.handler.ts'
+import { DocumentRelationRepository } from '../../../src/DocumentRelations/Infrastructure/Persistence/TypeORM/Repositories/document-relation.repository.ts'
+import { DocumentRevisionModel } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
+import { InspectKnowledgeBaseDocumentRetentionQueryHandler } from '../../../src/KnowledgeBaseDocuments/Application/Queries/inspect-knowledge-base-document-retention.query.handler.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
+import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 type PgStatActivityRow = {
@@ -134,13 +134,13 @@ const createFixture = async (dataSource: DataSource, prefix: string) => {
 }
 
 const createCollector = (persistenceTransaction: PersistenceTransaction, retrievalDataSource: DataSource) =>
-  new CollectDocumentIndexGarbageUseCase(
+  new CollectDocumentIndexGarbageCommandHandler(
     new DocumentIndexRepository(persistenceTransaction),
     new JobRepository(persistenceTransaction),
     new FailedJobRepository(persistenceTransaction),
-    new InspectKnowledgeBaseDocumentRetentionUseCase(new KnowledgeBaseDocumentRepository(persistenceTransaction)),
-    new CollectDocumentRelationGarbageUseCase(new DocumentRelationRepository(persistenceTransaction)),
-    new CollectIndexChunkGarbageUseCase(new ChunkRepository(persistenceTransaction, retrievalDataSource)),
+    new InspectKnowledgeBaseDocumentRetentionQueryHandler(new KnowledgeBaseDocumentRepository(persistenceTransaction)),
+    new CollectDocumentRelationGarbageCommandHandler(new DocumentRelationRepository(persistenceTransaction)),
+    new CollectIndexChunkGarbageCommandHandler(new ChunkRepository(persistenceTransaction, retrievalDataSource)),
   )
 
 const lockScope = (documentId: string, retentionCutoff: Date) => ({

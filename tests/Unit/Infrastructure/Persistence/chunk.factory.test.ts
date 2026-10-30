@@ -1,18 +1,18 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { Chunk, type ChunkState } from '../../../../src/Domain/Chunk/chunk.ts'
-import { ChunkDocumentIndexRequiredException } from '../../../../src/Domain/Chunk/Exceptions/chunk-document-index-required.exception.ts'
-import { ChunkIdentityRequiredException } from '../../../../src/Domain/Chunk/Exceptions/chunk-identity-required.exception.ts'
-import { ChunkSourceSpanReversedException } from '../../../../src/Domain/Chunk/Exceptions/chunk-source-span-reversed.exception.ts'
-import { InvalidChunkBlockEndException } from '../../../../src/Domain/Chunk/Exceptions/invalid-chunk-block-end.exception.ts'
-import { InvalidChunkBlockStartException } from '../../../../src/Domain/Chunk/Exceptions/invalid-chunk-block-start.exception.ts'
-import { InvalidChunkContentException } from '../../../../src/Domain/Chunk/Exceptions/invalid-chunk-content.exception.ts'
-import { InvalidChunkHeadingPathException } from '../../../../src/Domain/Chunk/Exceptions/invalid-chunk-heading-path.exception.ts'
-import { InvalidChunkOrdinalException } from '../../../../src/Domain/Chunk/Exceptions/invalid-chunk-ordinal.exception.ts'
-import { InvalidChunkTokenCountException } from '../../../../src/Domain/Chunk/Exceptions/invalid-chunk-token-count.exception.ts'
-import { ChunkFactory } from '../../../../src/Infrastructure/Persistence/Factories/chunk.factory.ts'
-import { ChunkModel } from '../../../../src/Infrastructure/Persistence/Models/chunk.model.ts'
+import { Chunk, type ChunkState } from '../../../../src/Chunks/Domain/Entities/chunk.ts'
+import { ChunkDocumentIndexRequiredException } from '../../../../src/Chunks/Domain/Exceptions/chunk-document-index-required.exception.ts'
+import { ChunkIdentityRequiredException } from '../../../../src/Chunks/Domain/Exceptions/chunk-identity-required.exception.ts'
+import { ChunkSourceSpanReversedException } from '../../../../src/Chunks/Domain/Exceptions/chunk-source-span-reversed.exception.ts'
+import { InvalidChunkBlockEndException } from '../../../../src/Chunks/Domain/Exceptions/invalid-chunk-block-end.exception.ts'
+import { InvalidChunkBlockStartException } from '../../../../src/Chunks/Domain/Exceptions/invalid-chunk-block-start.exception.ts'
+import { InvalidChunkContentException } from '../../../../src/Chunks/Domain/Exceptions/invalid-chunk-content.exception.ts'
+import { InvalidChunkHeadingPathException } from '../../../../src/Chunks/Domain/Exceptions/invalid-chunk-heading-path.exception.ts'
+import { InvalidChunkOrdinalException } from '../../../../src/Chunks/Domain/Exceptions/invalid-chunk-ordinal.exception.ts'
+import { InvalidChunkTokenCountException } from '../../../../src/Chunks/Domain/Exceptions/invalid-chunk-token-count.exception.ts'
+import { ChunkPersistenceAdapter } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Adapters/chunk.persistence.adapter.ts'
+import { ChunkModel } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
 
 const createChunkModel = (chunkStateOverrides: Partial<ChunkState> = {}): ChunkModel =>
   Object.assign(new ChunkModel(), {
@@ -30,10 +30,10 @@ const createChunkModel = (chunkStateOverrides: Partial<ChunkState> = {}): ChunkM
     ...chunkStateOverrides,
   })
 
-describe('ChunkFactory', () => {
+describe('ChunkPersistenceAdapter', () => {
   it('restores a real Chunk with its persisted identity, owner and original source fields', () => {
     const persistedChunkModel = createChunkModel()
-    const chunk = ChunkFactory.toChunk(persistedChunkModel)
+    const chunk = ChunkPersistenceAdapter.toChunk(persistedChunkModel)
 
     assert.ok(chunk instanceof Chunk)
     assert.equal(chunk.id, persistedChunkModel.id)
@@ -53,7 +53,7 @@ describe('ChunkFactory', () => {
 
   it('isolates restored headings, embeddings and timestamps from mutable ORM model state', () => {
     const persistedChunkModel = createChunkModel()
-    const chunk = ChunkFactory.toChunk(persistedChunkModel)
+    const chunk = ChunkPersistenceAdapter.toChunk(persistedChunkModel)
     persistedChunkModel.headingPath[0] = 'Changed after restoration'
     persistedChunkModel.headingPath.push('Added after restoration')
     persistedChunkModel.embedding[0] = 99
@@ -98,7 +98,7 @@ describe('ChunkFactory', () => {
     await Promise.all(
       testCases.map(({ name, state: invalidChunkState, exception }) =>
         t.test(name, () => {
-          assert.throws(() => ChunkFactory.toChunk(createChunkModel(invalidChunkState)), exception)
+          assert.throws(() => ChunkPersistenceAdapter.toChunk(createChunkModel(invalidChunkState)), exception)
         }),
       ),
     )

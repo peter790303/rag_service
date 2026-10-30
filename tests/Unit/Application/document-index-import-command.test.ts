@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { DocumentIndexingRequestedListener } from '../../../src/Application/DocumentIndexes/Listeners/document-indexing-requested.listener.ts'
-import { ReadDocumentIndexingStatusListener } from '../../../src/Application/DocumentIndexes/Listeners/read-document-indexing-status.listener.ts'
-import { RetryDocumentIndexingListener } from '../../../src/Application/DocumentIndexes/Listeners/retry-document-indexing.listener.ts'
-import type { UnretriedDocumentIndexFailureTargetQueryObject } from '../../../src/Application/DocumentIndexes/QueryObjects/document-index-failure.query-object.ts'
-import { DocumentSourceTypeEnum } from '../../../src/Domain/Document/Enums/document-source-type.enum.ts'
-import { DocumentIndexImportCommand } from '../../../src/Interfaces/Console/Commands/document-index-import-command.ts'
+import { DocumentIndexingRequestedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexing-requested.listener.ts'
+import { ReadDocumentIndexingStatusListener } from '../../../src/DocumentIndexes/Application/Listeners/read-document-indexing-status.listener.ts'
+import { RetryDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/retry-document-indexing.listener.ts'
+import type { UnretriedDocumentIndexFailureTargetParams } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-failure.params.ts'
+import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { DocumentIndexImportCommand } from '../../../src/Documents/Interfaces/Console/Commands/document-index-import-command.ts'
 
 const sourceDocument = {
   knowledgeBaseId: 'kb-1',
@@ -85,7 +85,7 @@ test('internal import retries an unretried failure through the retry listener an
     blockedByFailedJob: true,
   }))
   const retry = context.mock.fn(
-    async (target: UnretriedDocumentIndexFailureTargetQueryObject & { readonly projectId: string }) => {
+    async (target: UnretriedDocumentIndexFailureTargetParams & { readonly projectId: string }) => {
       assert.ok(target)
 
       return { jobId: 'retry-job-1' }

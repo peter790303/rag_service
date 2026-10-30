@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { DocumentIndexExecutionClaimLimitReachedException } from '../../../src/Application/DocumentIndexes/Exceptions/document-index-execution-claim-limit-reached.exception.ts'
-import { DocumentIndexExecutionClaimRequiresQueuedStateException } from '../../../src/Application/DocumentIndexes/Exceptions/document-index-execution-claim-requires-queued-state.exception.ts'
-import { DocumentIndexExecutionIdentityRequiredException } from '../../../src/Application/DocumentIndexes/Exceptions/document-index-execution-identity-required.exception.ts'
-import { InvalidDocumentIndexExecutionAttemptCountException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-attempt-count.exception.ts'
-import { InvalidDocumentIndexExecutionLeaseDurationException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease-duration.exception.ts'
-import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-lease.exception.ts'
-import { InvalidDocumentIndexExecutionTimestampException } from '../../../src/Application/DocumentIndexes/Exceptions/invalid-document-index-execution-timestamp.exception.ts'
+import { DocumentIndexExecutionClaimLimitReachedException } from '../../../src/DocumentIndexes/Application/Exceptions/document-index-execution-claim-limit-reached.exception.ts'
+import { DocumentIndexExecutionClaimRequiresQueuedStateException } from '../../../src/DocumentIndexes/Application/Exceptions/document-index-execution-claim-requires-queued-state.exception.ts'
+import { DocumentIndexExecutionIdentityRequiredException } from '../../../src/DocumentIndexes/Application/Exceptions/document-index-execution-identity-required.exception.ts'
+import { InvalidDocumentIndexExecutionAttemptCountException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-attempt-count.exception.ts'
+import { InvalidDocumentIndexExecutionLeaseDurationException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease-duration.exception.ts'
+import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease.exception.ts'
+import { InvalidDocumentIndexExecutionTimestampException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-timestamp.exception.ts'
 import {
   DOCUMENT_INDEX_EXECUTION_STATUS,
   DocumentIndexExecutionLifecycle,
-} from '../../../src/Application/DocumentIndexes/Helpers/document-index-execution-lifecycle.helper.ts'
+} from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 
 const now = new Date('2026-10-15T00:00:00.000Z')
 const queuedState = { id: 'job', status: DOCUMENT_INDEX_EXECUTION_STATUS.QUEUED, attempts: 0, leaseExpiresAt: null }
