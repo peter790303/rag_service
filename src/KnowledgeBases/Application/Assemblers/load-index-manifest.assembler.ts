@@ -1,15 +1,15 @@
 import type { DocumentIndex } from '../../../DocumentIndexes/Domain/Entities/document-index.ts'
-import type { DocumentRevision } from '../../../Documents/Domain/Entities/document-revision.ts'
+import type { DocumentRevision } from '../../../DocumentRevisions/Domain/Entities/document-revision.ts'
 import type { Document } from '../../../Documents/Domain/Entities/document.ts'
-import type { KnowledgeBaseDocument } from '../../Domain/Entities/knowledge-base-document.ts'
+import type { KnowledgeBaseDocument } from '../../../KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
 import type {
   IndexManifestActiveIndex,
   IndexManifestDocument,
   IndexManifestIssue,
   IndexManifestProfile,
 } from '../../Domain/ValueObjects/knowledge-base-index-manifest.ts'
-import type { LoadIndexManifestDTO } from '../DataTransferObjects/load-index-manifest.dto.ts'
-import type { KnowledgeBaseProjectQueryObject } from '../QueryObjects/knowledge-base.query-object.ts'
+import type { LoadIndexManifestQuery } from '../Queries/load-index-manifest.query.ts'
+import type { KnowledgeBaseProjectQO } from '../QueryObjects/knowledge-base.query-object.ts'
 
 export class LoadIndexManifestAssembler {
   /** Version 1 canonical tuples; callers provide inventory ordered by documentId. */
@@ -27,10 +27,8 @@ export class LoadIndexManifestAssembler {
     return JSON.stringify([1, projectId, rows])
   }
 
-  static toKnowledgeBaseProjectQueryObject(
-    loadIndexManifestDTO: LoadIndexManifestDTO,
-  ): KnowledgeBaseProjectQueryObject {
-    return { projectId: loadIndexManifestDTO.projectId }
+  static toKnowledgeBaseProjectQO(loadIndexManifestQuery: LoadIndexManifestQuery): KnowledgeBaseProjectQO {
+    return { projectId: loadIndexManifestQuery.projectId }
   }
 
   static toIndexManifestDocument(

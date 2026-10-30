@@ -9,30 +9,30 @@ import {
   createRestoredDocumentIndexFixture,
   createRestoredKnowledgeBaseDocumentFixture,
 } from './document-index-lifecycle.fixture.ts'
+import type { MarkdownChunkPlan } from '../../../src/Chunks/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { ReplaceIndexChunkInputDTO } from '../../../src/Chunks/Application/DataTransferObjects/replace-index-chunk-input.dto.ts'
+import { ChunkPlanningUnavailableException } from '../../../src/Chunks/Application/Exceptions/chunk-planning-unavailable.exception.ts'
 import type { DocumentIndexExecutionLeaseDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-lease.dto.ts'
 import { type DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-claim.dto.ts'
-import type { MarkdownChunkPlan } from '../../../src/DocumentIndexes/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
-import type { ReplaceIndexChunkInputDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/replace-index-chunk-input.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
 import type { DocumentIndexedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexed.event.ts'
 import { DocumentIndexingDispatchedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-dispatched.event.ts'
 import type { DocumentIndexingFailedEvent } from '../../../src/DocumentIndexes/Application/Events/document-indexing-failed.event.ts'
-import { ChunkPlanningUnavailableException } from '../../../src/DocumentIndexes/Application/Exceptions/chunk-planning-unavailable.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import { ProcessDocumentIndexListener } from '../../../src/DocumentIndexes/Application/Listeners/process-document-index.listener.ts'
+import type {
+  DocumentIndexExecutionIdParams,
+  RenewDocumentIndexExecutionLeaseParams,
+} from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.params.ts'
 import type { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
 import type { DocumentIndexRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
-import type {
-  DocumentIndexExecutionIdQueryObject,
-  RenewDocumentIndexExecutionLeaseQueryObject,
-} from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-execution.query-object.ts'
+import { DocumentRevision } from '../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
 import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
 import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
-import type { DocumentIdQueryObject } from '../../../src/Documents/Application/QueryObjects/document.query-object.ts'
-import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
-import type { KnowledgeBaseDocumentSourceQueryObject } from '../../../src/KnowledgeBases/Application/QueryObjects/knowledge-base-document.query-object.ts'
+import type { DocumentIdQO } from '../../../src/Documents/Application/QueryObjects/document.query-object.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import type { KnowledgeBaseDocumentSourceQO } from '../../../src/KnowledgeBaseDocuments/Application/QueryObjects/knowledge-base-document.query-object.ts'
 import type { PersistenceTransaction } from '../../../src/Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 
@@ -117,7 +117,7 @@ const createProcessJobScenario = (
     },
   }
   const documentRepository = {
-    lockByDocumentId: async (documentIdQO: DocumentIdQueryObject) => {
+    lockByDocumentId: async (documentIdQO: DocumentIdQO) => {
       assert.ok(activeTransactions > 0)
       assert.deepEqual(documentIdQO, { documentId: currentJob.documentId })
       lockOrder.push('document')
@@ -126,9 +126,7 @@ const createProcessJobScenario = (
     },
   } as DocumentRepository
   const knowledgeBaseDocumentRepository = {
-    lockByKnowledgeBaseIdAndDocumentId: async (
-      knowledgeBaseDocumentSourceQO: KnowledgeBaseDocumentSourceQueryObject,
-    ) => {
+    lockByKnowledgeBaseIdAndDocumentId: async (knowledgeBaseDocumentSourceQO: KnowledgeBaseDocumentSourceQO) => {
       assert.ok(activeTransactions > 0)
       assert.deepEqual(knowledgeBaseDocumentSourceQO, {
         knowledgeBaseId: currentJob.knowledgeBaseId,
@@ -146,14 +144,14 @@ const createProcessJobScenario = (
     },
   } as KnowledgeBaseDocumentRepository
   const jobRepository = {
-    lockExecution: async (jobIdQO: DocumentIndexExecutionIdQueryObject) => {
+    lockExecution: async (jobIdQO: DocumentIndexExecutionIdParams) => {
       assert.ok(activeTransactions > 0)
       assert.deepEqual(jobIdQO, { jobId: currentJob.id })
       lockOrder.push('job')
 
       return createJobRecordFixture(leaseFact)
     },
-    renewLease: async (saveJobHeartbeatQO: RenewDocumentIndexExecutionLeaseQueryObject) => {
+    renewLease: async (saveJobHeartbeatQO: RenewDocumentIndexExecutionLeaseParams) => {
       assert.ok(activeTransactions > 0)
       assert.equal(saveJobHeartbeatQO.jobId, currentJob.id)
       assert.ok(saveJobHeartbeatQO.reservedAt instanceof Date)
@@ -199,8 +197,8 @@ const createProcessJobScenario = (
     },
   }
   const chunkPlanner = {
-    plan: options.plan ?? (async (source: string) => createMarkdownChunkPlan(source)),
-    modelId: 'planner',
+    execute: ({ source, signal }: { source: string; signal?: AbortSignal }) =>
+      options.plan ? options.plan(source, signal) : Promise.resolve(createMarkdownChunkPlan(source)),
   }
   const embeddings = {
     embed: options.embed ?? (async () => embeddingResult.promise),

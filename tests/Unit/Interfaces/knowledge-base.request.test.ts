@@ -6,8 +6,8 @@ import 'reflect-metadata'
 
 import { SourceDocumentIndexRequest } from '../../../src/DocumentIndexes/Interfaces/Nest/Requests/source-document-index.request.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
+import { PruneKnowledgeBaseDocumentsRequest } from '../../../src/KnowledgeBaseDocuments/Interfaces/Nest/Requests/prune-knowledge-base-documents.request.ts'
 import { HybridKnowledgeRetrievalRequest } from '../../../src/KnowledgeBases/Interfaces/Nest/Requests/hybrid-knowledge-retrieval.request.ts'
-import { PruneKnowledgeBaseDocumentsRequest } from '../../../src/KnowledgeBases/Interfaces/Nest/Requests/prune-knowledge-base-documents.request.ts'
 
 test('prune request assembles its validated body with the route knowledge-base id', () => {
   const request = Object.assign(new PruneKnowledgeBaseDocumentsRequest(), {

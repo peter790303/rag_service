@@ -5,8 +5,8 @@ import { loadHostCliBridgeConfig } from '../../../config/host-cli-bridge.config.
 import {
   createHostCliBridgeServer,
   HOST_CLI_BRIDGE_ROUTE,
-} from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/host-cli-bridge.server.ts'
-import { HostCliChunkPlanningClient } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/host-cli-chunk-planning.client.ts'
+} from '../../../src/Chunks/Infrastructure/External/ChunkPlanning/host-cli-bridge.server.ts'
+import { HostCliChunkPlanningClient } from '../../../src/Chunks/Infrastructure/External/ChunkPlanning/host-cli-chunk-planning.client.ts'
 
 const secret = 'unit-test-shared-secret-with-at-least-32-characters'
 const source = '# Title\n\nFirst paragraph.\n\nSecond paragraph.\n'

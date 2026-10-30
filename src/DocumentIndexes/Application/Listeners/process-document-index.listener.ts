@@ -1,13 +1,15 @@
 import type { DocumentIndexedListener } from './document-indexed.listener.ts'
 import type { DocumentIndexingFailedListener } from './document-indexing-failed.listener.ts'
-import type { LoadDocumentRevisionQueryHandlerContract } from '../../../Documents/Application/Contracts/load-document-revision.query.handler.contract.ts'
+import type { PlanMarkdownChunksQueryHandlerContract } from '../../../Chunks/Application/Contracts/plan-markdown-chunks.query.handler.contract.ts'
+import type { ReplaceIndexChunkCommandHandlerContract } from '../../../Chunks/Application/Contracts/replace-index-chunk.command.handler.contract.ts'
+import { ChunkPlanningUnavailableException } from '../../../Chunks/Application/Exceptions/chunk-planning-unavailable.exception.ts'
+import type { LoadDocumentRevisionQueryHandlerContract } from '../../../DocumentRevisions/Application/Contracts/load-document-revision.query.handler.contract.ts'
 import type { ReserveDocumentForIndexingCommandHandlerContract } from '../../../Documents/Application/Contracts/reserve-document-for-indexing.command.handler.contract.ts'
-import type { ReserveKnowledgeBaseDocumentForIndexingCommandHandlerContract } from '../../../KnowledgeBases/Application/Contracts/reserve-knowledge-base-document-for-indexing.command.handler.contract.ts'
+import type { ReserveKnowledgeBaseDocumentForIndexingCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/reserve-knowledge-base-document-for-indexing.command.handler.contract.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
 import { EmbeddingProvider } from '../../../Shared/Application/Ports/Out/Gateways/embedding-provider.ts'
 import type { PersistenceTransaction } from '../../../Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import { ProcessDocumentIndexAssembler } from '../Assemblers/process-document-index.assembler.ts'
-import type { ReplaceIndexChunkCommandHandlerContract } from '../Contracts/replace-index-chunk.command.handler.contract.ts'
 import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
 import type { DocumentIndexingFailureDecision } from '../DataTransferObjects/document-indexing-failure-decision.dto.ts'
 import type { DocumentIndexingProgressDTO } from '../DataTransferObjects/document-indexing-progress.dto.ts'
@@ -15,7 +17,6 @@ import { DocumentIndexExecutionStageEnum } from '../Enums/document-index-executi
 import { DocumentIndexedEvent } from '../Events/document-indexed.event.ts'
 import type { DocumentIndexingDispatchedEvent } from '../Events/document-indexing-dispatched.event.ts'
 import { DocumentIndexingFailedEvent } from '../Events/document-indexing-failed.event.ts'
-import { ChunkPlanningUnavailableException } from '../Exceptions/chunk-planning-unavailable.exception.ts'
 import { IndexDisappearedBeforeCompletionException } from '../Exceptions/index-disappeared-before-completion.exception.ts'
 import { IndexRevisionUnavailableException } from '../Exceptions/index-revision-unavailable.exception.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../Exceptions/invalid-document-index-execution-lease.exception.ts'
@@ -23,7 +24,6 @@ import {
   DocumentIndexExecutionLifecycle,
   DOCUMENT_INDEX_EXECUTION_STATUS,
 } from '../Helpers/document-index-execution-lifecycle.helper.ts'
-import { ChunkPlanningProvider } from '../Ports/Out/Gateways/chunk-planning-provider.ts'
 import type { DocumentIndexExecutionQueue } from '../Ports/Out/Gateways/document-index-execution.queue.ts'
 import type { DocumentIndexRepository } from '../Ports/Out/Repositories/document-index.repository.ts'
 
@@ -41,7 +41,7 @@ export class ProcessDocumentIndexListener {
     private readonly documentIndexed: Pick<DocumentIndexedListener, 'handle'>,
     private readonly documentIndexingFailed: Pick<DocumentIndexingFailedListener, 'handle'>,
     private readonly embeddings: EmbeddingProvider,
-    private readonly chunkPlanner: ChunkPlanningProvider,
+    private readonly chunkPlanner: PlanMarkdownChunksQueryHandlerContract,
     private readonly workerLeaseSeconds: number,
     private readonly loadDocumentRevision: LoadDocumentRevisionQueryHandlerContract,
   ) {}
@@ -77,7 +77,7 @@ export class ProcessDocumentIndexListener {
       }
       await this.heartbeat(job, planningProgress)
       const plan = await this.withLeaseRenewal(job, planningProgress, renewalIntervalMs, (signal) =>
-        this.chunkPlanner.plan(content, signal),
+        this.chunkPlanner.execute({ source: content, signal }),
       )
       const chunkContents = plan.chunks.map((chunk) => chunk.content)
       const embeddingProgress: DocumentIndexingProgressDTO = {
@@ -102,7 +102,7 @@ export class ProcessDocumentIndexListener {
       await this.heartbeat(job, persistingProgress)
       await this.withLeaseRenewal(job, persistingProgress, renewalIntervalMs, () =>
         this.replaceIndexChunk.execute(
-          ProcessDocumentIndexAssembler.toReplaceIndexChunkInputDTO(job, plan, vectors, new Date()),
+          ProcessDocumentIndexAssembler.toReplaceIndexChunkCommand(job, plan, vectors, new Date()),
         ),
       )
       await this.documentIndexed.handle(new DocumentIndexedEvent({ jobDelivery: job, completedAt: new Date() }))

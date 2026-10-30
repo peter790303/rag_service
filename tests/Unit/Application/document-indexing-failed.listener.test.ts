@@ -15,13 +15,13 @@ import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/Docume
 import { InvalidDocumentIndexingFailureDecisionException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-indexing-failure-decision.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import { DocumentIndexingFailedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexing-failed.listener.ts'
-import type { DocumentIndexExecutionStatusFields } from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-execution.query-object.ts'
-import type { ArchiveDocumentIndexFailureQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-failure.query-object.ts'
+import type { DocumentIndexExecutionStatusFields } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.params.ts'
+import type { ArchiveDocumentIndexFailureParams } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-failure.params.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
 import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
 import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
 
 const now = new Date('2026-10-14T00:00:30.000Z')
 const claimedJobFixture: DocumentIndexingDeliveryDTO = {
@@ -66,7 +66,7 @@ const createFailedJobScenario = (
   lockedOverrides: Partial<DocumentIndexExecutionRecordDTO> = {},
 ) => {
   const calls: string[] = []
-  let archive: ArchiveDocumentIndexFailureQueryObject | null = null
+  let archive: ArchiveDocumentIndexFailureParams | null = null
   let retryState: Record<string, unknown> | null = null
   let retryWrite: DocumentIndexExecutionStatusFields | null = null
   const useCase = new DocumentIndexingFailedListener(

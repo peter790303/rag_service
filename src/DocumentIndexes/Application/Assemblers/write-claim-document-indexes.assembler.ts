@@ -12,7 +12,7 @@ import type {
 import type { DocumentIndexingClaimDTO } from '../DataTransferObjects/document-indexing-claim.dto.ts'
 import type { DocumentIndexingLeaseClaimDTO } from '../DataTransferObjects/document-indexing-lease-claim.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../Enums/document-index-execution-stage.enum.ts'
-import type { DocumentIndexExecutionClaimFields } from '../QueryObjects/document-index-execution.query-object.ts'
+import type { DocumentIndexExecutionClaimFields } from '../Ports/Out/Gateways/document-index-execution.params.ts'
 
 /** Maps queued-job candidates, their new leases, and the claimed worker result. */
 export class WriteClaimDocumentIndexesAssembler {

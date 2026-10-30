@@ -1,32 +1,34 @@
 import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
+import { CollectIndexChunkGarbageCommandHandler } from '../../../src/Chunks/Application/Commands/collect-index-chunk-garbage.command.handler.ts'
+import type { ChunkRepository } from '../../../src/Chunks/Application/Ports/Out/Repositories/chunk.repository.ts'
+import { CollectDocumentIndexFailureGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-document-index-failure-garbage.command.handler.ts'
 import { CollectDocumentIndexGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-document-index-garbage.command.handler.ts'
-import { CollectIndexChunkGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-index-chunk-garbage.command.handler.ts'
 import { StartDocumentIndexPruningRetentionCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/start-document-index-pruning-retention.command.handler.ts'
 import { CancelKnowledgeBaseDocumentDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/cancel-knowledge-base-document-document-indexing.listener.ts'
 import type { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
 import type { DocumentIndexFailureArchive } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-failure.archive.ts'
-import type { ChunkRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/chunk.repository.ts'
 import type { DocumentIndexRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
+import { InspectDocumentIndexExecutionRetentionQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/inspect-document-index-execution-retention.query.handler.ts'
 import { InspectDocumentIndexRetentionQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/inspect-document-index-retention.query.handler.ts'
 import { PlanDocumentIndexGarbageQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/plan-document-index-garbage.query.handler.ts'
-import { CollectDocumentRelationGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-relation-garbage.command.handler.ts'
-import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-revision-garbage.command.handler.ts'
+import { CollectDocumentRelationGarbageCommandHandler } from '../../../src/DocumentRelations/Application/Commands/collect-document-relation-garbage.command.handler.ts'
+import type { DocumentRelationRepository } from '../../../src/DocumentRelations/Application/Ports/Out/Repositories/document-relation.repository.ts'
+import { InspectDocumentRelationRetentionQueryHandler } from '../../../src/DocumentRelations/Application/Queries/inspect-document-relation-retention.query.handler.ts'
+import { PlanDocumentRelationGarbageQueryHandler } from '../../../src/DocumentRelations/Application/Queries/plan-document-relation-garbage.query.handler.ts'
+import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/DocumentRevisions/Application/Commands/collect-document-revision-garbage.command.handler.ts'
+import type { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import { InspectDocumentRevisionRetentionQueryHandler } from '../../../src/DocumentRevisions/Application/Queries/inspect-document-revision-retention.query.handler.ts'
+import { PlanDocumentRevisionGarbageQueryHandler } from '../../../src/DocumentRevisions/Application/Queries/plan-document-revision-garbage.query.handler.ts'
 import { LockDocumentRetentionParentsCommandHandler } from '../../../src/Documents/Application/Commands/lock-document-retention-parents.command.handler.ts'
 import { StartDocumentPruningRetentionCommandHandler } from '../../../src/Documents/Application/Commands/start-document-pruning-retention.command.handler.ts'
 import { DocumentGarbageCollectionRequestedListener } from '../../../src/Documents/Application/Listeners/document-garbage-collection-requested.listener.ts'
-import type { DocumentRelationRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-relation.repository.ts'
-import type { DocumentRevisionRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-revision.repository.ts'
 import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
-import { InspectDocumentRelationRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-relation-retention.query.handler.ts'
 import { InspectDocumentRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-retention.query.handler.ts'
-import { InspectDocumentRevisionRetentionQueryHandler } from '../../../src/Documents/Application/Queries/inspect-document-revision-retention.query.handler.ts'
-import { PlanDocumentRelationGarbageQueryHandler } from '../../../src/Documents/Application/Queries/plan-document-relation-garbage.query.handler.ts'
-import { PlanDocumentRevisionGarbageQueryHandler } from '../../../src/Documents/Application/Queries/plan-document-revision-garbage.query.handler.ts'
-import { PruneKnowledgeBaseDocumentsCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/prune-knowledge-base-documents.command.handler.ts'
+import { PruneKnowledgeBaseDocumentsCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/prune-knowledge-base-documents.command.handler.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import { InspectKnowledgeBaseDocumentRetentionQueryHandler } from '../../../src/KnowledgeBaseDocuments/Application/Queries/inspect-knowledge-base-document-retention.query.handler.ts'
 import { ValidateKnowledgeBasePruningCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/validate-knowledge-base-pruning.command.handler.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
 import type { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base.repository.ts'
-import { InspectKnowledgeBaseDocumentRetentionQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/inspect-knowledge-base-document-retention.query.handler.ts'
 import type { PersistenceTransaction } from '../../../src/Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 
 export type GarbageCollectionTestDependencies = [
@@ -69,8 +71,7 @@ const createDocumentRetention = (
     new InspectDocumentIndexRetentionQueryHandler(documentIndexRepository),
     new InspectDocumentRelationRetentionQueryHandler(documentRelationRepository),
     documentRepository,
-    jobRepository,
-    failedJobRepository,
+    new InspectDocumentIndexExecutionRetentionQueryHandler(jobRepository, failedJobRepository),
   )
 
 export const createGarbageCollectionListener = (
@@ -95,7 +96,7 @@ export const createGarbageCollectionListener = (
   return new DocumentGarbageCollectionRequestedListener(
     persistenceTransaction,
     documentRepository,
-    new PlanDocumentIndexGarbageQueryHandler(documentIndexRepository),
+    new PlanDocumentIndexGarbageQueryHandler(documentIndexRepository, failedJobRepository),
     new CollectDocumentIndexGarbageCommandHandler(
       documentIndexRepository,
       jobRepository,
@@ -118,8 +119,7 @@ export const createGarbageCollectionListener = (
       documentRepository,
     ),
     config,
-    jobRepository,
-    failedJobRepository,
+    new CollectDocumentIndexFailureGarbageCommandHandler(jobRepository, failedJobRepository),
   )
 }
 

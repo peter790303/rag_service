@@ -2,12 +2,12 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import { CollectDocumentRelationGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-relation-garbage.command.handler.ts'
-import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/Documents/Application/Commands/replace-planned-document-relations.command.handler.ts'
-import { InvalidDocumentRelationInputException } from '../../../src/Documents/Application/Exceptions/invalid-document-relation-input.exception.ts'
-import type { DocumentRelationRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-relation.repository.ts'
-import type { InsertPlannedDocumentRelationsQueryObject } from '../../../src/Documents/Application/QueryObjects/document-relation.query-object.ts'
-import { InvalidDocumentRelationStateException } from '../../../src/Documents/Domain/Exceptions/invalid-document-relation-state.exception.ts'
+import { CollectDocumentRelationGarbageCommandHandler } from '../../../src/DocumentRelations/Application/Commands/collect-document-relation-garbage.command.handler.ts'
+import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/DocumentRelations/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import { InvalidDocumentRelationInputException } from '../../../src/DocumentRelations/Application/Exceptions/invalid-document-relation-input.exception.ts'
+import type { DocumentRelationRepository } from '../../../src/DocumentRelations/Application/Ports/Out/Repositories/document-relation.repository.ts'
+import type { InsertPlannedDocumentRelationsQO } from '../../../src/DocumentRelations/Application/QueryObjects/document-relation.query-object.ts'
+import { InvalidDocumentRelationStateException } from '../../../src/DocumentRelations/Domain/Exceptions/invalid-document-relation-state.exception.ts'
 
 type ReplaceRelationsInput = Parameters<ReplacePlannedDocumentRelationsCommandHandler['execute']>[0]
 const plannedRelation = {
@@ -64,7 +64,7 @@ test('relation replacement rejects missing scope or malformed plan before cleari
 
 test('relation replacement preserves null, zero and empty evidence, and an empty plan clears the scoped relations', async () => {
   const removedIndexes: string[] = []
-  const writes: InsertPlannedDocumentRelationsQueryObject[] = []
+  const writes: InsertPlannedDocumentRelationsQO[] = []
   const useCase = new ReplacePlannedDocumentRelationsCommandHandler(
     createRepositoryStub<DocumentRelationRepository>({
       removeBySourceIndexId: async ({ sourceIndexId }) => {

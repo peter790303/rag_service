@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { ActivateKnowledgeBaseDocumentIndexCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/activate-knowledge-base-document-index.command.handler.ts'
-import { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/prepare-knowledge-base-document-for-index-request.command.handler.ts'
-import { SaveKnowledgeBaseDocumentIndexRequestCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/save-knowledge-base-document-index-request.command.handler.ts'
-import type { PrepareKnowledgeBaseDocumentForIndexRequestDTO } from '../../../src/KnowledgeBases/Application/DataTransferObjects/prepare-knowledge-base-document-for-index-request.dto.ts'
-import { InvalidKnowledgeBaseDocumentInputException } from '../../../src/KnowledgeBases/Application/Exceptions/invalid-knowledge-base-document-input.exception.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
-import { KnowledgeBaseDocument } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
-import { InvalidKnowledgeBaseDocumentStateException } from '../../../src/KnowledgeBases/Domain/Exceptions/invalid-knowledge-base-document-state.exception.ts'
+import { ActivateKnowledgeBaseDocumentIndexCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/activate-knowledge-base-document-index.command.handler.ts'
+import { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/prepare-knowledge-base-document-for-index-request.command.handler.ts'
+import { SaveKnowledgeBaseDocumentIndexRequestCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/save-knowledge-base-document-index-request.command.handler.ts'
+import type { PrepareKnowledgeBaseDocumentForIndexRequestDTO } from '../../../src/KnowledgeBaseDocuments/Application/DataTransferObjects/prepare-knowledge-base-document-for-index-request.dto.ts'
+import { InvalidKnowledgeBaseDocumentInputException } from '../../../src/KnowledgeBaseDocuments/Application/Exceptions/invalid-knowledge-base-document-input.exception.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import { KnowledgeBaseDocument } from '../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
+import { InvalidKnowledgeBaseDocumentStateException } from '../../../src/KnowledgeBaseDocuments/Domain/Exceptions/invalid-knowledge-base-document-state.exception.ts'
 
 const sourceDocument: PrepareKnowledgeBaseDocumentForIndexRequestDTO['sourceDocument'] = {
   knowledgeBaseId: 'kb-1',

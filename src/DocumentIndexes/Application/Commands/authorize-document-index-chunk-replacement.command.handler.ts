@@ -1,6 +1,6 @@
 import type { AuthorizeDocumentIndexChunkReplacementCommand } from './authorize-document-index-chunk-replacement.command.ts'
 import type { ReserveDocumentForIndexingCommandHandlerContract } from '../../../Documents/Application/Contracts/reserve-document-for-indexing.command.handler.contract.ts'
-import type { ReserveKnowledgeBaseDocumentForIndexingCommandHandlerContract } from '../../../KnowledgeBases/Application/Contracts/reserve-knowledge-base-document-for-indexing.command.handler.contract.ts'
+import type { ReserveKnowledgeBaseDocumentForIndexingCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/reserve-knowledge-base-document-for-indexing.command.handler.contract.ts'
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
 import { ReadLeaseDocumentIndexesAssembler } from '../Assemblers/read-lease-document-indexes.assembler.ts'
 import type { AuthorizeDocumentIndexChunkReplacementCommandHandlerContract } from '../Contracts/authorize-document-index-chunk-replacement.command.handler.contract.ts'
@@ -20,9 +20,9 @@ export class AuthorizeDocumentIndexChunkReplacementCommandHandler implements Aut
   ) {}
 
   async execute(
-    authorizeDocumentIndexChunkReplacementDTO: AuthorizeDocumentIndexChunkReplacementCommand,
+    authorizeDocumentIndexChunkReplacementCommand: AuthorizeDocumentIndexChunkReplacementCommand,
   ): Promise<DocumentIndex | null> {
-    const delivery = authorizeDocumentIndexChunkReplacementDTO.delivery
+    const delivery = authorizeDocumentIndexChunkReplacementCommand.delivery
     const job = { ...delivery, leaseExpiresAt: new Date(delivery.leaseExpiresAt) }
     const document = await this.reserveDocumentForIndexingUseCase.execute({ documentId: job.documentId })
 

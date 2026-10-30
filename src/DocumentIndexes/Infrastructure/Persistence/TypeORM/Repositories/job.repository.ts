@@ -6,34 +6,34 @@ import { PersistenceTransaction } from '../../../../../Shared/Infrastructure/Per
 import type { DocumentIndexExecutionFactsDTO } from '../../../../Application/DataTransferObjects/document-index-execution-facts.dto.ts'
 import type { DocumentIndexExecutionRecordDTO } from '../../../../Application/DataTransferObjects/document-index-execution-record.dto.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../../Application/Helpers/document-index-execution-lifecycle.helper.ts'
+import type {
+  ExpiredDocumentIndexExecutionParams,
+  ExpiredDocumentIndexExecutionsParams,
+  TransitionDocumentIndexExecutionParams,
+  AvailableDocumentIndexExecutionParams,
+  OldestAvailableDocumentIndexExecutionParams,
+  AvailableDocumentIndexExecutionsParams,
+  RunningDocumentIndexExecutionSiblingsParams,
+  EnqueueDocumentIndexingRetryParams,
+  EnqueueDocumentIndexExecutionParams,
+  UpdateDocumentIndexExecutionParams,
+  RemoveDocumentIndexExecutionsParams,
+  RenewDocumentIndexExecutionLeaseParams,
+  RescheduleDocumentIndexExecutionParams,
+} from '../../../../Application/Ports/Out/Gateways/document-index-execution.params.ts'
+import type {
+  DocumentIndexExecutionDocumentParams,
+  DocumentIndexExecutionKnowledgeBaseDocumentParams,
+  DocumentIndexExecutionGenerationParams,
+  DocumentIndexExecutionIdParams,
+  DocumentIndexExecutionInProjectParams,
+  DocumentIndexExecutionIndexParams,
+  DocumentIndexExecutionRetrySourceParams,
+  DocumentIndexExecutionTargetParams,
+  DocumentIndexExecutionsForIndexParams,
+  DocumentIndexExecutionsForKnowledgeBaseDocumentParams,
+} from '../../../../Application/Ports/Out/Gateways/document-index-execution.params.ts'
 import { DocumentIndexExecutionQueue } from '../../../../Application/Ports/Out/Gateways/document-index-execution.queue.ts'
-import type {
-  ExpiredDocumentIndexExecutionQueryObject,
-  ExpiredDocumentIndexExecutionsQueryObject,
-  TransitionDocumentIndexExecutionQueryObject,
-  AvailableDocumentIndexExecutionQueryObject,
-  OldestAvailableDocumentIndexExecutionQueryObject,
-  AvailableDocumentIndexExecutionsQueryObject,
-  RunningDocumentIndexExecutionSiblingsQueryObject,
-  EnqueueDocumentIndexingRetryQueryObject,
-  EnqueueDocumentIndexExecutionQueryObject,
-  UpdateDocumentIndexExecutionQueryObject,
-  RemoveDocumentIndexExecutionsQueryObject,
-  RenewDocumentIndexExecutionLeaseQueryObject,
-  RescheduleDocumentIndexExecutionQueryObject,
-} from '../../../../Application/QueryObjects/document-index-execution.query-object.ts'
-import type {
-  DocumentIndexExecutionDocumentQueryObject,
-  DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
-  DocumentIndexExecutionGenerationQueryObject,
-  DocumentIndexExecutionIdQueryObject,
-  DocumentIndexExecutionInProjectQueryObject,
-  DocumentIndexExecutionIndexQueryObject,
-  DocumentIndexExecutionRetrySourceQueryObject,
-  DocumentIndexExecutionTargetQueryObject,
-  DocumentIndexExecutionsForIndexQueryObject,
-  DocumentIndexExecutionsForKnowledgeBaseDocumentQueryObject,
-} from '../../../../Application/QueryObjects/document-index-execution.query-object.ts'
 import { JobRecordAdapter } from '../Mappers/job-record.adapter.ts'
 import { JobWriteAdapter } from '../Mappers/job-write.adapter.ts'
 import { JobModel } from '../Models/job.model.ts'
@@ -41,7 +41,7 @@ import { JobModel } from '../Models/job.model.ts'
 /** Persists document-index deliveries and leases in the current transaction. */
 @Injectable()
 export class JobRepository extends DocumentIndexExecutionQueue {
-  async countDocumentExecutions(jobDocumentQO: DocumentIndexExecutionDocumentQueryObject): Promise<number> {
+  async countDocumentExecutions(jobDocumentQO: DocumentIndexExecutionDocumentParams): Promise<number> {
     const { documentId } = jobDocumentQO
 
     return this.jobModelRepository.countBy({ documentId })
@@ -56,7 +56,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
   }
 
   async findByKnowledgeBaseIdAndDocumentIdAndDocumentIndexIdAndGeneration(
-    jobTargetQO: DocumentIndexExecutionTargetQueryObject,
+    jobTargetQO: DocumentIndexExecutionTargetParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { knowledgeBaseId, documentId, documentIndexId, generation } = jobTargetQO
 
@@ -71,7 +71,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
   }
 
   async findByKnowledgeBaseIdAndDocumentIdAndGeneration(
-    jobGenerationQO: DocumentIndexExecutionGenerationQueryObject,
+    jobGenerationQO: DocumentIndexExecutionGenerationParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { knowledgeBaseId, documentId, generation } = jobGenerationQO
 
@@ -80,9 +80,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async lockKnowledgeBaseDocumentExecution(
-    jobDocumentTargetQO: DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
-  ) {
+  async lockKnowledgeBaseDocumentExecution(jobDocumentTargetQO: DocumentIndexExecutionKnowledgeBaseDocumentParams) {
     const { knowledgeBaseId, documentId } = jobDocumentTargetQO
 
     return JobRecordAdapter.toNullableRecord(
@@ -93,27 +91,25 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async findKnowledgeBaseDocumentExecution(
-    jobDocumentTargetQO: DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
-  ) {
+  async findKnowledgeBaseDocumentExecution(jobDocumentTargetQO: DocumentIndexExecutionKnowledgeBaseDocumentParams) {
     const { knowledgeBaseId, documentId } = jobDocumentTargetQO
 
     return JobRecordAdapter.toNullableRecord(await this.jobModelRepository.findOneBy({ knowledgeBaseId, documentId }))
   }
 
-  async enqueueRetry(createRetryJobQO: EnqueueDocumentIndexingRetryQueryObject): Promise<void> {
+  async enqueueRetry(createRetryJobQO: EnqueueDocumentIndexingRetryParams): Promise<void> {
     await this.jobModelRepository.insert(JobWriteAdapter.toJobPersistence(createRetryJobQO))
   }
 
   async removeByKnowledgeBaseIdAndDocumentId(
-    jobDocumentTargetQO: DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
+    jobDocumentTargetQO: DocumentIndexExecutionKnowledgeBaseDocumentParams,
   ): Promise<void> {
     const { knowledgeBaseId, documentId } = jobDocumentTargetQO
 
     await this.jobModelRepository.delete({ knowledgeBaseId, documentId })
   }
 
-  async findByDocumentIndexIdMany(jobsForIndexQO: DocumentIndexExecutionsForIndexQueryObject) {
+  async findByDocumentIndexIdMany(jobsForIndexQO: DocumentIndexExecutionsForIndexParams) {
     const { documentIndexId, lock } = jobsForIndexQO
 
     return JobRecordAdapter.toRecords(
@@ -124,15 +120,13 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async deleteByIds(removeJobsQO: RemoveDocumentIndexExecutionsQueryObject): Promise<void> {
+  async deleteByIds(removeJobsQO: RemoveDocumentIndexExecutionsParams): Promise<void> {
     if (!removeJobsQO.jobIds.length) return
 
     await this.jobModelRepository.delete({ id: In(removeJobsQO.jobIds) })
   }
 
-  async findKnowledgeBaseDocumentExecutions(
-    jobsForTargetQO: DocumentIndexExecutionsForKnowledgeBaseDocumentQueryObject,
-  ) {
+  async findKnowledgeBaseDocumentExecutions(jobsForTargetQO: DocumentIndexExecutionsForKnowledgeBaseDocumentParams) {
     const { knowledgeBaseId, documentId, lock } = jobsForTargetQO
 
     return JobRecordAdapter.toRecords(
@@ -143,23 +137,23 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async findByDocumentIndexId(jobIndexQO: DocumentIndexExecutionIndexQueryObject) {
+  async findByDocumentIndexId(jobIndexQO: DocumentIndexExecutionIndexParams) {
     const { documentIndexId } = jobIndexQO
 
     return JobRecordAdapter.toNullableRecord(await this.jobModelRepository.findOneBy({ documentIndexId }))
   }
 
-  async enqueue(saveQueuedJobQO: EnqueueDocumentIndexExecutionQueryObject): Promise<void> {
+  async enqueue(saveQueuedJobQO: EnqueueDocumentIndexExecutionParams): Promise<void> {
     await this.jobModelRepository.insert(JobWriteAdapter.toJobPersistence(saveQueuedJobQO))
   }
 
-  async releaseExecution(jobIdQO: DocumentIndexExecutionIdQueryObject): Promise<void> {
+  async releaseExecution(jobIdQO: DocumentIndexExecutionIdParams): Promise<void> {
     const { jobId } = jobIdQO
 
     await this.jobModelRepository.delete({ id: jobId })
   }
 
-  async lockExecution(jobIdQO: DocumentIndexExecutionIdQueryObject): Promise<DocumentIndexExecutionRecordDTO | null> {
+  async lockExecution(jobIdQO: DocumentIndexExecutionIdParams): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { jobId } = jobIdQO
 
     return JobRecordAdapter.toNullableRecord(
@@ -170,12 +164,12 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async update(updateJobQO: UpdateDocumentIndexExecutionQueryObject): Promise<void> {
+  async update(updateJobQO: UpdateDocumentIndexExecutionParams): Promise<void> {
     await this.jobModelRepository.update({ id: updateJobQO.id }, JobWriteAdapter.toJobPersistence(updateJobQO))
   }
 
   async findExecutionInProject(
-    jobInProjectQO: DocumentIndexExecutionInProjectQueryObject,
+    jobInProjectQO: DocumentIndexExecutionInProjectParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { projectId, id } = jobInProjectQO
 
@@ -184,7 +178,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async renewLease(saveJobHeartbeatQO: RenewDocumentIndexExecutionLeaseQueryObject): Promise<void> {
+  async renewLease(saveJobHeartbeatQO: RenewDocumentIndexExecutionLeaseParams): Promise<void> {
     const { jobId } = saveJobHeartbeatQO
 
     await this.jobModelRepository.update(
@@ -197,26 +191,26 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async countIndexExecutions(jobIndexQO: DocumentIndexExecutionIndexQueryObject): Promise<number> {
+  async countIndexExecutions(jobIndexQO: DocumentIndexExecutionIndexParams): Promise<number> {
     const { documentIndexId } = jobIndexQO
 
     return this.jobModelRepository.countBy({ documentIndexId })
   }
 
-  async rescheduleExecution(saveJobStatusQO: RescheduleDocumentIndexExecutionQueryObject): Promise<void> {
+  async rescheduleExecution(saveJobStatusQO: RescheduleDocumentIndexExecutionParams): Promise<void> {
     const { jobId, ...statusFields } = saveJobStatusQO
 
     await this.jobModelRepository.update({ id: jobId }, JobWriteAdapter.toJobStatusPersistence(statusFields))
   }
 
-  async countFailureRetries(jobRetrySourceQO: DocumentIndexExecutionRetrySourceQueryObject): Promise<number> {
+  async countFailureRetries(jobRetrySourceQO: DocumentIndexExecutionRetrySourceParams): Promise<number> {
     const { failedJobId } = jobRetrySourceQO
 
     return this.jobModelRepository.countBy({ retryOfFailedJobId: failedJobId })
   }
 
   async findExpiredExecutions(
-    expiredJobsQO: ExpiredDocumentIndexExecutionsQueryObject,
+    expiredJobsQO: ExpiredDocumentIndexExecutionsParams,
   ): Promise<DocumentIndexExecutionRecordDTO[]> {
     const { now } = expiredJobsQO
 
@@ -232,7 +226,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
   }
 
   async lockExpiredExecution(
-    expiredJobQO: ExpiredDocumentIndexExecutionQueryObject,
+    expiredJobQO: ExpiredDocumentIndexExecutionParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { jobId, now } = expiredJobQO
 
@@ -247,7 +241,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     )
   }
 
-  async countAvailableExecutions(queuedJobsQO: AvailableDocumentIndexExecutionsQueryObject): Promise<number> {
+  async countAvailableExecutions(queuedJobsQO: AvailableDocumentIndexExecutionsParams): Promise<number> {
     const { availableAt } = queuedJobsQO
 
     return this.jobModelRepository.countBy({
@@ -257,7 +251,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
   }
 
   async findOldestAvailableExecution(
-    queuedJobSnapshotQO: OldestAvailableDocumentIndexExecutionQueryObject,
+    queuedJobSnapshotQO: OldestAvailableDocumentIndexExecutionParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { availableAt, excludedDocumentIndexIds } = queuedJobSnapshotQO
 
@@ -276,7 +270,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
   }
 
   async lockAvailableExecution(
-    queuedJobQO: AvailableDocumentIndexExecutionQueryObject,
+    queuedJobQO: AvailableDocumentIndexExecutionParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null> {
     const { jobId, availableAt } = queuedJobQO
 
@@ -289,7 +283,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
   }
 
   async findSiblingExecutions(
-    runningJobSiblingsQO: RunningDocumentIndexExecutionSiblingsQueryObject,
+    runningJobSiblingsQO: RunningDocumentIndexExecutionSiblingsParams,
   ): Promise<DocumentIndexExecutionFactsDTO[]> {
     const { documentIndexId, jobId } = runningJobSiblingsQO
 
@@ -301,7 +295,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     return executionFacts.map((executionFact) => JobRecordAdapter.toExecutionFacts(executionFact))
   }
 
-  async transitionExecution(updateJobStatusQO: TransitionDocumentIndexExecutionQueryObject): Promise<boolean> {
+  async transitionExecution(updateJobStatusQO: TransitionDocumentIndexExecutionParams): Promise<boolean> {
     const { jobId, expectedStatus, ...statusFields } = updateJobStatusQO
 
     const jobStatusUpdate = await this.jobModelRepository.update(
@@ -312,7 +306,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     return (jobStatusUpdate.affected ?? 0) === 1
   }
 
-  async releaseQueuedExecution(jobIdQO: DocumentIndexExecutionIdQueryObject): Promise<boolean> {
+  async releaseQueuedExecution(jobIdQO: DocumentIndexExecutionIdParams): Promise<boolean> {
     const { jobId } = jobIdQO
 
     const queuedJobDeletion = await this.jobModelRepository.delete({
@@ -323,7 +317,7 @@ export class JobRepository extends DocumentIndexExecutionQueue {
     return (queuedJobDeletion.affected ?? 0) === 1
   }
 
-  async releaseRunningExecution(jobIdQO: DocumentIndexExecutionIdQueryObject): Promise<void> {
+  async releaseRunningExecution(jobIdQO: DocumentIndexExecutionIdParams): Promise<void> {
     const { jobId } = jobIdQO
 
     await this.jobModelRepository.delete({ id: jobId, status: DOCUMENT_INDEX_EXECUTION_STATUS.RUNNING })

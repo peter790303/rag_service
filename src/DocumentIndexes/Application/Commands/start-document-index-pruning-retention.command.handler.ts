@@ -1,7 +1,7 @@
 import { concatMap, from, lastValueFrom, toArray } from 'rxjs'
 
 import type { StartDocumentIndexPruningRetentionCommand } from './start-document-index-pruning-retention.command.ts'
-import type { InspectKnowledgeBaseDocumentRetentionQueryHandlerContract } from '../../../KnowledgeBases/Application/Contracts/inspect-knowledge-base-document-retention.query.handler.contract.ts'
+import type { InspectKnowledgeBaseDocumentRetentionQueryHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/inspect-knowledge-base-document-retention.query.handler.contract.ts'
 import { PruningDocumentIndexAssembler } from '../Assemblers/pruning-document-index.assembler.ts'
 import { WriteLifecycleDocumentIndexAssembler } from '../Assemblers/write-lifecycle-document-index.assembler.ts'
 import type { StartDocumentIndexPruningRetentionCommandHandlerContract } from '../Contracts/start-document-index-pruning-retention.command.handler.contract.ts'
@@ -18,16 +18,16 @@ export class StartDocumentIndexPruningRetentionCommandHandler implements StartDo
   async execute({ documentIndexIds, now }: StartDocumentIndexPruningRetentionCommand): Promise<void> {
     const startRetention = async (documentIndexId: string): Promise<void> => {
       const restoredDocumentIndexDTO = await this.documentIndexRepository.lockByDocumentIndexId(
-        PruningDocumentIndexAssembler.toDocumentIndexIdQueryObject(documentIndexId),
+        PruningDocumentIndexAssembler.toDocumentIndexIdQO(documentIndexId),
       )
 
       if (restoredDocumentIndexDTO === null) return
 
       const knowledgeBaseDocumentProtectsIndex = await this.knowledgeBaseDocumentRetention.execute(
-        PruningDocumentIndexAssembler.toInspectKnowledgeBaseDocumentRetentionDTO(documentIndexId),
+        PruningDocumentIndexAssembler.toInspectKnowledgeBaseDocumentRetentionQuery(documentIndexId),
       )
       const jobCount = await this.documentIndexExecutionQueue.countIndexExecutions(
-        PruningDocumentIndexAssembler.toDocumentIndexIdQueryObject(documentIndexId),
+        PruningDocumentIndexAssembler.toDocumentIndexIdQO(documentIndexId),
       )
 
       if (knowledgeBaseDocumentProtectsIndex || jobCount > 0) return

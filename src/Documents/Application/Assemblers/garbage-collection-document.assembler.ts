@@ -1,30 +1,32 @@
-import type { PlanDocumentIndexGarbageDTO } from '../../../DocumentIndexes/Application/DataTransferObjects/document-index-garbage.dto.ts'
-import type { CollectDocumentIndexGarbageDTO } from '../../../DocumentIndexes/Application/DataTransferObjects/document-index-garbage.dto.ts'
-import type {
-  DocumentIndexFailureIdQueryObject,
-  ExpiredDocumentIndexFailuresQueryObject,
-} from '../../../DocumentIndexes/Application/QueryObjects/document-index-failure.query-object.ts'
+import type { CollectDocumentIndexGarbageCommand } from '../../../DocumentIndexes/Application/Commands/collect-document-index-garbage.command.ts'
+import type { PlanDocumentIndexGarbageQuery } from '../../../DocumentIndexes/Application/Queries/plan-document-index-garbage.query.ts'
 import type { DocumentIndex } from '../../../DocumentIndexes/Domain/Entities/document-index.ts'
-import type { DocumentRevision } from '../../Domain/Entities/document-revision.ts'
+import type { PlanDocumentRelationGarbageQuery } from '../../../DocumentRelations/Application/Queries/plan-document-relation-garbage.query.ts'
+import type { CollectDocumentRevisionGarbageCommand } from '../../../DocumentRevisions/Application/Commands/collect-document-revision-garbage.command.ts'
+import type { PlanDocumentRevisionGarbageQuery } from '../../../DocumentRevisions/Application/Queries/plan-document-revision-garbage.query.ts'
+import type { DocumentRevision } from '../../../DocumentRevisions/Domain/Entities/document-revision.ts'
+import type { LockDocumentRetentionParentsCommand } from '../Commands/lock-document-retention-parents.command.ts'
 import type { DocumentGarbageCollectionScopeDTO } from '../DataTransferObjects/document-garbage-collection-scope.dto.ts'
-import type { PlanDocumentRelationGarbageDTO } from '../DataTransferObjects/document-relation-garbage.dto.ts'
-import type { LockDocumentRetentionParentsDTO } from '../DataTransferObjects/document-retention-scope.dto.ts'
-import type { CollectDocumentRevisionGarbageDTO } from '../DataTransferObjects/document-revision-garbage.dto.ts'
-import type { PlanDocumentRevisionGarbageDTO } from '../DataTransferObjects/document-revision-garbage.dto.ts'
-import type { DocumentGarbageCandidatesQueryObject } from '../QueryObjects/document.query-object.ts'
+import type { DocumentGarbageCandidatesQO } from '../QueryObjects/document.query-object.ts'
 
 export class GarbageCollectionDocumentAssembler {
-  static toCollectDocumentIndexGarbageDTO(
+  static toCollectDocumentIndexGarbageCommand(
     documentGarbageCollectionScopeDTO: DocumentGarbageCollectionScopeDTO,
     documentIndexes: readonly DocumentIndex[],
-  ): CollectDocumentIndexGarbageDTO {
-    return { scope: documentGarbageCollectionScopeDTO, candidates: documentIndexes }
+  ): CollectDocumentIndexGarbageCommand {
+    return {
+      scope: {
+        retentionCutoff: documentGarbageCollectionScopeDTO.retentionCutoff,
+        lockedDocumentIds: documentGarbageCollectionScopeDTO.lockedDocumentIds,
+      },
+      candidates: documentIndexes,
+    }
   }
 
-  static toCollectDocumentRevisionGarbageDTO(
+  static toCollectDocumentRevisionGarbageCommand(
     documentGarbageCollectionScopeDTO: DocumentGarbageCollectionScopeDTO,
     documentRevisionCandidatesDTO: readonly DocumentRevision[],
-  ): CollectDocumentRevisionGarbageDTO {
+  ): CollectDocumentRevisionGarbageCommand {
     return {
       scope: {
         retentionCutoff: documentGarbageCollectionScopeDTO.retentionCutoff,
@@ -34,31 +36,25 @@ export class GarbageCollectionDocumentAssembler {
     }
   }
 
-  static toPlanDocumentRelationGarbageDTO(documentIndexes: readonly DocumentIndex[]): PlanDocumentRelationGarbageDTO {
+  static toPlanDocumentRelationGarbageQuery(
+    documentIndexes: readonly DocumentIndex[],
+  ): PlanDocumentRelationGarbageQuery {
     return { sourceIndexIds: documentIndexes.map((index) => index.id) }
   }
 
-  static toPlanDocumentIndexGarbageDTO(retentionCutoff: Date): PlanDocumentIndexGarbageDTO {
+  static toPlanDocumentIndexGarbageQuery(retentionCutoff: Date): PlanDocumentIndexGarbageQuery {
     return { retentionCutoff }
   }
 
-  static toExpiredDocumentIndexFailuresQO(retentionCutoff: Date): ExpiredDocumentIndexFailuresQueryObject {
-    return { cutoff: retentionCutoff }
-  }
-
-  static toDocumentIndexFailureIdQO(failedJobId: string): DocumentIndexFailureIdQueryObject {
-    return { failedJobId }
-  }
-
-  static toPlanDocumentRevisionGarbageDTO(retentionCutoff: Date): PlanDocumentRevisionGarbageDTO {
+  static toPlanDocumentRevisionGarbageQuery(retentionCutoff: Date): PlanDocumentRevisionGarbageQuery {
     return { retentionCutoff }
   }
 
-  static toLockDocumentRetentionParentsDTO(documentIds: readonly string[]): LockDocumentRetentionParentsDTO {
+  static toLockDocumentRetentionParentsCommand(documentIds: readonly string[]): LockDocumentRetentionParentsCommand {
     return { documentIds }
   }
 
-  static toDocumentGarbageCandidatesQO(retentionCutoff: Date): DocumentGarbageCandidatesQueryObject {
+  static toDocumentGarbageCandidatesQO(retentionCutoff: Date): DocumentGarbageCandidatesQO {
     return { cutoff: retentionCutoff }
   }
 

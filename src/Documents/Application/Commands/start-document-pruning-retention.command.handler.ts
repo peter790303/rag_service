@@ -13,7 +13,7 @@ export class StartDocumentPruningRetentionCommandHandler implements StartDocumen
   async execute({ documentId, now, lockedDocumentIds }: StartDocumentPruningRetentionCommand): Promise<void> {
     if (
       !lockedDocumentIds.includes(documentId) ||
-      (await this.documentRetention.execute(RetentionDocumentAssembler.toInspectDocumentRetentionDTO(documentId)))
+      (await this.documentRetention.execute(RetentionDocumentAssembler.toInspectDocumentRetentionQuery(documentId)))
     )
       return
 

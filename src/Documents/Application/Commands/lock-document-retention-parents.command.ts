@@ -1,3 +1,3 @@
-import type { LockDocumentRetentionParentsDTO } from '../DataTransferObjects/document-retention-scope.dto.ts'
-
-export type LockDocumentRetentionParentsCommand = LockDocumentRetentionParentsDTO
+export type LockDocumentRetentionParentsCommand = {
+  readonly documentIds: readonly string[]
+}

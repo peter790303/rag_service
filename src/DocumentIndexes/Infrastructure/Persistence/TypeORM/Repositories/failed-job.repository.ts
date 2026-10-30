@@ -7,21 +7,21 @@ import type { DocumentIndexFailureRecordDTO } from '../../../../Application/Data
 import type { ExpiredDocumentIndexFailureDTO } from '../../../../Application/DataTransferObjects/expired-document-index-failure.dto.ts'
 import { DocumentIndexFailureArchive } from '../../../../Application/Ports/Out/Gateways/document-index-failure.archive.ts'
 import type {
-  ArchiveDocumentIndexFailureQueryObject,
-  ArchiveDocumentIndexFailuresQueryObject,
-  RemoveDocumentIndexFailuresQueryObject,
-} from '../../../../Application/QueryObjects/document-index-failure.query-object.ts'
+  ArchiveDocumentIndexFailureParams,
+  ArchiveDocumentIndexFailuresParams,
+  RemoveDocumentIndexFailuresParams,
+} from '../../../../Application/Ports/Out/Gateways/document-index-failure.params.ts'
 import type {
-  DocumentIndexFailureDocumentQueryObject,
-  DocumentIndexFailureKnowledgeBaseDocumentQueryObject,
-  ExpiredDocumentIndexFailuresQueryObject,
-  DocumentIndexFailureIdQueryObject,
-  DocumentIndexFailureInProjectQueryObject,
-  DocumentIndexFailureIndexQueryObject,
-  DocumentIndexFailureLookupQueryObject,
-  UnretriedDocumentIndexFailureTargetQueryObject,
-  UnretriedDocumentIndexFailuresQueryObject,
-} from '../../../../Application/QueryObjects/document-index-failure.query-object.ts'
+  DocumentIndexFailureDocumentParams,
+  DocumentIndexFailureKnowledgeBaseDocumentParams,
+  ExpiredDocumentIndexFailuresParams,
+  DocumentIndexFailureIdParams,
+  DocumentIndexFailureInProjectParams,
+  DocumentIndexFailureIndexParams,
+  DocumentIndexFailureLookupParams,
+  UnretriedDocumentIndexFailureTargetParams,
+  UnretriedDocumentIndexFailuresParams,
+} from '../../../../Application/Ports/Out/Gateways/document-index-failure.params.ts'
 import { FailedJobRecordAdapter } from '../Mappers/failed-job-record.adapter.ts'
 import { FailedJobRetentionFactsAdapter } from '../Mappers/failed-job-retention-facts.adapter.ts'
 import { FailedJobModel } from '../Models/failed-job.model.ts'
@@ -38,7 +38,7 @@ export class FailedJobRepository extends DocumentIndexFailureArchive {
   }
 
   async findFailureInProject(
-    failedJobInProjectQO: DocumentIndexFailureInProjectQueryObject,
+    failedJobInProjectQO: DocumentIndexFailureInProjectParams,
   ): Promise<DocumentIndexFailureRecordDTO | null> {
     const { idOrJobId, projectId } = failedJobInProjectQO
 
@@ -52,7 +52,7 @@ export class FailedJobRepository extends DocumentIndexFailureArchive {
     )
   }
 
-  async lockFailure(failedJobIdQO: DocumentIndexFailureIdQueryObject): Promise<DocumentIndexFailureRecordDTO | null> {
+  async lockFailure(failedJobIdQO: DocumentIndexFailureIdParams): Promise<DocumentIndexFailureRecordDTO | null> {
     const { failedJobId } = failedJobIdQO
 
     return FailedJobRecordAdapter.toNullableRecord(
@@ -64,7 +64,7 @@ export class FailedJobRepository extends DocumentIndexFailureArchive {
   }
 
   async findUnretriedTargetFailure(
-    unretriedFailedJobTargetQO: UnretriedDocumentIndexFailureTargetQueryObject,
+    unretriedFailedJobTargetQO: UnretriedDocumentIndexFailureTargetParams,
   ): Promise<DocumentIndexFailureRecordDTO | null> {
     const { knowledgeBaseId, documentId, documentIndexId, generation } = unretriedFailedJobTargetQO
 
@@ -80,7 +80,7 @@ export class FailedJobRepository extends DocumentIndexFailureArchive {
   }
 
   async findByRetriedAtIsNullAndFailedAtLessThanOrEqualCutoffOrderByFailedAtAscAndIdAsc(
-    query: UnretriedDocumentIndexFailuresQueryObject,
+    query: UnretriedDocumentIndexFailuresParams,
   ): Promise<string[]> {
     const { cutoff, failedJobId, projectId } = query
     const where = {
@@ -99,17 +99,17 @@ export class FailedJobRepository extends DocumentIndexFailureArchive {
     return failures.map(({ id }) => id)
   }
 
-  async archive(saveFailedJobQO: ArchiveDocumentIndexFailureQueryObject): Promise<void> {
+  async archive(saveFailedJobQO: ArchiveDocumentIndexFailureParams): Promise<void> {
     await this.failedJobModelRepository.insert(FailedJobRecordAdapter.toPersistence(saveFailedJobQO))
   }
 
-  async removeFailure(failedJobIdQO: DocumentIndexFailureIdQueryObject): Promise<void> {
+  async removeFailure(failedJobIdQO: DocumentIndexFailureIdParams): Promise<void> {
     const { failedJobId } = failedJobIdQO
 
     await this.failedJobModelRepository.delete({ id: failedJobId })
   }
 
-  async insertMany(insertFailedJobsQO: ArchiveDocumentIndexFailuresQueryObject): Promise<void> {
+  async insertMany(insertFailedJobsQO: ArchiveDocumentIndexFailuresParams): Promise<void> {
     if (insertFailedJobsQO.failedJobs.length === 0) return
 
     const failureAttributes = FailedJobRecordAdapter.toPersistenceRecords(insertFailedJobsQO.failedJobs)
@@ -117,7 +117,7 @@ export class FailedJobRepository extends DocumentIndexFailureArchive {
   }
 
   async findByKnowledgeBaseIdAndDocumentId(
-    failedJobDocumentTargetQO: DocumentIndexFailureKnowledgeBaseDocumentQueryObject,
+    failedJobDocumentTargetQO: DocumentIndexFailureKnowledgeBaseDocumentParams,
   ): Promise<DocumentIndexFailureRecordDTO[]> {
     const { knowledgeBaseId, documentId } = failedJobDocumentTargetQO
 
@@ -125,41 +125,41 @@ export class FailedJobRepository extends DocumentIndexFailureArchive {
   }
 
   async findByDocumentIndexId(
-    failedJobIndexQO: DocumentIndexFailureIndexQueryObject,
+    failedJobIndexQO: DocumentIndexFailureIndexParams,
   ): Promise<DocumentIndexFailureRecordDTO[]> {
     const { documentIndexId } = failedJobIndexQO
 
     return FailedJobRecordAdapter.toRecords(await this.failedJobModelRepository.findBy({ documentIndexId }))
   }
 
-  async deleteByIds(removeFailedJobsQO: RemoveDocumentIndexFailuresQueryObject): Promise<void> {
+  async deleteByIds(removeFailedJobsQO: RemoveDocumentIndexFailuresParams): Promise<void> {
     if (!removeFailedJobsQO.failedJobIds.length) return
 
     await this.failedJobModelRepository.delete({ id: In(removeFailedJobsQO.failedJobIds) })
   }
 
   async findFailure(
-    failedJobLookupQO: DocumentIndexFailureLookupQueryObject,
+    failedJobLookupQO: DocumentIndexFailureLookupParams,
   ): Promise<DocumentIndexFailureRecordDTO | null> {
     const { id } = failedJobLookupQO
 
     return FailedJobRecordAdapter.toNullableRecord(await this.failedJobModelRepository.findOneBy({ id }))
   }
 
-  async countDocumentFailures(failedJobDocumentQO: DocumentIndexFailureDocumentQueryObject): Promise<number> {
+  async countDocumentFailures(failedJobDocumentQO: DocumentIndexFailureDocumentParams): Promise<number> {
     const { documentId } = failedJobDocumentQO
 
     return this.failedJobModelRepository.countBy({ documentId })
   }
 
-  async countIndexFailures(failedJobIndexQO: DocumentIndexFailureIndexQueryObject): Promise<number> {
+  async countIndexFailures(failedJobIndexQO: DocumentIndexFailureIndexParams): Promise<number> {
     const { documentIndexId } = failedJobIndexQO
 
     return this.failedJobModelRepository.countBy({ documentIndexId })
   }
 
   async findExpiredFailures(
-    failedJobGarbageQO: ExpiredDocumentIndexFailuresQueryObject,
+    failedJobGarbageQO: ExpiredDocumentIndexFailuresParams,
   ): Promise<ExpiredDocumentIndexFailureDTO[]> {
     const { cutoff } = failedJobGarbageQO
 
@@ -172,7 +172,7 @@ export class FailedJobRepository extends DocumentIndexFailureArchive {
   }
 
   async lockExpiredFailure(
-    failedJobIdQO: DocumentIndexFailureIdQueryObject,
+    failedJobIdQO: DocumentIndexFailureIdParams,
   ): Promise<ExpiredDocumentIndexFailureDTO | null> {
     const { failedJobId } = failedJobIdQO
 
@@ -184,7 +184,7 @@ export class FailedJobRepository extends DocumentIndexFailureArchive {
     return FailedJobRetentionFactsAdapter.toNullableGarbageFailedJobCandidate(failedJob)
   }
 
-  async removeExpiredFailure(failedJobIdQO: DocumentIndexFailureIdQueryObject): Promise<void> {
+  async removeExpiredFailure(failedJobIdQO: DocumentIndexFailureIdParams): Promise<void> {
     const { failedJobId } = failedJobIdQO
 
     await this.failedJobModelRepository.delete({ id: failedJobId })

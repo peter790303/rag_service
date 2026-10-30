@@ -1,16 +1,16 @@
-export interface DocumentIdQueryObject {
+export interface DocumentIdQO {
   readonly documentId: string
 }
 
-export interface DocumentIdsQueryObject {
+export interface DocumentIdsQO {
   readonly ids: readonly string[]
 }
 
-export interface DocumentGarbageCandidatesQueryObject {
+export interface DocumentGarbageCandidatesQO {
   readonly cutoff: Date
 }
 
-export interface UpsertDocumentSourceQueryObject {
+export interface UpsertDocumentSourceQO {
   readonly id: string
   readonly sourceType: string
   readonly sourceKey: string
@@ -19,15 +19,15 @@ export interface UpsertDocumentSourceQueryObject {
   readonly unreferencedSince: Date | null
 }
 
-export interface UpsertDocumentSourceTitleQueryObject extends UpsertDocumentSourceQueryObject {
+export interface UpsertDocumentSourceTitleQO extends UpsertDocumentSourceQO {
   readonly currentTitle: string | null
 }
 
-export interface MarkDocumentUnreferencedQueryObject extends DocumentIdQueryObject {
+export interface MarkDocumentUnreferencedQO extends DocumentIdQO {
   readonly unreferencedSince: Date
 }
 
-export interface DocumentSourceQueryObject {
+export interface DocumentSourceQO {
   readonly sourceType: string
   readonly sourceKey: string
   readonly sourcePath: string

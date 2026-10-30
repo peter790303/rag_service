@@ -8,8 +8,8 @@ import type { DocumentRepository } from '../Ports/Out/Repositories/document.repo
 export class GetDocumentForIndexRetryQueryHandler implements GetDocumentForIndexRetryQueryHandlerContract {
   constructor(private readonly documents: DocumentRepository) {}
 
-  async execute(getDocumentForIndexRetryDTO: GetDocumentForIndexRetryQuery): Promise<Document | null> {
-    const documentIdQO = { documentId: getDocumentForIndexRetryDTO.documentId }
+  async execute(getDocumentForIndexRetryQuery: GetDocumentForIndexRetryQuery): Promise<Document | null> {
+    const documentIdQO = { documentId: getDocumentForIndexRetryQuery.documentId }
     const document = await this.documents.findByDocumentId(documentIdQO)
 
     if (

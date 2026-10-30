@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRetrievalKnowledgeBaseContentInputFixture } from './retrieval-knowledge-base-content.fixture.ts'
-import { DocumentRelation } from '../../../src/Documents/Domain/Entities/document-relation.ts'
+import { DocumentRelation } from '../../../src/DocumentRelations/Domain/Entities/document-relation.ts'
 import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
 import { RetrievalExactChunkCountMissingException } from '../../../src/KnowledgeBases/Domain/Exceptions/retrieval-exact-chunk-count-missing.exception.ts'
 import { RetrievalRelationResolutionMissingException } from '../../../src/KnowledgeBases/Domain/Exceptions/retrieval-relation-resolution-missing.exception.ts'

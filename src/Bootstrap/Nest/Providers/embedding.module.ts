@@ -2,9 +2,9 @@ import { Module } from '@nestjs/common'
 
 import { KnowledgeServiceConfigModule } from './knowledge-service-config.module.ts'
 import { KNOWLEDGE_SERVICE_CONFIG, type KnowledgeServiceConfig } from '../../../../config/knowledge-service.config.ts'
-import { HttpEmbeddingClient } from '../../../DocumentIndexes/Infrastructure/External/Embedding/http-embedding.client.ts'
-import { LocalEmbeddingClient } from '../../../DocumentIndexes/Infrastructure/External/Embedding/local-embedding.client.ts'
 import { EmbeddingProvider } from '../../../Shared/Application/Ports/Out/Gateways/embedding-provider.ts'
+import { HttpEmbeddingClient } from '../../../Shared/Infrastructure/External/Embedding/http-embedding.client.ts'
+import { LocalEmbeddingClient } from '../../../Shared/Infrastructure/External/Embedding/local-embedding.client.ts'
 
 @Module({
   imports: [KnowledgeServiceConfigModule],

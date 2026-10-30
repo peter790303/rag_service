@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
-import { Chunk } from '../../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
+import { Chunk } from '../../../../src/Chunks/Domain/Entities/chunk.ts'
 import { DocumentIndex } from '../../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
-import { DocumentRevision } from '../../../../src/Documents/Domain/Entities/document-revision.ts'
+import { DocumentRevision } from '../../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
 import { Document } from '../../../../src/Documents/Domain/Entities/document.ts'
 import { InvalidDocumentTimestampException } from '../../../../src/Documents/Domain/Exceptions/invalid-document-timestamp.exception.ts'
-import { KnowledgeBaseDocument } from '../../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
+import { KnowledgeBaseDocument } from '../../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
 import { DateTime } from '../../../../src/Shared/Domain/ValueObjects/date-time.ts'
 
 const timestamp = new DateTime(new Date('2026-10-16T20:34:56.789Z'), { timeZone: 'Asia/Taipei' })

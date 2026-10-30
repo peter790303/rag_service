@@ -1,31 +1,31 @@
 import type { DocumentIndexStatus } from '../../Domain/Enums/document-index-status.enum.ts'
 
-export interface DocumentIndexIdQueryObject {
+export interface DocumentIndexIdQO {
   readonly documentIndexId: string
 }
 
-export interface DocumentIndexRevisionPipelineQueryObject {
+export interface DocumentIndexRevisionPipelineQO {
   readonly revisionId: string
   readonly pipelineHash: string
 }
 
-export interface DocumentIndexDocumentQueryObject {
+export interface DocumentIndexDocumentQO {
   readonly documentId: string
 }
 
-export interface DocumentIndexRevisionQueryObject {
+export interface DocumentIndexRevisionQO {
   readonly revisionId: string
 }
 
-export interface DocumentIndexGarbageCandidatesQueryObject {
+export interface DocumentIndexGarbageCandidatesQO {
   readonly cutoff: Date
 }
 
-export interface DocumentIndexDocumentsQueryObject {
+export interface DocumentIndexDocumentsQO {
   readonly documentIds: readonly string[]
 }
 
-export interface CreateBuildingDocumentIndexQueryObject {
+export interface CreateBuildingDocumentIndexQO {
   readonly id: string
   readonly createdAt: Date
   readonly documentId: string
@@ -43,14 +43,14 @@ export interface CreateBuildingDocumentIndexQueryObject {
   readonly unreferencedSince: Date | null
 }
 
-export interface SaveDocumentIndexLifecycleQueryObject {
+export interface SaveDocumentIndexLifecycleQO {
   readonly documentIndexId: string
   readonly status: DocumentIndexStatus
   readonly readyAt: Date | null
   readonly unreferencedSince: Date | null
 }
 
-export interface SetDocumentIndexUnreferencedSinceQueryObject {
+export interface SetDocumentIndexUnreferencedSinceQO {
   readonly documentIndexId: string
   readonly unreferencedSince: Date | null
 }

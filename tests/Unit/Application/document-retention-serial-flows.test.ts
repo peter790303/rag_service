@@ -2,11 +2,11 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createDocumentFixture, createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-revision-garbage.command.handler.ts'
+import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/DocumentRevisions/Application/Commands/collect-document-revision-garbage.command.handler.ts'
+import type { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import { DocumentRevision } from '../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
 import { LockDocumentRetentionParentsCommandHandler } from '../../../src/Documents/Application/Commands/lock-document-retention-parents.command.handler.ts'
-import type { DocumentRevisionRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-revision.repository.ts'
 import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
-import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
 
 const createExpiredRevision = (id: string): DocumentRevision =>
   new DocumentRevision({

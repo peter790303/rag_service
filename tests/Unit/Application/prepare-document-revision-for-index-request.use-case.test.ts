@@ -2,14 +2,14 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import { PrepareDocumentRevisionForIndexRequestCommandHandler } from '../../../src/Documents/Application/Commands/prepare-document-revision-for-index-request.command.handler.ts'
-import type { DocumentRevisionSourceSnapshotDTO } from '../../../src/Documents/Application/DataTransferObjects/prepare-document-revision-for-index-request.dto.ts'
-import { InvalidDocumentRevisionIndexRequestInputException } from '../../../src/Documents/Application/Exceptions/invalid-document-revision-index-request-input.exception.ts'
-import type { DocumentRevisionRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-revision.repository.ts'
-import type { CreateDocumentRevisionQueryObject } from '../../../src/Documents/Application/QueryObjects/document-revision.query-object.ts'
-import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
-import { InvalidDocumentRevisionHashException } from '../../../src/Documents/Domain/Exceptions/invalid-document-revision-hash.exception.ts'
-import { InvalidDocumentRevisionIdentityException } from '../../../src/Documents/Domain/Exceptions/invalid-document-revision-identity.exception.ts'
+import { PrepareDocumentRevisionForIndexRequestCommandHandler } from '../../../src/DocumentRevisions/Application/Commands/prepare-document-revision-for-index-request.command.handler.ts'
+import type { DocumentRevisionSourceSnapshotDTO } from '../../../src/DocumentRevisions/Application/DataTransferObjects/prepare-document-revision-for-index-request.dto.ts'
+import { InvalidDocumentRevisionIndexRequestInputException } from '../../../src/DocumentRevisions/Application/Exceptions/invalid-document-revision-index-request-input.exception.ts'
+import type { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import type { CreateDocumentRevisionQO } from '../../../src/DocumentRevisions/Application/QueryObjects/document-revision.query-object.ts'
+import { DocumentRevision } from '../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
+import { InvalidDocumentRevisionHashException } from '../../../src/DocumentRevisions/Domain/Exceptions/invalid-document-revision-hash.exception.ts'
+import { InvalidDocumentRevisionIdentityException } from '../../../src/DocumentRevisions/Domain/Exceptions/invalid-document-revision-identity.exception.ts'
 
 const sourceDocument: DocumentRevisionSourceSnapshotDTO = {
   content: '',
@@ -91,7 +91,7 @@ test('revision creation supplies validated identity and timestamps while preserv
   await Promise.all(
     [undefined, null, ''].map((title) =>
       context.test(`title ${String(title)}`, async () => {
-        const writes: CreateDocumentRevisionQueryObject[] = []
+        const writes: CreateDocumentRevisionQO[] = []
         const useCase = new PrepareDocumentRevisionForIndexRequestCommandHandler(
           createRepositoryStub<DocumentRevisionRepository>({
             findByDocumentIdAndContentSha256: async () => null,

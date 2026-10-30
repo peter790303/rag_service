@@ -1,5 +1,6 @@
 import { Controller, Get, NotFoundException, Param, UseGuards } from '@nestjs/common'
 
+import { KnowledgeBaseRequestAssembler } from '../../../../KnowledgeBases/Application/Assemblers/knowledge-base-request.assembler.ts'
 import { LoadIndexManifestQueryHandler } from '../../../../KnowledgeBases/Application/Queries/load-index-manifest.query.handler.ts'
 import { ProjectServiceAuthGuard } from '../../../../Shared/Interfaces/Nest/Middleware/project-service-auth.guard.ts'
 import { LoadIndexManifestRequest } from '../Requests/load-index-manifest.request.ts'
@@ -12,7 +13,9 @@ export class IndexManifestController {
   @Get('v1/projects/:projectId/index-manifest')
   @UseGuards(ProjectServiceAuthGuard)
   async getManifest(@Param() loadIndexManifestRequest: LoadIndexManifestRequest): Promise<IndexManifestResponse> {
-    const knowledgeBase = await this.loadIndexManifest.execute(loadIndexManifestRequest.toDTO())
+    const knowledgeBase = await this.loadIndexManifest.execute(
+      KnowledgeBaseRequestAssembler.toLoadIndexManifestQuery(loadIndexManifestRequest.toDTO()),
+    )
 
     if (!knowledgeBase) throw new NotFoundException('Knowledge base not found')
 

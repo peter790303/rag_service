@@ -2,7 +2,7 @@ import { mkdir, rename, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import process from 'node:process'
 
-import { createDataSource } from '../dist/src/Shared/Infrastructure/Persistence/TypeORM/DataSource.js'
+import { createDataSource } from '../dist/src/Bootstrap/Persistence/TypeORM/DataSource.js'
 import { resetRagDatabase } from '../dist/src/Shared/Infrastructure/Persistence/TypeORM/reset-rag-database.js'
 
 const manifestPath = resolve(process.env.RAG_IMPORT_MANIFEST ?? '.local/import-manifest.json')

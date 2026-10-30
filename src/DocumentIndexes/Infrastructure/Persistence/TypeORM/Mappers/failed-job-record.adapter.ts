@@ -1,18 +1,18 @@
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js'
 
 import type { DocumentIndexFailureRecordDTO } from '../../../../Application/DataTransferObjects/document-index-failure-record.dto.ts'
-import type { ArchiveDocumentIndexFailureQueryObject } from '../../../../Application/QueryObjects/document-index-failure.query-object.ts'
+import type { ArchiveDocumentIndexFailureParams } from '../../../../Application/Ports/Out/Gateways/document-index-failure.params.ts'
 import type { FailedJobModel } from '../Models/failed-job.model.ts'
 
 /** Copies only persisted technical-record fields; never exposes ORM models or mutable references. */
 export class FailedJobRecordAdapter {
-  static toPersistence(failure: ArchiveDocumentIndexFailureQueryObject): QueryDeepPartialEntity<FailedJobModel> {
+  static toPersistence(failure: ArchiveDocumentIndexFailureParams): QueryDeepPartialEntity<FailedJobModel> {
     // JSON retry payload and reasons are validated opaque values.
     return structuredClone(failure) as QueryDeepPartialEntity<FailedJobModel>
   }
 
   static toPersistenceRecords(
-    failures: readonly ArchiveDocumentIndexFailureQueryObject[],
+    failures: readonly ArchiveDocumentIndexFailureParams[],
   ): QueryDeepPartialEntity<FailedJobModel>[] {
     return failures.map(FailedJobRecordAdapter.toPersistence)
   }

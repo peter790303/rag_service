@@ -1,8 +1,8 @@
 import type { RetryUnretriedDocumentIndexFailuresResultDTO } from '../../../Application/DataTransferObjects/retry-unretried-document-index-failures-result.dto.ts'
 import { RetryDocumentIndexingListener } from '../../../Application/Listeners/retry-document-indexing.listener.ts'
-import type { UnretriedDocumentIndexFailuresQueryObject } from '../../../Application/QueryObjects/document-index-failure.query-object.ts'
+import type { UnretriedDocumentIndexFailuresParams } from '../../../Application/Ports/Out/Gateways/document-index-failure.params.ts'
 
-type RetryFailedJobsCommandOptions = Omit<UnretriedDocumentIndexFailuresQueryObject, 'cutoff'>
+type RetryFailedJobsCommandOptions = Omit<UnretriedDocumentIndexFailuresParams, 'cutoff'>
 
 export class RetryFailedJobsCommand {
   constructor(private readonly retry: RetryDocumentIndexingListener) {}

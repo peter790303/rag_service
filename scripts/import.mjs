@@ -15,9 +15,9 @@ import {
   readSource,
   sourceType as obsidianSourceType,
 } from './import-sources/obsidian-reader.mjs'
+import { createDataSource } from '../dist/src/Bootstrap/Persistence/TypeORM/DataSource.js'
 import { DocumentIndexImportCommand } from '../dist/src/Documents/Interfaces/Console/Commands/document-index-import-command.js'
 import { DocumentIndexImportModule } from '../dist/src/Documents/Interfaces/Console/Commands/document-index-import.module.js'
-import { createDataSource } from '../dist/src/Shared/Infrastructure/Persistence/TypeORM/DataSource.js'
 import { loadObsidianImportCatalog } from '../dist/src/Shared/Infrastructure/Persistence/TypeORM/obsidian-import-catalog.js'
 
 const sourceReaders = new Map([[obsidianSourceType, { isValidEntry, readSource }]])

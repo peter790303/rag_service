@@ -10,8 +10,8 @@ export class LoadRetrievalDocumentsQueryHandler extends LoadRetrievalDocumentsQu
     super()
   }
 
-  async execute(loadRetrievalDocumentsDTO: LoadRetrievalDocumentsQuery): Promise<Document[]> {
-    const { documentIds } = RetrievalDocumentsAssembler.toLoadRetrievalDocumentsDTO(loadRetrievalDocumentsDTO)
+  async execute(loadRetrievalDocumentsQuery: LoadRetrievalDocumentsQuery): Promise<Document[]> {
+    const { documentIds } = RetrievalDocumentsAssembler.toLoadRetrievalDocumentsQuery(loadRetrievalDocumentsQuery)
     const uniqueRetrievalDocumentIds = [...new Set(documentIds)]
 
     if (uniqueRetrievalDocumentIds.length === 0) return []

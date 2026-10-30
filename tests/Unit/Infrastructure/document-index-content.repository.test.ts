@@ -10,10 +10,10 @@ import { ProcessDocumentIndexListener } from '../../../src/DocumentIndexes/Appli
 import type { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
 import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
 import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
-import { LoadDocumentRevisionQueryHandler } from '../../../src/Documents/Application/Queries/load-document-revision.query.handler.ts'
-import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
-import { DocumentRevisionModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
-import { DocumentRevisionRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
+import { LoadDocumentRevisionQueryHandler } from '../../../src/DocumentRevisions/Application/Queries/load-document-revision.query.handler.ts'
+import { DocumentRevision } from '../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
+import { DocumentRevisionModel } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 import {
@@ -72,11 +72,10 @@ const createIndexContentProcessing = () => {
     { handle: async (input) => void failures.push(input) },
     { modelId: 'embedding', embed: async (contents) => contents.map(() => [1, 0]) },
     {
-      modelId: 'planner',
-      plan: async (content) => {
-        plannedContent.push(content)
+      execute: async ({ source }) => {
+        plannedContent.push(source)
 
-        return createMarkdownChunkPlan(content)
+        return createMarkdownChunkPlan(source)
       },
     },
     30,

@@ -2,8 +2,8 @@ import { ReadLeaseDocumentIndexesAssembler } from './read-lease-document-indexes
 import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
 import type { ExpiredDocumentIndexExecutionDTO } from '../DataTransferObjects/expired-document-index-execution.dto.ts'
 import type { DOCUMENT_INDEX_EXECUTION_STATUS } from '../Helpers/document-index-execution-lifecycle.helper.ts'
-import type { DocumentIndexExecutionRetryFields } from '../QueryObjects/document-index-execution.query-object.ts'
-import type { ArchiveDocumentIndexFailureQueryObject } from '../QueryObjects/document-index-failure.query-object.ts'
+import type { DocumentIndexExecutionRetryFields } from '../Ports/Out/Gateways/document-index-execution.params.ts'
+import type { ArchiveDocumentIndexFailureParams } from '../Ports/Out/Gateways/document-index-failure.params.ts'
 
 /** Maps failed execution state to a queued retry or a failed-job archive. */
 export class WriteFailDocumentIndexesAssembler {
@@ -58,7 +58,7 @@ export class WriteFailDocumentIndexesAssembler {
     errorMessage: string,
     executionState: Record<string, unknown>,
     failedAt: Date,
-  ): ArchiveDocumentIndexFailureQueryObject {
+  ): ArchiveDocumentIndexFailureParams {
     const retryPayload = this.toArchivedExecutionRetryPayload(expiredJob.payload, executionState)
 
     return {

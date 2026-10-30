@@ -1,6 +1,7 @@
 import { Controller, Get, NotFoundException, Param, Query, UseGuards } from '@nestjs/common'
 
 import { ProjectServiceAuthGuard } from '../../../../Shared/Interfaces/Nest/Middleware/project-service-auth.guard.ts'
+import { KnowledgeBaseRequestAssembler } from '../../../Application/Assemblers/knowledge-base-request.assembler.ts'
 import { ListKnowledgeGraphProjectsQueryHandler } from '../../../Application/Queries/list-knowledge-graph-projects.query.handler.ts'
 import { LoadKnowledgeGraphQueryHandler } from '../../../Application/Queries/load-knowledge-graph.query.handler.ts'
 import { KnowledgeGraphRequest } from '../Requests/knowledge-graph.request.ts'
@@ -25,7 +26,9 @@ export class KnowledgeGraphController {
   @Get('v1/projects/:projectId/knowledge-graph')
   @UseGuards(ProjectServiceAuthGuard)
   async getGraph(@Param('projectId') projectId: string, @Query() query: KnowledgeGraphRequest) {
-    const knowledgeBase = await this.loadKnowledgeGraph.execute(query.toDTO(projectId))
+    const knowledgeBase = await this.loadKnowledgeGraph.execute(
+      KnowledgeBaseRequestAssembler.toLoadKnowledgeGraphQuery(query.toDTO(projectId)),
+    )
 
     if (!knowledgeBase) throw new NotFoundException('Knowledge base not found.')
 

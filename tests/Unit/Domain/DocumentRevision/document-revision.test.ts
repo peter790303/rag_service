@@ -4,8 +4,8 @@ import test from 'node:test'
 import {
   DocumentRevision,
   type DocumentRevisionState,
-} from '../../../../src/Documents/Domain/Entities/document-revision.ts'
-import { InvalidDocumentRevisionTimestampException } from '../../../../src/Documents/Domain/Exceptions/invalid-document-revision-timestamp.exception.ts'
+} from '../../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
+import { InvalidDocumentRevisionTimestampException } from '../../../../src/DocumentRevisions/Domain/Exceptions/invalid-document-revision-timestamp.exception.ts'
 import { DateTime } from '../../../../src/Shared/Domain/ValueObjects/date-time.ts'
 
 function createRevision(changes: Partial<DocumentRevisionState> = {}): DocumentRevision {

@@ -1,5 +1,5 @@
 import type { RankedCandidate } from './ranked-candidate.ts'
-import type { DocumentRelationResolutionEnum } from '../../../Documents/Domain/Enums/document-relation-resolution.enum.ts'
+import type { DocumentRelationResolutionEnum } from '../../../DocumentRelations/Domain/Enums/document-relation-resolution.enum.ts'
 import type { DocumentReference } from '../../../Documents/Domain/ValueObjects/document-reference.ts'
 import type { DateTime } from '../../../Shared/Domain/ValueObjects/date-time.ts'
 import type { RetrievalProfileSettingsDTO } from '../DataTransferObjects/retrieval-profile-settings.dto.ts'

@@ -1,4 +1,4 @@
-import type { KnowledgeBaseDocument } from '../../../KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
+import type { KnowledgeBaseDocument } from '../../../KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
 import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'
 import type { DocumentIndexExecutionVerificationDTO } from '../DataTransferObjects/document-index-execution-verification.dto.ts'

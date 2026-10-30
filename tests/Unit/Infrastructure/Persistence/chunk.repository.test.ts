@@ -6,13 +6,13 @@ import type { DataSource } from 'typeorm'
 import type { EntityManager, FindManyOptions, FindOptionsWhere } from 'typeorm'
 
 import type {
-  ChunkIndexQueryObject,
-  ChunkIndexOrdinalsQueryObject,
-} from '../../../../src/DocumentIndexes/Application/QueryObjects/chunk.query-object.ts'
-import { Chunk } from '../../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
-import { InvalidChunkOrdinalException } from '../../../../src/DocumentIndexes/Domain/Exceptions/invalid-chunk-ordinal.exception.ts'
-import { ChunkModel } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
-import { ChunkRepository } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+  ChunkIndexQO,
+  ChunkIndexOrdinalsQO,
+} from '../../../../src/Chunks/Application/QueryObjects/chunk.query-object.ts'
+import { Chunk } from '../../../../src/Chunks/Domain/Entities/chunk.ts'
+import { InvalidChunkOrdinalException } from '../../../../src/Chunks/Domain/Exceptions/invalid-chunk-ordinal.exception.ts'
+import { ChunkModel } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { ChunkRepository } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
 import { PersistenceTransaction } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 const createChunkModel = (chunkModelOverrides: Partial<ChunkModel> = {}): ChunkModel =>
@@ -88,7 +88,7 @@ describe('ChunkRepository native chunkFindCriteria', () => {
         }
       },
     } as unknown as EntityManager
-    const chunkIndexQO: ChunkIndexQueryObject = Object.freeze({ documentIndexId: 'target-index' })
+    const chunkIndexQO: ChunkIndexQO = Object.freeze({ documentIndexId: 'target-index' })
     const chunkRepository = createChunkRepository(new PersistenceTransaction({ manager } as DataSource))
 
     assert.deepEqual(
@@ -177,7 +177,7 @@ describe('ChunkRepository native chunkFindCriteria', () => {
       },
     } as unknown as EntityManager
     const chunkRepository = createChunkRepository(new PersistenceTransaction({ manager } as DataSource))
-    const chunkIndexOrdinalsQO: ChunkIndexOrdinalsQueryObject = Object.freeze({
+    const chunkIndexOrdinalsQO: ChunkIndexOrdinalsQO = Object.freeze({
       documentIndexId: 'active-a',
       ordinals: Object.freeze([0, 1]),
     })

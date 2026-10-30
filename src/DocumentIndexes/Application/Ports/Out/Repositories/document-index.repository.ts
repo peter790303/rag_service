@@ -1,48 +1,48 @@
 import type { DocumentIndex } from '../../../../Domain/Entities/document-index.ts'
 import type {
-  CreateBuildingDocumentIndexQueryObject,
-  SaveDocumentIndexLifecycleQueryObject,
-  SetDocumentIndexUnreferencedSinceQueryObject,
+  CreateBuildingDocumentIndexQO,
+  SaveDocumentIndexLifecycleQO,
+  SetDocumentIndexUnreferencedSinceQO,
 } from '../../../QueryObjects/document-index.query-object.ts'
-import type { DocumentIndexDocumentQueryObject } from '../../../QueryObjects/document-index.query-object.ts'
-import type { DocumentIndexDocumentsQueryObject } from '../../../QueryObjects/document-index.query-object.ts'
-import type { DocumentIndexGarbageCandidatesQueryObject } from '../../../QueryObjects/document-index.query-object.ts'
-import type { DocumentIndexIdQueryObject } from '../../../QueryObjects/document-index.query-object.ts'
-import type { DocumentIndexRevisionPipelineQueryObject } from '../../../QueryObjects/document-index.query-object.ts'
-import type { DocumentIndexRevisionQueryObject } from '../../../QueryObjects/document-index.query-object.ts'
+import type { DocumentIndexDocumentQO } from '../../../QueryObjects/document-index.query-object.ts'
+import type { DocumentIndexDocumentsQO } from '../../../QueryObjects/document-index.query-object.ts'
+import type { DocumentIndexGarbageCandidatesQO } from '../../../QueryObjects/document-index.query-object.ts'
+import type { DocumentIndexIdQO } from '../../../QueryObjects/document-index.query-object.ts'
+import type { DocumentIndexRevisionPipelineQO } from '../../../QueryObjects/document-index.query-object.ts'
+import type { DocumentIndexRevisionQO } from '../../../QueryObjects/document-index.query-object.ts'
 
 export abstract class DocumentIndexRepository {
   abstract findByDocumentRevisionIdAndPipelineHash(
-    documentIndexRevisionPipelineQO: DocumentIndexRevisionPipelineQueryObject,
+    documentIndexRevisionPipelineQO: DocumentIndexRevisionPipelineQO,
   ): Promise<DocumentIndex | null>
 
-  abstract createBuildingIndex(createBuildingDocumentIndexQO: CreateBuildingDocumentIndexQueryObject): Promise<void>
+  abstract createBuildingIndex(createBuildingDocumentIndexQO: CreateBuildingDocumentIndexQO): Promise<void>
 
-  abstract lockByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQueryObject): Promise<DocumentIndex | null>
+  abstract lockByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQO): Promise<DocumentIndex | null>
 
-  abstract lockByDocumentIndexIdSkipLocked(documentIndexIdQO: DocumentIndexIdQueryObject): Promise<DocumentIndex | null>
+  abstract lockByDocumentIndexIdSkipLocked(documentIndexIdQO: DocumentIndexIdQO): Promise<DocumentIndex | null>
 
-  abstract deleteByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQueryObject): Promise<void>
+  abstract deleteByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQO): Promise<void>
 
-  abstract findByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQueryObject): Promise<DocumentIndex | null>
+  abstract findByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQO): Promise<DocumentIndex | null>
 
   abstract updateByDocumentIndexIdWithLifecycleFields(
-    saveDocumentIndexLifecycleQO: SaveDocumentIndexLifecycleQueryObject,
+    saveDocumentIndexLifecycleQO: SaveDocumentIndexLifecycleQO,
   ): Promise<void>
 
   abstract updateByDocumentIndexIdWithUnreferencedSince(
-    setDocumentIndexUnreferencedSinceQO: SetDocumentIndexUnreferencedSinceQueryObject,
+    setDocumentIndexUnreferencedSinceQO: SetDocumentIndexUnreferencedSinceQO,
   ): Promise<void>
 
-  abstract findByDocumentId(documentIndexDocumentQO: DocumentIndexDocumentQueryObject): Promise<DocumentIndex[]>
+  abstract findByDocumentId(documentIndexDocumentQO: DocumentIndexDocumentQO): Promise<DocumentIndex[]>
 
-  abstract findByRevisionId(documentIndexRevisionQO: DocumentIndexRevisionQueryObject): Promise<DocumentIndex[]>
+  abstract findByRevisionId(documentIndexRevisionQO: DocumentIndexRevisionQO): Promise<DocumentIndex[]>
 
   abstract findByUnreferencedSinceLessThanOrEqualOrderByIdAsc(
-    documentIndexGarbageCandidatesQO: DocumentIndexGarbageCandidatesQueryObject,
+    documentIndexGarbageCandidatesQO: DocumentIndexGarbageCandidatesQO,
   ): Promise<DocumentIndex[]>
 
   abstract findByDocumentIdsOrderByCreatedAtAscAndIdAsc(
-    documentIndexDocumentsQO: DocumentIndexDocumentsQueryObject,
+    documentIndexDocumentsQO: DocumentIndexDocumentsQO,
   ): Promise<DocumentIndex[]>
 }

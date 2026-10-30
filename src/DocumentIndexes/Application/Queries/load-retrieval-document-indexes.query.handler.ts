@@ -10,9 +10,9 @@ export class LoadRetrievalDocumentIndexesQueryHandler extends LoadRetrievalDocum
     super()
   }
 
-  async execute(loadRetrievalDocumentIndexesDTO: LoadRetrievalDocumentIndexesQuery): Promise<DocumentIndex[]> {
-    const { documentIds } = RetrievalDocumentIndexesAssembler.toLoadRetrievalDocumentIndexesDTO(
-      loadRetrievalDocumentIndexesDTO,
+  async execute(loadRetrievalDocumentIndexesQuery: LoadRetrievalDocumentIndexesQuery): Promise<DocumentIndex[]> {
+    const { documentIds } = RetrievalDocumentIndexesAssembler.toLoadRetrievalDocumentIndexesQuery(
+      loadRetrievalDocumentIndexesQuery,
     )
     const uniqueRetrievalDocumentIds = [...new Set(documentIds)]
 

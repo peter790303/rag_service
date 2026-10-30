@@ -4,11 +4,11 @@ import type { Repository } from 'typeorm'
 import { PersistenceTransaction } from '../../../../../Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { KnowledgeBaseRepository as KnowledgeBaseRepositoryContract } from '../../../../Application/Ports/Out/Repositories/knowledge-base.repository.ts'
 import type {
-  CreateKnowledgeBaseQueryObject,
-  KnowledgeBaseIdQueryObject,
-  KnowledgeBaseProjectQueryObject,
-  KnowledgeBaseProjectScopeQueryObject,
-  UpdateKnowledgeBaseQueryObject,
+  CreateKnowledgeBaseQO,
+  KnowledgeBaseIdQO,
+  KnowledgeBaseProjectQO,
+  KnowledgeBaseProjectScopeQO,
+  UpdateKnowledgeBaseQO,
 } from '../../../../Application/QueryObjects/knowledge-base.query-object.ts'
 import type { KnowledgeBase } from '../../../../Domain/Entities/knowledge-base.ts'
 import { KnowledgeBasePersistenceMapper } from '../Mappers/knowledge-base.persistence.mapper.ts'
@@ -24,7 +24,7 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
     return this.persistenceTransaction.manager.getRepository(KnowledgeBaseModel)
   }
 
-  async lockByKnowledgeBaseId(knowledgeBaseIdQO: KnowledgeBaseIdQueryObject): Promise<KnowledgeBase | null> {
+  async lockByKnowledgeBaseId(knowledgeBaseIdQO: KnowledgeBaseIdQO): Promise<KnowledgeBase | null> {
     const knowledgeBase = await this.knowledgeBaseModelRepository.findOne({
       where: { id: knowledgeBaseIdQO.knowledgeBaseId },
       lock: { mode: 'pessimistic_write' },
@@ -33,7 +33,7 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
     return knowledgeBase ? KnowledgeBasePersistenceMapper.toKnowledgeBase(knowledgeBase) : null
   }
 
-  async create(createKnowledgeBaseQO: CreateKnowledgeBaseQueryObject): Promise<void> {
+  async create(createKnowledgeBaseQO: CreateKnowledgeBaseQO): Promise<void> {
     await this.knowledgeBaseModelRepository.insert({
       id: createKnowledgeBaseQO.knowledgeBaseId,
       projectId: createKnowledgeBaseQO.projectId,
@@ -43,7 +43,7 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
     })
   }
 
-  async createIfAbsent(createKnowledgeBaseQO: CreateKnowledgeBaseQueryObject): Promise<boolean> {
+  async createIfAbsent(createKnowledgeBaseQO: CreateKnowledgeBaseQO): Promise<boolean> {
     const insertResult = await this.knowledgeBaseModelRepository
       .createQueryBuilder()
       .insert()
@@ -62,7 +62,7 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
     return insertResult.raw.length > 0
   }
 
-  async update(updateKnowledgeBaseQO: UpdateKnowledgeBaseQueryObject): Promise<void> {
+  async update(updateKnowledgeBaseQO: UpdateKnowledgeBaseQO): Promise<void> {
     await this.knowledgeBaseModelRepository.update(
       { id: updateKnowledgeBaseQO.knowledgeBaseId },
       {
@@ -74,7 +74,7 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
   }
 
   async findByKnowledgeBaseIdAndProjectId(
-    knowledgeBaseProjectScopeQO: KnowledgeBaseProjectScopeQueryObject,
+    knowledgeBaseProjectScopeQO: KnowledgeBaseProjectScopeQO,
   ): Promise<KnowledgeBase | null> {
     const knowledgeBase = await this.knowledgeBaseModelRepository.findOneBy({
       id: knowledgeBaseProjectScopeQO.knowledgeBaseId,
@@ -84,13 +84,13 @@ export class KnowledgeBaseRepository extends KnowledgeBaseRepositoryContract {
     return knowledgeBase ? KnowledgeBasePersistenceMapper.toKnowledgeBase(knowledgeBase) : null
   }
 
-  async findByKnowledgeBaseId(knowledgeBaseIdQO: KnowledgeBaseIdQueryObject): Promise<KnowledgeBase | null> {
+  async findByKnowledgeBaseId(knowledgeBaseIdQO: KnowledgeBaseIdQO): Promise<KnowledgeBase | null> {
     const knowledgeBase = await this.knowledgeBaseModelRepository.findOneBy({ id: knowledgeBaseIdQO.knowledgeBaseId })
 
     return knowledgeBase ? KnowledgeBasePersistenceMapper.toKnowledgeBase(knowledgeBase) : null
   }
 
-  async findByProjectId(knowledgeBaseProjectQO: KnowledgeBaseProjectQueryObject): Promise<KnowledgeBase | null> {
+  async findByProjectId(knowledgeBaseProjectQO: KnowledgeBaseProjectQO): Promise<KnowledgeBase | null> {
     const knowledgeBase = await this.knowledgeBaseModelRepository.findOneBy({
       projectId: knowledgeBaseProjectQO.projectId,
     })

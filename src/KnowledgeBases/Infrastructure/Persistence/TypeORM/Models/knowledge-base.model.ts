@@ -8,9 +8,9 @@ import {
   type Relation,
 } from 'typeorm'
 
-import { KnowledgeBaseDocumentModel } from './knowledge-base-document.model.ts'
 import { FailedJobModel } from '../../../../../DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/failed-job.model.ts'
 import { JobModel } from '../../../../../DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../../../KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
 
 @Entity('knowledge_bases')
 export class KnowledgeBaseModel {

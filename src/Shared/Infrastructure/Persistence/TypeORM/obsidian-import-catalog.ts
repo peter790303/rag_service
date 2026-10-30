@@ -1,7 +1,7 @@
 import type { EntityManager } from 'typeorm'
 
 import type { ImportManifestEntry } from './reset-rag-database.ts'
-import { KnowledgeBaseDocumentModel } from '../../../../KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../../KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
 
 export async function loadObsidianImportCatalog(manager: EntityManager): Promise<ImportManifestEntry[]> {
   const memberships = await manager.getRepository(KnowledgeBaseDocumentModel).find({

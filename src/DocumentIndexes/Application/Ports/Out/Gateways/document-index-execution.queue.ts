@@ -1,89 +1,87 @@
+import type {
+  EnqueueDocumentIndexingRetryParams,
+  ExpiredDocumentIndexExecutionParams,
+  ExpiredDocumentIndexExecutionsParams,
+  DocumentIndexExecutionDocumentParams,
+  DocumentIndexExecutionKnowledgeBaseDocumentParams,
+  DocumentIndexExecutionIdParams,
+  DocumentIndexExecutionInProjectParams,
+  DocumentIndexExecutionIndexParams,
+  DocumentIndexExecutionRetrySourceParams,
+  DocumentIndexExecutionsForKnowledgeBaseDocumentParams,
+  AvailableDocumentIndexExecutionParams,
+  OldestAvailableDocumentIndexExecutionParams,
+  AvailableDocumentIndexExecutionsParams,
+  RunningDocumentIndexExecutionSiblingsParams,
+  RenewDocumentIndexExecutionLeaseParams,
+  RescheduleDocumentIndexExecutionParams,
+  EnqueueDocumentIndexExecutionParams,
+  TransitionDocumentIndexExecutionParams,
+} from './document-index-execution.params.ts'
 import type { DocumentIndexExecutionFactsDTO } from '../../../DataTransferObjects/document-index-execution-facts.dto.ts'
 import type { DocumentIndexExecutionRecordDTO } from '../../../DataTransferObjects/document-index-execution-record.dto.ts'
-import type {
-  EnqueueDocumentIndexingRetryQueryObject,
-  ExpiredDocumentIndexExecutionQueryObject,
-  ExpiredDocumentIndexExecutionsQueryObject,
-  DocumentIndexExecutionDocumentQueryObject,
-  DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
-  DocumentIndexExecutionIdQueryObject,
-  DocumentIndexExecutionInProjectQueryObject,
-  DocumentIndexExecutionIndexQueryObject,
-  DocumentIndexExecutionRetrySourceQueryObject,
-  DocumentIndexExecutionsForKnowledgeBaseDocumentQueryObject,
-  AvailableDocumentIndexExecutionQueryObject,
-  OldestAvailableDocumentIndexExecutionQueryObject,
-  AvailableDocumentIndexExecutionsQueryObject,
-  RunningDocumentIndexExecutionSiblingsQueryObject,
-  RenewDocumentIndexExecutionLeaseQueryObject,
-  RescheduleDocumentIndexExecutionQueryObject,
-  EnqueueDocumentIndexExecutionQueryObject,
-  TransitionDocumentIndexExecutionQueryObject,
-} from '../../../QueryObjects/document-index-execution.query-object.ts'
 
 /** Durable delivery and lease capabilities owned by document-index listeners. */
 export abstract class DocumentIndexExecutionQueue {
-  abstract enqueue(queuedExecution: EnqueueDocumentIndexExecutionQueryObject): Promise<void>
+  abstract enqueue(queuedExecution: EnqueueDocumentIndexExecutionParams): Promise<void>
 
-  abstract enqueueRetry(retryExecution: EnqueueDocumentIndexingRetryQueryObject): Promise<void>
+  abstract enqueueRetry(retryExecution: EnqueueDocumentIndexingRetryParams): Promise<void>
 
-  abstract lockExecution(
-    execution: DocumentIndexExecutionIdQueryObject,
-  ): Promise<DocumentIndexExecutionRecordDTO | null>
+  abstract lockExecution(execution: DocumentIndexExecutionIdParams): Promise<DocumentIndexExecutionRecordDTO | null>
 
   abstract lockKnowledgeBaseDocumentExecution(
-    knowledgeBaseDocument: DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
+    knowledgeBaseDocument: DocumentIndexExecutionKnowledgeBaseDocumentParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null>
 
   abstract findKnowledgeBaseDocumentExecution(
-    knowledgeBaseDocument: DocumentIndexExecutionKnowledgeBaseDocumentQueryObject,
+    knowledgeBaseDocument: DocumentIndexExecutionKnowledgeBaseDocumentParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null>
 
   abstract findKnowledgeBaseDocumentExecutions(
-    knowledgeBaseDocument: DocumentIndexExecutionsForKnowledgeBaseDocumentQueryObject,
+    knowledgeBaseDocument: DocumentIndexExecutionsForKnowledgeBaseDocumentParams,
   ): Promise<DocumentIndexExecutionRecordDTO[]>
 
   abstract findExecutionInProject(
-    execution: DocumentIndexExecutionInProjectQueryObject,
+    execution: DocumentIndexExecutionInProjectParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null>
 
-  abstract renewLease(heartbeat: RenewDocumentIndexExecutionLeaseQueryObject): Promise<void>
+  abstract renewLease(heartbeat: RenewDocumentIndexExecutionLeaseParams): Promise<void>
 
-  abstract rescheduleExecution(execution: RescheduleDocumentIndexExecutionQueryObject): Promise<void>
+  abstract rescheduleExecution(execution: RescheduleDocumentIndexExecutionParams): Promise<void>
 
-  abstract releaseExecution(execution: DocumentIndexExecutionIdQueryObject): Promise<void>
+  abstract releaseExecution(execution: DocumentIndexExecutionIdParams): Promise<void>
 
-  abstract countDocumentExecutions(document: DocumentIndexExecutionDocumentQueryObject): Promise<number>
+  abstract countDocumentExecutions(document: DocumentIndexExecutionDocumentParams): Promise<number>
 
-  abstract countIndexExecutions(index: DocumentIndexExecutionIndexQueryObject): Promise<number>
+  abstract countIndexExecutions(index: DocumentIndexExecutionIndexParams): Promise<number>
 
-  abstract countFailureRetries(failure: DocumentIndexExecutionRetrySourceQueryObject): Promise<number>
+  abstract countFailureRetries(failure: DocumentIndexExecutionRetrySourceParams): Promise<number>
 
   abstract findExpiredExecutions(
-    expiration: ExpiredDocumentIndexExecutionsQueryObject,
+    expiration: ExpiredDocumentIndexExecutionsParams,
   ): Promise<DocumentIndexExecutionRecordDTO[]>
 
   abstract lockExpiredExecution(
-    expiration: ExpiredDocumentIndexExecutionQueryObject,
+    expiration: ExpiredDocumentIndexExecutionParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null>
 
-  abstract countAvailableExecutions(availability: AvailableDocumentIndexExecutionsQueryObject): Promise<number>
+  abstract countAvailableExecutions(availability: AvailableDocumentIndexExecutionsParams): Promise<number>
 
   abstract findOldestAvailableExecution(
-    availability: OldestAvailableDocumentIndexExecutionQueryObject,
+    availability: OldestAvailableDocumentIndexExecutionParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null>
 
   abstract lockAvailableExecution(
-    availability: AvailableDocumentIndexExecutionQueryObject,
+    availability: AvailableDocumentIndexExecutionParams,
   ): Promise<DocumentIndexExecutionRecordDTO | null>
 
   abstract findSiblingExecutions(
-    execution: RunningDocumentIndexExecutionSiblingsQueryObject,
+    execution: RunningDocumentIndexExecutionSiblingsParams,
   ): Promise<DocumentIndexExecutionFactsDTO[]>
 
-  abstract transitionExecution(transition: TransitionDocumentIndexExecutionQueryObject): Promise<boolean>
+  abstract transitionExecution(transition: TransitionDocumentIndexExecutionParams): Promise<boolean>
 
-  abstract releaseQueuedExecution(execution: DocumentIndexExecutionIdQueryObject): Promise<boolean>
+  abstract releaseQueuedExecution(execution: DocumentIndexExecutionIdParams): Promise<boolean>
 
-  abstract releaseRunningExecution(execution: DocumentIndexExecutionIdQueryObject): Promise<void>
+  abstract releaseRunningExecution(execution: DocumentIndexExecutionIdParams): Promise<void>
 }

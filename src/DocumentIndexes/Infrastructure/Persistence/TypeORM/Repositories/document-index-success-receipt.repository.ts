@@ -4,9 +4,9 @@ import { PersistenceTransaction } from '../../../../../Shared/Infrastructure/Per
 import type { DocumentIndexSuccessReceiptDTO } from '../../../../Application/DataTransferObjects/document-index-success-receipt.dto.ts'
 import { DocumentIndexSuccessArchive } from '../../../../Application/Ports/Out/Gateways/document-index-success.archive.ts'
 import type {
-  ArchiveDocumentIndexSuccessQueryObject,
-  FindDocumentIndexSuccessByProjectIdAndJobIdQueryObject,
-} from '../../../../Application/QueryObjects/document-index-success.query-object.ts'
+  ArchiveDocumentIndexSuccessParams,
+  FindDocumentIndexSuccessByProjectIdAndJobIdParams,
+} from '../../../../Application/Ports/Out/Gateways/document-index-success.params.ts'
 import { DocumentIndexSuccessReceiptAdapter } from '../Mappers/document-index-success-receipt.adapter.ts'
 import { DocumentIndexSuccessReceiptModel } from '../Models/document-index-success-receipt.model.ts'
 
@@ -21,13 +21,13 @@ export class DocumentIndexSuccessReceiptRepository extends DocumentIndexSuccessA
     return this.persistenceTransaction.manager.getRepository(DocumentIndexSuccessReceiptModel)
   }
 
-  async archiveSuccess(archiveDocumentIndexSuccessQO: ArchiveDocumentIndexSuccessQueryObject): Promise<void> {
+  async archiveSuccess(archiveDocumentIndexSuccessQO: ArchiveDocumentIndexSuccessParams): Promise<void> {
     const receiptAttributes = DocumentIndexSuccessReceiptAdapter.toPersistence(archiveDocumentIndexSuccessQO)
     await this.successReceiptModelRepository.insert(receiptAttributes)
   }
 
   async findSuccessByProjectIdAndJobId(
-    findDocumentIndexSuccessByProjectIdAndJobIdQO: FindDocumentIndexSuccessByProjectIdAndJobIdQueryObject,
+    findDocumentIndexSuccessByProjectIdAndJobIdQO: FindDocumentIndexSuccessByProjectIdAndJobIdParams,
   ): Promise<DocumentIndexSuccessReceiptDTO | null> {
     const { jobId, projectId } = findDocumentIndexSuccessByProjectIdAndJobIdQO
     const receipt = await this.successReceiptModelRepository.findOneBy({ jobId, projectId })

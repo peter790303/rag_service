@@ -1,14 +1,14 @@
 import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity.js'
 
 import type { DocumentIndexSuccessReceiptDTO } from '../../../../Application/DataTransferObjects/document-index-success-receipt.dto.ts'
-import type { ArchiveDocumentIndexSuccessQueryObject } from '../../../../Application/QueryObjects/document-index-success.query-object.ts'
+import type { ArchiveDocumentIndexSuccessParams } from '../../../../Application/Ports/Out/Gateways/document-index-success.params.ts'
 import { InvalidDocumentIndexSuccessReceiptException } from '../Exceptions/invalid-document-index-success-receipt.exception.ts'
 import type { DocumentIndexSuccessReceiptModel } from '../Models/document-index-success-receipt.model.ts'
 
 /** Copies the immutable technical success receipt without exposing ORM state. */
 export class DocumentIndexSuccessReceiptAdapter {
   static toPersistence(
-    receipt: ArchiveDocumentIndexSuccessQueryObject,
+    receipt: ArchiveDocumentIndexSuccessParams,
   ): QueryDeepPartialEntity<DocumentIndexSuccessReceiptModel> {
     DocumentIndexSuccessReceiptAdapter.assertValid(receipt)
 

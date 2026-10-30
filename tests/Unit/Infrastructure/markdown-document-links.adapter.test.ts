@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { MarkdownDocumentLinksAdapter } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Adapters/markdown-document-links.adapter.ts'
-import { MarkdownSourceAdapter } from '../../../src/DocumentIndexes/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
+import { MarkdownDocumentLinksAdapter } from '../../../src/Chunks/Infrastructure/External/ChunkPlanning/Adapters/markdown-document-links.adapter.ts'
+import { MarkdownSourceAdapter } from '../../../src/Chunks/Infrastructure/External/ChunkPlanning/Adapters/markdown-source.adapter.ts'
 
 describe('MarkdownDocumentLinksAdapter', () => {
   it('preserves Markdown and wiki link source types with their raw target, anchor, and evidence', () => {

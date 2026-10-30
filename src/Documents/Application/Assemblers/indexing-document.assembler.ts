@@ -1,9 +1,9 @@
 import type { Document } from '../../Domain/Entities/document.ts'
 import { InvalidDocumentSourceInputException } from '../Exceptions/invalid-document-source-input.exception.ts'
 import type {
-  DocumentSourceQueryObject,
-  UpsertDocumentSourceQueryObject,
-  UpsertDocumentSourceTitleQueryObject,
+  DocumentSourceQO,
+  UpsertDocumentSourceQO,
+  UpsertDocumentSourceTitleQO,
 } from '../QueryObjects/document.query-object.ts'
 
 export type DocumentSourceInput = {
@@ -54,7 +54,7 @@ export class IndexingDocumentAssembler {
     return documentSourceInput
   }
 
-  static toDocumentSourceQO(document: Document): DocumentSourceQueryObject {
+  static toDocumentSourceQO(document: Document): DocumentSourceQO {
     return {
       sourceType: document.sourceType,
       sourceKey: document.sourceKey,
@@ -62,7 +62,7 @@ export class IndexingDocumentAssembler {
     }
   }
 
-  static toUpsertDocumentSourceQO(document: Document): UpsertDocumentSourceQueryObject {
+  static toUpsertDocumentSourceQO(document: Document): UpsertDocumentSourceQO {
     return {
       id: document.id,
       sourceType: document.sourceType,
@@ -73,7 +73,7 @@ export class IndexingDocumentAssembler {
     }
   }
 
-  static toUpsertDocumentSourceTitleQO(document: Document): UpsertDocumentSourceTitleQueryObject {
+  static toUpsertDocumentSourceTitleQO(document: Document): UpsertDocumentSourceTitleQO {
     return {
       ...this.toUpsertDocumentSourceQO(document),
       currentTitle: document.currentTitle,

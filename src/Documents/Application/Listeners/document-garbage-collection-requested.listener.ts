@@ -1,19 +1,17 @@
 import { concatMap, firstValueFrom, from, toArray } from 'rxjs'
 
 import type { KnowledgeServiceConfig } from '../../../../config/knowledge-service.config.ts'
+import type { CollectDocumentIndexFailureGarbageCommandHandlerContract } from '../../../DocumentIndexes/Application/Contracts/collect-document-index-failure-garbage.command.handler.contract.ts'
 import type { CollectDocumentIndexGarbageCommandHandlerContract } from '../../../DocumentIndexes/Application/Contracts/collect-document-index-garbage.command.handler.contract.ts'
 import type { PlanDocumentIndexGarbageQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/plan-document-index-garbage.query.handler.contract.ts'
-import type { ExpiredDocumentIndexFailureDTO } from '../../../DocumentIndexes/Application/DataTransferObjects/expired-document-index-failure.dto.ts'
-import type { DocumentIndexExecutionQueue } from '../../../DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
-import type { DocumentIndexFailureArchive } from '../../../DocumentIndexes/Application/Ports/Out/Gateways/document-index-failure.archive.ts'
+import type { PlanDocumentRelationGarbageQueryHandlerContract } from '../../../DocumentRelations/Application/Contracts/plan-document-relation-garbage.query.handler.contract.ts'
+import type { CollectDocumentRevisionGarbageCommandHandlerContract } from '../../../DocumentRevisions/Application/Contracts/collect-document-revision-garbage.command.handler.contract.ts'
+import type { PlanDocumentRevisionGarbageQueryHandlerContract } from '../../../DocumentRevisions/Application/Contracts/plan-document-revision-garbage.query.handler.contract.ts'
 import type { PersistenceTransaction } from '../../../Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import type { Document } from '../../Domain/Entities/document.ts'
 import { GarbageCollectionDocumentAssembler } from '../Assemblers/garbage-collection-document.assembler.ts'
 import { RetentionDocumentAssembler } from '../Assemblers/retention-document.assembler.ts'
 import type { LockDocumentRetentionParentsCommandHandler } from '../Commands/lock-document-retention-parents.command.handler.ts'
-import type { CollectDocumentRevisionGarbageCommandHandlerContract } from '../Contracts/collect-document-revision-garbage.command.handler.contract.ts'
-import type { PlanDocumentRelationGarbageQueryHandlerContract } from '../Contracts/plan-document-relation-garbage.query.handler.contract.ts'
-import type { PlanDocumentRevisionGarbageQueryHandlerContract } from '../Contracts/plan-document-revision-garbage.query.handler.contract.ts'
 import type { DocumentGarbageCollectionScopeDTO } from '../DataTransferObjects/document-garbage-collection-scope.dto.ts'
 import type { DocumentGarbageCollectionRequestedEvent } from '../Events/document-garbage-collection-requested.event.ts'
 import type { DocumentRepository } from '../Ports/Out/Repositories/document.repository.ts'
@@ -31,8 +29,7 @@ export class DocumentGarbageCollectionRequestedListener {
     private readonly lockDocumentParents: LockDocumentRetentionParentsCommandHandler,
     private readonly documentRetention: InspectDocumentRetentionQueryHandler,
     private readonly serviceConfig: Pick<KnowledgeServiceConfig, 'gcRetentionMs'>,
-    private readonly documentIndexExecutionQueue: DocumentIndexExecutionQueue,
-    private readonly documentIndexFailureArchive: DocumentIndexFailureArchive,
+    private readonly collectFailureGarbage: CollectDocumentIndexFailureGarbageCommandHandlerContract,
   ) {}
 
   async handle(event: DocumentGarbageCollectionRequestedEvent): Promise<void> {
@@ -40,20 +37,19 @@ export class DocumentGarbageCollectionRequestedListener {
     const retentionCutoff = new Date(now.getTime() - this.serviceConfig.gcRetentionMs)
 
     return this.persistenceTransaction.run(async () => {
-      const failedJobCandidates = await this.documentIndexFailureArchive.findExpiredFailures(
-        GarbageCollectionDocumentAssembler.toExpiredDocumentIndexFailuresQO(retentionCutoff),
+      const indexGarbagePlan = await this.planIndexGarbage.execute(
+        GarbageCollectionDocumentAssembler.toPlanDocumentIndexGarbageQuery(retentionCutoff),
       )
-      const documentIndexCandidates = await this.planIndexGarbage.execute(
-        GarbageCollectionDocumentAssembler.toPlanDocumentIndexGarbageDTO(retentionCutoff),
-      )
+      const failedJobCandidates = indexGarbagePlan.failures
+      const documentIndexCandidates = indexGarbagePlan.indexes
       const documentRevisionCandidates = await this.planRevisionGarbage.execute(
-        GarbageCollectionDocumentAssembler.toPlanDocumentRevisionGarbageDTO(retentionCutoff),
+        GarbageCollectionDocumentAssembler.toPlanDocumentRevisionGarbageQuery(retentionCutoff),
       )
       const expiredDocuments = await this.documentRepository.findByUnreferencedSinceLessThanOrEqual(
         GarbageCollectionDocumentAssembler.toDocumentGarbageCandidatesQO(retentionCutoff),
       )
       const relationCandidates = await this.planRelationGarbage.execute(
-        GarbageCollectionDocumentAssembler.toPlanDocumentRelationGarbageDTO(documentIndexCandidates),
+        GarbageCollectionDocumentAssembler.toPlanDocumentRelationGarbageQuery(documentIndexCandidates),
       )
       const candidateDocumentIds = [
         ...new Set([
@@ -69,7 +65,7 @@ export class DocumentGarbageCollectionRequestedListener {
 
       // Lock every parent before any failed job, index or revision row.
       const lockedDocuments = await this.lockDocumentParents.execute(
-        GarbageCollectionDocumentAssembler.toLockDocumentRetentionParentsDTO(candidateDocumentIds),
+        GarbageCollectionDocumentAssembler.toLockDocumentRetentionParentsCommand(candidateDocumentIds),
       )
       const documentGarbageCollectionScopeDTO = GarbageCollectionDocumentAssembler.toDocumentGarbageCollectionScopeDTO(
         retentionCutoff,
@@ -77,22 +73,20 @@ export class DocumentGarbageCollectionRequestedListener {
       )
       const changedDocumentIds = new Set<string>()
 
-      const sortedFailedJobCandidates = [...failedJobCandidates].sort((left, right) =>
-        left.failedJobId.localeCompare(right.failedJobId),
-      )
-      const collectFailure = (candidate: ExpiredDocumentIndexFailureDTO): Promise<void> =>
-        this.collectExpiredFailure(documentGarbageCollectionScopeDTO, candidate, changedDocumentIds)
-
-      await firstValueFrom(from(sortedFailedJobCandidates).pipe(concatMap(collectFailure), toArray()))
+      const collectedFailures = await this.collectFailureGarbage.execute({
+        scope: documentGarbageCollectionScopeDTO,
+        candidates: failedJobCandidates,
+      })
+      collectedFailures.forEach((failure) => changedDocumentIds.add(failure.documentId))
 
       const collectedDocumentIndexes = await this.collectIndexGarbage.execute(
-        GarbageCollectionDocumentAssembler.toCollectDocumentIndexGarbageDTO(
+        GarbageCollectionDocumentAssembler.toCollectDocumentIndexGarbageCommand(
           documentGarbageCollectionScopeDTO,
           documentIndexCandidates,
         ),
       )
       const collectedDocumentRevisions = await this.collectRevisionGarbage.execute(
-        GarbageCollectionDocumentAssembler.toCollectDocumentRevisionGarbageDTO(
+        GarbageCollectionDocumentAssembler.toCollectDocumentRevisionGarbageCommand(
           documentGarbageCollectionScopeDTO,
           documentRevisionCandidates,
         ),
@@ -119,33 +113,6 @@ export class DocumentGarbageCollectionRequestedListener {
     })
   }
 
-  private async collectExpiredFailure(
-    scope: DocumentGarbageCollectionScopeDTO,
-    candidate: ExpiredDocumentIndexFailureDTO,
-    changedDocumentIds: Set<string>,
-  ): Promise<void> {
-    if (!scope.lockedDocumentIds.includes(candidate.documentId)) return
-
-    const failure = await this.documentIndexFailureArchive.lockExpiredFailure(
-      GarbageCollectionDocumentAssembler.toDocumentIndexFailureIdQO(candidate.failedJobId),
-    )
-
-    if (!failure || failure.failedAt.getTime() > scope.retentionCutoff.getTime()) return
-
-    if (failure.failedJobId !== candidate.failedJobId || failure.documentId !== candidate.documentId) return
-
-    const retries = await this.documentIndexExecutionQueue.countFailureRetries(
-      GarbageCollectionDocumentAssembler.toDocumentIndexFailureIdQO(failure.failedJobId),
-    )
-
-    if (retries > 0) return
-
-    await this.documentIndexFailureArchive.removeExpiredFailure(
-      GarbageCollectionDocumentAssembler.toDocumentIndexFailureIdQO(failure.failedJobId),
-    )
-    changedDocumentIds.add(failure.documentId)
-  }
-
   private async startDocumentRetention(
     documentGarbageCollectionScopeDTO: DocumentGarbageCollectionScopeDTO,
     now: Date,
@@ -161,7 +128,7 @@ export class DocumentGarbageCollectionRequestedListener {
 
     if (document.unreferencedSince) return
 
-    if (await this.documentRetention.execute(RetentionDocumentAssembler.toInspectDocumentRetentionDTO(documentId)))
+    if (await this.documentRetention.execute(RetentionDocumentAssembler.toInspectDocumentRetentionQuery(documentId)))
       return
 
     await this.documentRepository.updateUnreferencedSinceByDocumentIdAndUnreferencedSinceIsNull(
@@ -185,7 +152,7 @@ export class DocumentGarbageCollectionRequestedListener {
 
     if (
       document.id !== candidate.id ||
-      (await this.documentRetention.execute(RetentionDocumentAssembler.toInspectDocumentRetentionDTO(document.id)))
+      (await this.documentRetention.execute(RetentionDocumentAssembler.toInspectDocumentRetentionQuery(document.id)))
     )
       return
 

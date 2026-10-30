@@ -1,3 +1,1 @@
-import type { DocumentIndexRetentionDTO } from '../DataTransferObjects/document-index-garbage.dto.ts'
-
-export type InspectDocumentIndexRetentionQuery = DocumentIndexRetentionDTO
+export type InspectDocumentIndexRetentionQuery = { documentId: string } | { revisionId: string }

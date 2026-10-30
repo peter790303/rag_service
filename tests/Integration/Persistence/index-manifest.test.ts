@@ -5,20 +5,20 @@ import { LoadRetrievalDocumentIndexesQueryHandler } from '../../../src/DocumentI
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
 import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
 import { DocumentIndexRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/document-index.repository.ts'
-import { LoadRetrievalDocumentRevisionsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-document-revisions.query.handler.ts'
+import { LoadRetrievalDocumentRevisionsQueryHandler } from '../../../src/DocumentRevisions/Application/Queries/load-retrieval-document-revisions.query.handler.ts'
+import { DocumentRevisionModel } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
 import { LoadRetrievalDocumentsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-documents.query.handler.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
-import { DocumentRevisionModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
 import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
-import { DocumentRevisionRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document-revision.repository.ts'
 import { DocumentRepository } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Repositories/document.repository.ts'
+import { LoadRetrievalKnowledgeBaseDocumentsQueryHandler } from '../../../src/KnowledgeBaseDocuments/Application/Queries/load-retrieval-knowledge-base-documents.query.handler.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
 import { LoadIndexManifestQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/load-index-manifest.query.handler.ts'
-import { LoadRetrievalKnowledgeBaseDocumentsQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/load-retrieval-knowledge-base-documents.query.handler.ts'
-import type { KnowledgeBaseProjectQueryObject } from '../../../src/KnowledgeBases/Application/QueryObjects/knowledge-base.query-object.ts'
+import type { KnowledgeBaseProjectQO } from '../../../src/KnowledgeBases/Application/QueryObjects/knowledge-base.query-object.ts'
 import type { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'
-import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
 import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
 import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
@@ -31,9 +31,7 @@ class SnapshotCheckingKnowledgeBaseRepository extends KnowledgeBaseRepository {
     super(transaction)
   }
 
-  override async findByProjectId(
-    knowledgeBaseProjectQO: KnowledgeBaseProjectQueryObject,
-  ): Promise<KnowledgeBase | null> {
+  override async findByProjectId(knowledgeBaseProjectQO: KnowledgeBaseProjectQO): Promise<KnowledgeBase | null> {
     const knowledgeBase = await super.findByProjectId(knowledgeBaseProjectQO)
     const [settings] = await this.transaction.manager.query<{ readOnly: string; isolation: string }[]>(
       "SELECT current_setting('transaction_read_only') AS \"readOnly\", current_setting('transaction_isolation') AS isolation",

@@ -2,12 +2,12 @@ import { createHash, randomUUID } from 'node:crypto'
 
 import { concatMap, from, lastValueFrom, range, takeWhile } from 'rxjs'
 
+import type { PrepareDocumentRevisionForIndexRequestCommandHandlerContract } from '../../../DocumentRevisions/Application/Contracts/prepare-document-revision-for-index-request.command.handler.contract.ts'
 import type { PrepareDocumentForIndexRequestCommandHandlerContract } from '../../../Documents/Application/Contracts/prepare-document-for-index-request.command.handler.contract.ts'
-import type { PrepareDocumentRevisionForIndexRequestCommandHandlerContract } from '../../../Documents/Application/Contracts/prepare-document-revision-for-index-request.command.handler.contract.ts'
 import type { SourceDocumentDTO } from '../../../Documents/Application/DataTransferObjects/source-document.dto.ts'
+import type { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/prepare-knowledge-base-document-for-index-request.command.handler.contract.ts'
+import type { SaveKnowledgeBaseDocumentIndexRequestCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/save-knowledge-base-document-index-request.command.handler.contract.ts'
 import type { EnsureIndexingKnowledgeBaseCommandHandlerContract } from '../../../KnowledgeBases/Application/Contracts/ensure-indexing-knowledge-base.command.handler.contract.ts'
-import type { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandlerContract } from '../../../KnowledgeBases/Application/Contracts/prepare-knowledge-base-document-for-index-request.command.handler.contract.ts'
-import type { SaveKnowledgeBaseDocumentIndexRequestCommandHandlerContract } from '../../../KnowledgeBases/Application/Contracts/save-knowledge-base-document-index-request.command.handler.contract.ts'
 import type { PersistenceTransaction } from '../../../Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import { DocumentIndex } from '../../Domain/Entities/document-index.ts'
 import type { DocumentIndexStatus } from '../../Domain/Enums/document-index-status.enum.ts'
@@ -102,27 +102,26 @@ export class DocumentIndexingRequestedListener {
     sourceDocumentDTO: SourceDocumentDTO & { readonly payload: Record<string, unknown> },
     pipelineMetadata: ReturnType<WriteRequestDocumentIndexesAssembler['toDocumentIndexPipelineMetadata']>,
   ): Promise<DocumentIndexRequestResult | null> {
-    await this.ensureIndexingKnowledgeBase.execute(sourceDocumentDTO)
-    const document = await this.prepareDocumentForIndexRequest.execute(sourceDocumentDTO)
+    await this.ensureIndexingKnowledgeBase.execute(
+      this.writeRequestDocumentIndexesAssembler.toEnsureIndexingKnowledgeBaseCommand(sourceDocumentDTO),
+    )
+    const document = await this.prepareDocumentForIndexRequest.execute(
+      this.writeRequestDocumentIndexesAssembler.toPrepareDocumentForIndexRequestCommand(sourceDocumentDTO),
+    )
     const documentId = document.id
-    const requestKnowledgeBaseDocument = await this.prepareKnowledgeBaseDocumentForIndexRequest.execute({
-      sourceDocument: {
-        knowledgeBaseId: sourceDocumentDTO.knowledgeBaseId,
-        ...(sourceDocumentDTO.isEntry === undefined ? {} : { isEntry: sourceDocumentDTO.isEntry }),
-        ...(sourceDocumentDTO.alwaysIncludeFullContent === undefined
-          ? {}
-          : { alwaysIncludeFullContent: sourceDocumentDTO.alwaysIncludeFullContent }),
-      },
-      documentId,
-    })
-    const revision = await this.prepareDocumentRevisionForIndexRequest.execute({
-      sourceDocument: {
-        ...(sourceDocumentDTO.title === undefined ? {} : { title: sourceDocumentDTO.title }),
-        content: sourceDocumentDTO.content,
-      },
-      documentId,
-      contentSha256: pipelineMetadata.contentSha256,
-    })
+    const requestKnowledgeBaseDocument = await this.prepareKnowledgeBaseDocumentForIndexRequest.execute(
+      this.writeRequestDocumentIndexesAssembler.toPrepareKnowledgeBaseDocumentForIndexRequestCommand(
+        sourceDocumentDTO,
+        documentId,
+      ),
+    )
+    const revision = await this.prepareDocumentRevisionForIndexRequest.execute(
+      this.writeRequestDocumentIndexesAssembler.toPrepareDocumentRevisionForIndexRequestCommand(
+        sourceDocumentDTO,
+        documentId,
+        pipelineMetadata.contentSha256,
+      ),
+    )
     const revisionId = revision.id
     const knowledgeBaseDocumentQO = { knowledgeBaseId: sourceDocumentDTO.knowledgeBaseId, documentId }
     let restoredTargetDocumentIndexDTO = await this.documentIndexRepository.findByDocumentRevisionIdAndPipelineHash({

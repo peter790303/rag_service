@@ -14,28 +14,28 @@ import { InvalidDocumentIndexingPayloadException } from '../../../src/DocumentIn
 import { PreparedIndexCollectedException } from '../../../src/DocumentIndexes/Application/Exceptions/prepared-index-collected.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import { DocumentIndexingRequestedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexing-requested.listener.ts'
-import type { EnqueueDocumentIndexExecutionQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-execution.query-object.ts'
+import type { EnqueueDocumentIndexExecutionParams } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.params.ts'
 import {
   DocumentIndexStatusEnum,
   type DocumentIndexStatus,
 } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import { PrepareDocumentRevisionForIndexRequestCommandHandler } from '../../../src/DocumentRevisions/Application/Commands/prepare-document-revision-for-index-request.command.handler.ts'
+import type { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import type { CreateDocumentRevisionQO } from '../../../src/DocumentRevisions/Application/QueryObjects/document-revision.query-object.ts'
 import { PrepareDocumentForIndexRequestCommandHandler } from '../../../src/Documents/Application/Commands/prepare-document-for-index-request.command.handler.ts'
-import { PrepareDocumentRevisionForIndexRequestCommandHandler } from '../../../src/Documents/Application/Commands/prepare-document-revision-for-index-request.command.handler.ts'
 import { IndexRequestDocumentUnavailableException } from '../../../src/Documents/Application/Exceptions/index-request-document-unavailable.exception.ts'
-import type { DocumentRevisionRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-revision.repository.ts'
 import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
-import type { CreateDocumentRevisionQueryObject } from '../../../src/Documents/Application/QueryObjects/document-revision.query-object.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
-import { EnsureIndexingKnowledgeBaseCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/ensure-indexing-knowledge-base.command.handler.ts'
-import { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/prepare-knowledge-base-document-for-index-request.command.handler.ts'
-import { SaveKnowledgeBaseDocumentIndexRequestCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/save-knowledge-base-document-index-request.command.handler.ts'
-import { IndexRequestKnowledgeBaseDocumentUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/index-request-knowledge-base-document-unavailable.exception.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
-import type { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base.repository.ts'
+import { PrepareKnowledgeBaseDocumentForIndexRequestCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/prepare-knowledge-base-document-for-index-request.command.handler.ts'
+import { SaveKnowledgeBaseDocumentIndexRequestCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/save-knowledge-base-document-index-request.command.handler.ts'
+import { IndexRequestKnowledgeBaseDocumentUnavailableException } from '../../../src/KnowledgeBaseDocuments/Application/Exceptions/index-request-knowledge-base-document-unavailable.exception.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
 import type {
-  InsertKnowledgeBaseDocumentQueryObject,
-  UpdateKnowledgeBaseDocumentQueryObject,
-} from '../../../src/KnowledgeBases/Application/QueryObjects/knowledge-base-document.query-object.ts'
+  InsertKnowledgeBaseDocumentQO,
+  UpdateKnowledgeBaseDocumentQO,
+} from '../../../src/KnowledgeBaseDocuments/Application/QueryObjects/knowledge-base-document.query-object.ts'
+import { EnsureIndexingKnowledgeBaseCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/ensure-indexing-knowledge-base.command.handler.ts'
+import type { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base.repository.ts'
 import { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'
 import { KnowledgeBaseProjectMismatchException } from '../../../src/KnowledgeBases/Domain/Exceptions/knowledge-base-project-mismatch.exception.ts'
 
@@ -166,7 +166,7 @@ const createRequestDocumentIndexScenario = (
     },
   } as unknown as DocumentRepository
   const knowledgeBaseDocumentRepository = {
-    insert: async (insertKnowledgeBaseDocumentQO: InsertKnowledgeBaseDocumentQueryObject) => {
+    insert: async (insertKnowledgeBaseDocumentQO: InsertKnowledgeBaseDocumentQO) => {
       events.push(
         `create-knowledgeBaseDocument:${insertKnowledgeBaseDocumentQO.requestedGeneration}:${insertKnowledgeBaseDocumentQO.activeDocumentIndexId}:${insertKnowledgeBaseDocumentQO.isEntry}:${insertKnowledgeBaseDocumentQO.alwaysIncludeFullContent}`,
       )
@@ -185,9 +185,7 @@ const createRequestDocumentIndexScenario = (
         activeDocumentIndexId: options.activeDocumentIndexId ?? null,
       })
     },
-    updateByKnowledgeBaseIdAndDocumentId: async (
-      updateKnowledgeBaseDocumentQO: UpdateKnowledgeBaseDocumentQueryObject,
-    ) => {
+    updateByKnowledgeBaseIdAndDocumentId: async (updateKnowledgeBaseDocumentQO: UpdateKnowledgeBaseDocumentQO) => {
       if (updateKnowledgeBaseDocumentQO.requestedGeneration === String(requestedGeneration)) {
         assert.equal(updateKnowledgeBaseDocumentQO.isEntry, options.isEntry)
         events.push('update-knowledge-base-document-options')
@@ -200,7 +198,7 @@ const createRequestDocumentIndexScenario = (
 
       return null
     },
-    create: async (createDocumentRevisionQO: CreateDocumentRevisionQueryObject) => {
+    create: async (createDocumentRevisionQO: CreateDocumentRevisionQO) => {
       events.push('create-revision')
 
       assert.ok(createDocumentRevisionQO.id)
@@ -267,7 +265,7 @@ const createRequestDocumentIndexScenario = (
     releaseExecution: async () => {
       events.push('remove-job')
     },
-    enqueue: async (saveQueuedJobQO: EnqueueDocumentIndexExecutionQueryObject) => {
+    enqueue: async (saveQueuedJobQO: EnqueueDocumentIndexExecutionParams) => {
       assert.equal(saveQueuedJobQO.reservedAt, null)
       assert.equal(saveQueuedJobQO.leaseToken, null)
       assert.equal(saveQueuedJobQO.leaseExpiresAt, null)

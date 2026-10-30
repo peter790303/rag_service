@@ -6,15 +6,15 @@ import {
   createRestoredDocumentIndexFixture,
   createRestoredKnowledgeBaseDocumentFixture,
 } from './document-index-lifecycle.fixture.ts'
+import type { CollectIndexChunkGarbageCommandHandlerContract } from '../../../src/Chunks/Application/Contracts/collect-index-chunk-garbage.command.handler.contract.ts'
 import { CollectDocumentIndexGarbageCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/collect-document-index-garbage.command.handler.ts'
-import type { CollectIndexChunkGarbageCommandHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/collect-index-chunk-garbage.command.handler.contract.ts'
 import type { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
 import type { DocumentIndexFailureArchive } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-failure.archive.ts'
 import type { DocumentIndexRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
 import type { DocumentIndex } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
-import type { CollectDocumentRelationGarbageCommandHandlerContract } from '../../../src/Documents/Application/Contracts/collect-document-relation-garbage.command.handler.contract.ts'
+import type { CollectDocumentRelationGarbageCommandHandlerContract } from '../../../src/DocumentRelations/Application/Contracts/collect-document-relation-garbage.command.handler.contract.ts'
 import type { DocumentGarbageCollectionScopeDTO } from '../../../src/Documents/Application/DataTransferObjects/document-garbage-collection-scope.dto.ts'
-import type { InspectKnowledgeBaseDocumentRetentionQueryHandlerContract } from '../../../src/KnowledgeBases/Application/Contracts/inspect-knowledge-base-document-retention.query.handler.contract.ts'
+import type { InspectKnowledgeBaseDocumentRetentionQueryHandlerContract } from '../../../src/KnowledgeBaseDocuments/Application/Contracts/inspect-knowledge-base-document-retention.query.handler.contract.ts'
 
 const retentionCutoff = new Date('2026-01-01T00:00:00.000Z')
 const beforeCutoff = new Date('2025-12-31T23:59:59.999Z')

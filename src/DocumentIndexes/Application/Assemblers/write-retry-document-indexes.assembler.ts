@@ -5,7 +5,7 @@ import type { DocumentIndexingRetryTarget } from '../DataTransferObjects/documen
 import type { RetryDocumentIndexingResultDTO } from '../DataTransferObjects/retry-document-indexing-result.dto.ts'
 import { DocumentIndexingTargetStateEnum } from '../Enums/document-indexing-target-state.enum.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../Helpers/document-index-execution-lifecycle.helper.ts'
-import type { EnqueueDocumentIndexingRetryQueryObject } from '../QueryObjects/document-index-execution.query-object.ts'
+import type { EnqueueDocumentIndexingRetryParams } from '../Ports/Out/Gateways/document-index-execution.params.ts'
 
 /** Pure retry persistence and response mapping, without eligibility decisions. */
 export class WriteRetryDocumentIndexesAssembler {
@@ -41,7 +41,7 @@ export class WriteRetryDocumentIndexesAssembler {
     availableAt: Date,
     idempotencyKey: string,
     reusableExecutionState: Record<string, unknown> | null,
-  ): EnqueueDocumentIndexingRetryQueryObject {
+  ): EnqueueDocumentIndexingRetryParams {
     return {
       id: randomUUID(),
       knowledgeBaseId: retryContext.failedJob.knowledgeBaseId,

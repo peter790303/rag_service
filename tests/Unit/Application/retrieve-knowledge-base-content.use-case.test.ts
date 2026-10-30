@@ -6,7 +6,7 @@ import {
   createRetrievalPersistenceFixture,
   retrievalProfileFixtures,
 } from './retrieve-knowledge-base-content.use-case.fixtures.ts'
-import type { ChunkIndexOrdinalsQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/chunk.query-object.ts'
+import type { ChunkIndexOrdinalsQO } from '../../../src/Chunks/Application/QueryObjects/chunk.query-object.ts'
 import { KnowledgeIndexPendingException } from '../../../src/DocumentIndexes/Domain/Exceptions/knowledge-index-pending.exception.ts'
 import { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
 import { HybridKnowledgeRetrievalResource } from '../../../src/KnowledgeBases/Interfaces/Nest/Resources/hybrid-knowledge-retrieval.resource.ts'
@@ -65,7 +65,7 @@ test('retrieve reads project facts inside the readonly snapshot before validatin
 })
 
 test('retrieve ranks Chinese lexical keywords and queries context only for the selected topK roots', async () => {
-  const contextQueries: ChunkIndexOrdinalsQueryObject[] = []
+  const contextQueries: ChunkIndexOrdinalsQO[] = []
   const snapshot = {
     knowledgeBaseId: 'kb',
     knowledgeBaseDocuments: [{ documentId: 'doc', activeDocumentIndexId: 'index' }],
@@ -165,7 +165,7 @@ test('retrieve ranks Chinese lexical keywords and queries context only for the s
 })
 
 test('retrieve groups neighboring ordinals per index and keeps each root context in its own document', async () => {
-  const contextQueries: ChunkIndexOrdinalsQueryObject[] = []
+  const contextQueries: ChunkIndexOrdinalsQO[] = []
   const snapshot = {
     knowledgeBaseId: 'kb',
     knowledgeBaseDocuments: ['a', 'b'].map((suffix) => ({

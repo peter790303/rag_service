@@ -8,25 +8,25 @@ import {
   createJobRecordFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
+import { ReplaceIndexChunkCommandHandler } from '../../../src/Chunks/Application/Commands/replace-index-chunk.command.handler.ts'
+import type { MarkdownChunkPlan } from '../../../src/Chunks/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { ReplaceIndexChunkInputDTO } from '../../../src/Chunks/Application/DataTransferObjects/replace-index-chunk-input.dto.ts'
+import { ChunkPlanningUnavailableException } from '../../../src/Chunks/Application/Exceptions/chunk-planning-unavailable.exception.ts'
+import type { InsertChunksQO } from '../../../src/Chunks/Application/QueryObjects/insert-chunks.query-object.ts'
+import { InvalidChunkBlockStartException } from '../../../src/Chunks/Domain/Exceptions/invalid-chunk-block-start.exception.ts'
+import { InvalidChunkTokenCountException } from '../../../src/Chunks/Domain/Exceptions/invalid-chunk-token-count.exception.ts'
 import { AuthorizeDocumentIndexChunkReplacementCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/authorize-document-index-chunk-replacement.command.handler.ts'
-import { ReplaceIndexChunkCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/replace-index-chunk.command.handler.ts'
 import type { DocumentIndexExecutionLeaseDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-index-execution-lease.dto.ts'
 import type { DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-claim.dto.ts'
-import type { MarkdownChunkPlan } from '../../../src/DocumentIndexes/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
-import type { ReplaceIndexChunkInputDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/replace-index-chunk-input.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
-import { ChunkPlanningUnavailableException } from '../../../src/DocumentIndexes/Application/Exceptions/chunk-planning-unavailable.exception.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
-import type { InsertChunksQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/insert-chunks.query-object.ts'
 import type { DocumentIndex } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
-import { InvalidChunkBlockStartException } from '../../../src/DocumentIndexes/Domain/Exceptions/invalid-chunk-block-start.exception.ts'
-import { InvalidChunkTokenCountException } from '../../../src/DocumentIndexes/Domain/Exceptions/invalid-chunk-token-count.exception.ts'
-import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/Documents/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/DocumentRelations/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import type { PlannedDocumentRelationWriteQO } from '../../../src/DocumentRelations/Application/QueryObjects/document-relation.query-object.ts'
 import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
-import type { PlannedDocumentRelationWrite } from '../../../src/Documents/Application/QueryObjects/document-relation.query-object.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
 
 const claimedJobFixture: DocumentIndexingClaimDTO = {
@@ -79,14 +79,14 @@ interface ChunkReplacementScenario {
   lockDocumentIndex(): Promise<DocumentIndex | null>
   deleteChunksForIndex(): Promise<void>
   deleteRelationsForIndex(): Promise<void>
-  insertChunks(replacementChunksQO: InsertChunksQueryObject['chunks']): Promise<void>
-  saveRelations(plannedRelationsQO: readonly PlannedDocumentRelationWrite[]): Promise<void>
+  insertChunks(replacementChunksQO: InsertChunksQO['chunks']): Promise<void>
+  saveRelations(plannedRelationsQO: readonly PlannedDocumentRelationWriteQO[]): Promise<void>
 }
 
 const createChunkReplacementScenario = (scenarioOverrides: Partial<ChunkReplacementScenario> = {}) => {
   const events: string[] = []
-  const insertedChunks: InsertChunksQueryObject['chunks'][number][] = []
-  const savedRelations: PlannedDocumentRelationWrite[] = []
+  const insertedChunks: InsertChunksQO['chunks'][number][] = []
+  const savedRelations: PlannedDocumentRelationWriteQO[] = []
   const chunkReplacementOperations: ChunkReplacementScenario = {
     lockDocument: async () => {
       events.push('lock-document')

@@ -1,4 +1,4 @@
-import type { DocumentRevision } from '../../Domain/Entities/document-revision.ts'
+import type { DocumentRevision } from '../../../DocumentRevisions/Domain/Entities/document-revision.ts'
 import type { Document } from '../../Domain/Entities/document.ts'
 import type { RetrievalFullContentDocumentView } from '../DataTransferObjects/retrieval-full-content-document.dto.ts'
 

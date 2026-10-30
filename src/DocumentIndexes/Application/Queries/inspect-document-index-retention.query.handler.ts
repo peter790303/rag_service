@@ -7,18 +7,18 @@ import type { DocumentIndexRepository } from '../Ports/Out/Repositories/document
 export class InspectDocumentIndexRetentionQueryHandler implements InspectDocumentIndexRetentionQueryHandlerContract {
   constructor(private readonly documentIndexRepository: DocumentIndexRepository) {}
 
-  async execute(documentIndexRetentionDTO: InspectDocumentIndexRetentionQuery): Promise<DocumentIndex | null> {
-    if ('revisionId' in documentIndexRetentionDTO)
+  async execute(documentIndexRetentionQuery: InspectDocumentIndexRetentionQuery): Promise<DocumentIndex | null> {
+    if ('revisionId' in documentIndexRetentionQuery)
       return (
         (
           await this.documentIndexRepository.findByRevisionId(
-            DocumentIndexGarbageAssembler.toDocumentIndexRevisionQueryObject(documentIndexRetentionDTO.revisionId),
+            DocumentIndexGarbageAssembler.toDocumentIndexRevisionQO(documentIndexRetentionQuery.revisionId),
           )
         )[0] ?? null
       )
 
     const indexes = await this.documentIndexRepository.findByDocumentId(
-      DocumentIndexGarbageAssembler.toDocumentIndexDocumentQueryObject(documentIndexRetentionDTO.documentId),
+      DocumentIndexGarbageAssembler.toDocumentIndexDocumentQO(documentIndexRetentionQuery.documentId),
     )
 
     return indexes[0] ?? null

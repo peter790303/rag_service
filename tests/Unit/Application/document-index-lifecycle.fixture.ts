@@ -8,7 +8,7 @@ import { Document, type DocumentState } from '../../../src/Documents/Domain/Enti
 import {
   KnowledgeBaseDocument,
   type KnowledgeBaseDocumentState,
-} from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
+} from '../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
 
 const lifecycleFixtureCreatedAt = new Date('2020-01-01T00:00:00.000Z')
 

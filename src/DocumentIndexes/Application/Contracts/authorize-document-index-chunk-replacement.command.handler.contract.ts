@@ -4,6 +4,6 @@ import type { AuthorizeDocumentIndexChunkReplacementCommand } from '../Commands/
 /** Locks and authorizes replacing the plan for the committed document-index execution. */
 export abstract class AuthorizeDocumentIndexChunkReplacementCommandHandlerContract {
   abstract execute(
-    authorizeDocumentIndexChunkReplacementDTO: AuthorizeDocumentIndexChunkReplacementCommand,
+    authorizeDocumentIndexChunkReplacementCommand: AuthorizeDocumentIndexChunkReplacementCommand,
   ): Promise<DocumentIndex | null>
 }

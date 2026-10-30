@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { DataSource } from 'typeorm'
 
 import { createRetrievalReadonlyDataSourceOptions } from '../../src/Bootstrap/Nest/Providers/retrieval-readonly-data-source.options.ts'
-import { createDataSource } from '../../src/Shared/Infrastructure/Persistence/TypeORM/DataSource.ts'
+import { createDataSource } from '../../src/Bootstrap/Persistence/TypeORM/DataSource.ts'
 
 export interface PersistenceTestDatabaseContext {
   schema: string

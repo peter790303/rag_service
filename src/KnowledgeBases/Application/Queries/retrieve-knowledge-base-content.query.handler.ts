@@ -1,22 +1,24 @@
 import type { RetrieveKnowledgeBaseContentQuery } from './retrieve-knowledge-base-content.query.ts'
-import type { FindRetrievalChunkCandidatesQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/find-retrieval-chunk-candidates.query.handler.contract.ts'
-import type { LoadRetrievalChunkContextQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/load-retrieval-chunk-context.query.handler.contract.ts'
+import type { FindRetrievalChunkCandidatesQueryHandlerContract } from '../../../Chunks/Application/Contracts/find-retrieval-chunk-candidates.query.handler.contract.ts'
+import type { LoadRetrievalChunkContextQueryHandlerContract } from '../../../Chunks/Application/Contracts/load-retrieval-chunk-context.query.handler.contract.ts'
+import type { LoadRetrievalIndexChunksQueryHandlerContract } from '../../../Chunks/Application/Contracts/load-retrieval-index-chunks.query.handler.contract.ts'
+import type { FindRetrievalChunkCandidatesQuery } from '../../../Chunks/Application/Queries/find-retrieval-chunk-candidates.query.ts'
+import type { LoadRetrievalChunkContextQuery } from '../../../Chunks/Application/Queries/load-retrieval-chunk-context.query.ts'
+import type { LoadRetrievalIndexChunksQuery } from '../../../Chunks/Application/Queries/load-retrieval-index-chunks.query.ts'
 import type { LoadRetrievalDocumentIndexesQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/load-retrieval-document-indexes.query.handler.contract.ts'
-import type { LoadRetrievalIndexChunksQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/load-retrieval-index-chunks.query.handler.contract.ts'
-import type { FindRetrievalChunkCandidatesDTO } from '../../../DocumentIndexes/Application/DataTransferObjects/find-retrieval-chunk-candidates.dto.ts'
-import type { LoadRetrievalChunkContextDTO } from '../../../DocumentIndexes/Application/DataTransferObjects/load-retrieval-chunk-context.dto.ts'
-import type { LoadRetrievalDocumentIndexesDTO } from '../../../DocumentIndexes/Application/DataTransferObjects/load-retrieval-document-indexes.dto.ts'
-import type { LoadRetrievalIndexChunksDTO } from '../../../DocumentIndexes/Application/DataTransferObjects/load-retrieval-index-chunks.dto.ts'
+import type { LoadRetrievalDocumentIndexesQuery } from '../../../DocumentIndexes/Application/Queries/load-retrieval-document-indexes.query.ts'
 import { KnowledgeIndexPendingException } from '../../../DocumentIndexes/Domain/Exceptions/knowledge-index-pending.exception.ts'
-import type { LoadRetrievalDocumentRelationsQueryHandlerContract } from '../../../Documents/Application/Contracts/load-retrieval-document-relations.query.handler.contract.ts'
-import type { LoadRetrievalDocumentRevisionsQueryHandlerContract } from '../../../Documents/Application/Contracts/load-retrieval-document-revisions.query.handler.contract.ts'
+import type { LoadRetrievalDocumentRelationsQueryHandlerContract } from '../../../DocumentRelations/Application/Contracts/load-retrieval-document-relations.query.handler.contract.ts'
+import type { LoadRetrievalDocumentRelationsQuery } from '../../../DocumentRelations/Application/Queries/load-retrieval-document-relations.query.ts'
+import { DocumentRelationResolutionEnum } from '../../../DocumentRelations/Domain/Enums/document-relation-resolution.enum.ts'
+import { DocumentRelationTypeEnum } from '../../../DocumentRelations/Domain/Enums/document-relation-type.enum.ts'
+import type { LoadRetrievalDocumentRevisionsQueryHandlerContract } from '../../../DocumentRevisions/Application/Contracts/load-retrieval-document-revisions.query.handler.contract.ts'
+import type { LoadRetrievalDocumentRevisionsQuery } from '../../../DocumentRevisions/Application/Queries/load-retrieval-document-revisions.query.ts'
 import type { LoadRetrievalDocumentsQueryHandlerContract } from '../../../Documents/Application/Contracts/load-retrieval-documents.query.handler.contract.ts'
-import type { LoadRetrievalDocumentRelationsDTO } from '../../../Documents/Application/DataTransferObjects/load-retrieval-document-relations.dto.ts'
-import type { LoadRetrievalDocumentRevisionsDTO } from '../../../Documents/Application/DataTransferObjects/load-retrieval-document-revisions.dto.ts'
-import type { LoadRetrievalDocumentsDTO } from '../../../Documents/Application/DataTransferObjects/load-retrieval-documents.dto.ts'
-import { DocumentRelationResolutionEnum } from '../../../Documents/Domain/Enums/document-relation-resolution.enum.ts'
-import { DocumentRelationTypeEnum } from '../../../Documents/Domain/Enums/document-relation-type.enum.ts'
+import type { LoadRetrievalDocumentsQuery } from '../../../Documents/Application/Queries/load-retrieval-documents.query.ts'
 import { DocumentReference } from '../../../Documents/Domain/ValueObjects/document-reference.ts'
+import type { LoadRetrievalKnowledgeBaseDocumentsQueryHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/load-retrieval-knowledge-base-documents.query.handler.contract.ts'
+import type { LoadRetrievalKnowledgeBaseDocumentsQuery } from '../../../KnowledgeBaseDocuments/Application/Queries/load-retrieval-knowledge-base-documents.query.ts'
 import { EmbeddingProvider } from '../../../Shared/Application/Ports/Out/Gateways/embedding-provider.ts'
 import type { PersistenceTransaction } from '../../../Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import type { DateTime } from '../../../Shared/Domain/ValueObjects/date-time.ts'
@@ -39,12 +41,10 @@ import {
   type RetrievalKnowledgeBaseContentAssemblerInput,
 } from '../Assemblers/retrieval-knowledge-base-content.assembler.ts'
 import { RetrievalSnapshotKnowledgeBaseAssembler } from '../Assemblers/retrieval-snapshot-knowledge-base.assembler.ts'
-import type { LoadRetrievalKnowledgeBaseDocumentsQueryHandlerContract } from '../Contracts/load-retrieval-knowledge-base-documents.query.handler.contract.ts'
-import type { LoadRetrievalKnowledgeBaseDocumentsDTO } from '../DataTransferObjects/load-retrieval-knowledge-base-documents.dto.ts'
 import type { RetrievalProfileSettingsDTO } from '../DataTransferObjects/retrieval-profile-settings.dto.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../Exceptions/knowledge-embedding-unavailable.exception.ts'
 import type { KnowledgeBaseRepository } from '../Ports/Out/Repositories/knowledge-base.repository.ts'
-import type { KnowledgeBaseProjectQueryObject } from '../QueryObjects/knowledge-base.query-object.ts'
+import type { KnowledgeBaseProjectQO } from '../QueryObjects/knowledge-base.query-object.ts'
 import type { RankedCandidate } from '../Types/ranked-candidate.ts'
 import type { HybridChunkCandidate, RetrievalChunk } from '../Types/retrieval-chunk.ts'
 import type {
@@ -111,27 +111,27 @@ export class RetrieveKnowledgeBaseContentQueryHandler {
         indexes: facts.indexes,
         revisions: facts.revisions,
       })
-      const candidateQueryDTO: FindRetrievalChunkCandidatesDTO = {
+      const candidateQuery: FindRetrievalChunkCandidatesQuery = {
         documentIndexIds: scope.retrievalIndexIds,
         queryVector: queryEmbedding,
         queryText: retrievalRequest.queryText,
         limit: candidateLimit,
       }
-      const candidateChunks = await this.findRetrievalChunkCandidates.execute(candidateQueryDTO)
+      const candidateChunks = await this.findRetrievalChunkCandidates.execute(candidateQuery)
       const candidates = RetrievalKnowledgeBaseChunkAssembler.toHybridChunkCandidates(candidateChunks)
       const ranking = this.rankRetrievalCandidates(candidates, scope.retrievalIndexIds, [], retrievalMatchLimit)
-      const contextDTO: LoadRetrievalChunkContextDTO = {
+      const contextQuery: LoadRetrievalChunkContextQuery = {
         candidates: candidateChunks,
         rootChunkIds: ranking.fusedChunkRanking.map(({ candidate }) => candidate.id),
         activeDocumentIndexIds: scope.retrievalIndexIds,
       }
-      const neighboringChunks = await this.loadRetrievalChunkContext.execute(contextDTO)
+      const neighboringChunks = await this.loadRetrievalChunkContext.execute(contextQuery)
       const fullContentIndexIds = [...scope.requiredIndexIds, ...scope.relationTargetIndexIds]
-      const indexChunksDTO: LoadRetrievalIndexChunksDTO = {
+      const indexChunksQuery: LoadRetrievalIndexChunksQuery = {
         fullContentIndexIds,
         countedIndexIds: facts.indexes.map((index) => index.id),
       }
-      const indexChunks = await this.loadRetrievalIndexChunks.execute(indexChunksDTO)
+      const indexChunks = await this.loadRetrievalIndexChunks.execute(indexChunksQuery)
       const requiredChunks = indexChunks.filter((chunk) => scope.requiredIndexIds.includes(chunk.documentIndexId))
       const relationTargetChunks = indexChunks.filter((chunk) =>
         scope.relationTargetIndexIds.includes(chunk.documentIndexId),
@@ -212,29 +212,31 @@ export class RetrieveKnowledgeBaseContentQueryHandler {
   }
 
   private async loadSnapshotFacts(projectId: string): Promise<RetrievalSnapshot> {
-    const knowledgeBaseProjectQO: KnowledgeBaseProjectQueryObject = { projectId }
+    const knowledgeBaseProjectQO: KnowledgeBaseProjectQO = { projectId }
     const knowledgeBase = await this.knowledgeBaseRepository.findByProjectId(knowledgeBaseProjectQO)
 
     let knowledgeBaseDocuments: RetrievalSnapshot['knowledgeBaseDocuments'] = []
 
     if (knowledgeBase) {
-      const knowledgeBaseDocumentsDTO: LoadRetrievalKnowledgeBaseDocumentsDTO = { knowledgeBaseId: knowledgeBase.id }
-      knowledgeBaseDocuments = await this.loadRetrievalKnowledgeBaseDocuments.execute(knowledgeBaseDocumentsDTO)
+      const knowledgeBaseDocumentsQuery: LoadRetrievalKnowledgeBaseDocumentsQuery = {
+        knowledgeBaseId: knowledgeBase.id,
+      }
+      knowledgeBaseDocuments = await this.loadRetrievalKnowledgeBaseDocuments.execute(knowledgeBaseDocumentsQuery)
     }
 
     const documentIds = knowledgeBaseDocuments.map((knowledgeBaseDocument) => knowledgeBaseDocument.documentId)
-    const documentsDTO: LoadRetrievalDocumentsDTO = { documentIds }
-    const documents = await this.loadRetrievalDocuments.execute(documentsDTO)
-    const indexesDTO: LoadRetrievalDocumentIndexesDTO = { documentIds }
-    const indexes = await this.loadRetrievalDocumentIndexes.execute(indexesDTO)
-    const revisionsDTO: LoadRetrievalDocumentRevisionsDTO = {
+    const documentsQuery: LoadRetrievalDocumentsQuery = { documentIds }
+    const documents = await this.loadRetrievalDocuments.execute(documentsQuery)
+    const indexesQuery: LoadRetrievalDocumentIndexesQuery = { documentIds }
+    const indexes = await this.loadRetrievalDocumentIndexes.execute(indexesQuery)
+    const revisionsQuery: LoadRetrievalDocumentRevisionsQuery = {
       revisionIds: indexes.map((index) => index.revisionId),
     }
-    const revisions = await this.loadRetrievalDocumentRevisions.execute(revisionsDTO)
-    const relationsDTO: LoadRetrievalDocumentRelationsDTO = {
+    const revisions = await this.loadRetrievalDocumentRevisions.execute(revisionsQuery)
+    const relationsQuery: LoadRetrievalDocumentRelationsQuery = {
       documentIndexIds: indexes.map((index) => index.id),
     }
-    const relations = await this.loadRetrievalDocumentRelations.execute(relationsDTO)
+    const relations = await this.loadRetrievalDocumentRelations.execute(relationsQuery)
 
     return RetrievalSnapshotKnowledgeBaseAssembler.toRetrievalSnapshot({
       knowledgeBase,

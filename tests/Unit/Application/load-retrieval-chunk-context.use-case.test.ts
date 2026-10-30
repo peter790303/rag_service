@@ -2,10 +2,10 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
-import type { ChunkRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/chunk.repository.ts'
-import { LoadRetrievalChunkContextQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-chunk-context.query.handler.ts'
-import type { ChunkIndexOrdinalsQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/chunk.query-object.ts'
-import { Chunk } from '../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
+import type { ChunkRepository } from '../../../src/Chunks/Application/Ports/Out/Repositories/chunk.repository.ts'
+import { LoadRetrievalChunkContextQueryHandler } from '../../../src/Chunks/Application/Queries/load-retrieval-chunk-context.query.handler.ts'
+import type { ChunkIndexOrdinalsQO } from '../../../src/Chunks/Application/QueryObjects/chunk.query-object.ts'
+import { Chunk } from '../../../src/Chunks/Domain/Entities/chunk.ts'
 
 const createCandidateChunk = (id: string, documentIndexId: string, ordinal: number): Chunk =>
   new Chunk({
@@ -23,7 +23,7 @@ const createCandidateChunk = (id: string, documentIndexId: string, ordinal: numb
   })
 
 test('neighbor queries omit negative ordinals, deduplicate overlaps, group indexes and return repository entities', async () => {
-  const neighborQueriesQO: ChunkIndexOrdinalsQueryObject[] = []
+  const neighborQueriesQO: ChunkIndexOrdinalsQO[] = []
   const neighboringChunk = new Chunk({
     id: 'neighbor',
     documentIndexId: 'first-index',
@@ -69,7 +69,7 @@ test('neighbor queries omit negative ordinals, deduplicate overlaps, group index
 })
 
 test('neighbor ordinal deduplication preserves the same ordinal in distinct indexes', async () => {
-  const neighborQueriesQO: ChunkIndexOrdinalsQueryObject[] = []
+  const neighborQueriesQO: ChunkIndexOrdinalsQO[] = []
   const chunkRepository = createRepositoryStub<ChunkRepository>({
     findByDocumentIndexIdAndOrdinals: async (chunkIndexOrdinalsQO) => {
       neighborQueriesQO.push(chunkIndexOrdinalsQO)

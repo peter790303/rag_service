@@ -1,12 +1,12 @@
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
 import type {
-  SaveDocumentIndexLifecycleQueryObject,
-  SetDocumentIndexUnreferencedSinceQueryObject,
+  SaveDocumentIndexLifecycleQO,
+  SetDocumentIndexUnreferencedSinceQO,
 } from '../QueryObjects/document-index.query-object.ts'
 
 /** Maps domain lifecycle outcomes to the existing persistence commands. */
 export class WriteLifecycleDocumentIndexAssembler {
-  static toSaveDocumentIndexLifecycleQO(documentIndex: DocumentIndex): SaveDocumentIndexLifecycleQueryObject {
+  static toSaveDocumentIndexLifecycleQO(documentIndex: DocumentIndex): SaveDocumentIndexLifecycleQO {
     return {
       documentIndexId: documentIndex.id,
       status: documentIndex.status,
@@ -15,9 +15,7 @@ export class WriteLifecycleDocumentIndexAssembler {
     }
   }
 
-  static toSetDocumentIndexUnreferencedSinceQO(
-    documentIndex: DocumentIndex,
-  ): SetDocumentIndexUnreferencedSinceQueryObject {
+  static toSetDocumentIndexUnreferencedSinceQO(documentIndex: DocumentIndex): SetDocumentIndexUnreferencedSinceQO {
     return { documentIndexId: documentIndex.id, unreferencedSince: documentIndex.unreferencedSince?.nativeDate ?? null }
   }
 }

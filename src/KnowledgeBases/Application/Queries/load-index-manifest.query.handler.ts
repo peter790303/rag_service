@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto'
 
 import type { LoadIndexManifestQuery } from './load-index-manifest.query.ts'
 import type { LoadRetrievalDocumentIndexesQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/load-retrieval-document-indexes.query.handler.contract.ts'
-import type { LoadRetrievalDocumentRevisionsQueryHandlerContract } from '../../../Documents/Application/Contracts/load-retrieval-document-revisions.query.handler.contract.ts'
+import type { LoadRetrievalDocumentRevisionsQueryHandlerContract } from '../../../DocumentRevisions/Application/Contracts/load-retrieval-document-revisions.query.handler.contract.ts'
 import type { LoadRetrievalDocumentsQueryHandlerContract } from '../../../Documents/Application/Contracts/load-retrieval-documents.query.handler.contract.ts'
+import type { LoadRetrievalKnowledgeBaseDocumentsQueryHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/load-retrieval-knowledge-base-documents.query.handler.contract.ts'
 import type { PersistenceTransaction } from '../../../Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import type { KnowledgeBase } from '../../Domain/Entities/knowledge-base.ts'
 import {
@@ -11,7 +12,6 @@ import {
   type IndexManifestIssue,
 } from '../../Domain/ValueObjects/knowledge-base-index-manifest.ts'
 import { LoadIndexManifestAssembler } from '../Assemblers/load-index-manifest.assembler.ts'
-import type { LoadRetrievalKnowledgeBaseDocumentsQueryHandlerContract } from '../Contracts/load-retrieval-knowledge-base-documents.query.handler.contract.ts'
 import type { LoadIndexManifestDTO } from '../DataTransferObjects/load-index-manifest.dto.ts'
 import type { KnowledgeBaseRepository } from '../Ports/Out/Repositories/knowledge-base.repository.ts'
 
@@ -25,13 +25,13 @@ export class LoadIndexManifestQueryHandler {
     private readonly revisions: LoadRetrievalDocumentRevisionsQueryHandlerContract,
   ) {}
 
-  execute(loadIndexManifestDTO: LoadIndexManifestQuery): Promise<KnowledgeBase | null> {
-    return this.transaction.runReadOnlySnapshot(() => this.load(loadIndexManifestDTO))
+  execute(loadIndexManifestQuery: LoadIndexManifestQuery): Promise<KnowledgeBase | null> {
+    return this.transaction.runReadOnlySnapshot(() => this.load(loadIndexManifestQuery))
   }
 
   private async load(loadIndexManifestDTO: LoadIndexManifestDTO): Promise<KnowledgeBase | null> {
     const knowledgeBase = await this.knowledgeBases.findByProjectId(
-      LoadIndexManifestAssembler.toKnowledgeBaseProjectQueryObject(loadIndexManifestDTO),
+      LoadIndexManifestAssembler.toKnowledgeBaseProjectQO(loadIndexManifestDTO),
     )
 
     if (!knowledgeBase) return null

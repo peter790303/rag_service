@@ -4,34 +4,34 @@ import {
   createRestoredKnowledgeBaseDocumentFixture,
   createRestoredDocumentIndexFixture,
 } from './document-index-lifecycle.fixture.ts'
-import type { FindLexicalChunkCandidatesQueryHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/find-lexical-chunk-candidates.query.handler.contract.ts'
-import { FindRetrievalChunkCandidatesQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/find-retrieval-chunk-candidates.query.handler.ts'
-import { LoadRetrievalChunkContextQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-chunk-context.query.handler.ts'
-import { LoadRetrievalDocumentIndexesQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-document-indexes.query.handler.ts'
-import { LoadRetrievalIndexChunksQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-index-chunks.query.handler.ts'
+import type { FindLexicalChunkCandidatesQueryHandlerContract } from '../../../src/Chunks/Application/Contracts/find-lexical-chunk-candidates.query.handler.contract.ts'
+import { FindRetrievalChunkCandidatesQueryHandler } from '../../../src/Chunks/Application/Queries/find-retrieval-chunk-candidates.query.handler.ts'
+import { LoadRetrievalChunkContextQueryHandler } from '../../../src/Chunks/Application/Queries/load-retrieval-chunk-context.query.handler.ts'
+import { LoadRetrievalIndexChunksQueryHandler } from '../../../src/Chunks/Application/Queries/load-retrieval-index-chunks.query.handler.ts'
 import type {
-  ChunkIndexOrdinalsQueryObject,
-  ChunkVectorSimilarityQueryObject,
-} from '../../../src/DocumentIndexes/Application/QueryObjects/chunk.query-object.ts'
-import { Chunk, type ChunkState } from '../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
+  ChunkIndexOrdinalsQO,
+  ChunkVectorSimilarityQO,
+} from '../../../src/Chunks/Application/QueryObjects/chunk.query-object.ts'
+import { Chunk, type ChunkState } from '../../../src/Chunks/Domain/Entities/chunk.ts'
+import { LoadRetrievalDocumentIndexesQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/load-retrieval-document-indexes.query.handler.ts'
 import type { DocumentIndexState } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
-import { LoadRetrievalDocumentRelationsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-document-relations.query.handler.ts'
-import { LoadRetrievalDocumentRevisionsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-document-revisions.query.handler.ts'
-import { LoadRetrievalDocumentsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-documents.query.handler.ts'
+import { LoadRetrievalDocumentRelationsQueryHandler } from '../../../src/DocumentRelations/Application/Queries/load-retrieval-document-relations.query.handler.ts'
 import {
   DocumentRelation,
   type DocumentRelationState,
-} from '../../../src/Documents/Domain/Entities/document-relation.ts'
+} from '../../../src/DocumentRelations/Domain/Entities/document-relation.ts'
+import { LoadRetrievalDocumentRevisionsQueryHandler } from '../../../src/DocumentRevisions/Application/Queries/load-retrieval-document-revisions.query.handler.ts'
 import {
   DocumentRevision,
   type DocumentRevisionState,
-} from '../../../src/Documents/Domain/Entities/document-revision.ts'
+} from '../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
+import { LoadRetrievalDocumentsQueryHandler } from '../../../src/Documents/Application/Queries/load-retrieval-documents.query.handler.ts'
 import type { DocumentState } from '../../../src/Documents/Domain/Entities/document.ts'
-import { LoadRetrievalKnowledgeBaseDocumentsQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/load-retrieval-knowledge-base-documents.query.handler.ts'
+import { LoadRetrievalKnowledgeBaseDocumentsQueryHandler } from '../../../src/KnowledgeBaseDocuments/Application/Queries/load-retrieval-knowledge-base-documents.query.handler.ts'
+import type { KnowledgeBaseDocumentState } from '../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
 import type { RetrieveKnowledgeBaseContentQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/retrieve-knowledge-base-content.query.handler.ts'
 import type { RetrievalSnapshot } from '../../../src/KnowledgeBases/Application/Types/retrieval-snapshot.ts'
-import type { KnowledgeBaseDocumentState } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
 import { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'
 
 export type RetrievalChunkFixture = Pick<ChunkState, 'id' | 'documentIndexId'> &
@@ -137,7 +137,7 @@ type RetrievalPersistenceDependencies = [
 export const createRetrievalPersistenceFixture = (
   snapshotInput: RetrievalSnapshotFixture,
   onLoad?: (knowledgeBaseProjectQO: { projectId: string }) => void,
-  onContextQuery?: (chunkIndexOrdinalsQO: ChunkIndexOrdinalsQueryObject) => void,
+  onContextQuery?: (chunkIndexOrdinalsQO: ChunkIndexOrdinalsQO) => void,
 ) => {
   const snapshot = createRetrievalSnapshotFixture(snapshotInput)
   let snapshotActive = false
@@ -240,7 +240,7 @@ export const createRetrievalPersistenceFixture = (
 
         return chunkEntities.filter((chunk) => chunkIndexIdsQO.documentIndexIds.includes(chunk.documentIndexId))
       },
-      findByDocumentIndexIdAndOrdinals: async (chunkIndexOrdinalsQO: ChunkIndexOrdinalsQueryObject) => {
+      findByDocumentIndexIdAndOrdinals: async (chunkIndexOrdinalsQO: ChunkIndexOrdinalsQO) => {
         withinSnapshot('context')
         onContextQuery?.(chunkIndexOrdinalsQO)
 
@@ -256,7 +256,7 @@ export const createRetrievalPersistenceFixture = (
         return chunkEntities.filter((chunk) => chunkIndexIdsQO.documentIndexIds.includes(chunk.documentIndexId))
       },
       findByDocumentIndexIdsOrderByVectorCosineDistanceAscAndIdAsc: async (
-        chunkVectorSimilarityQO: ChunkVectorSimilarityQueryObject,
+        chunkVectorSimilarityQO: ChunkVectorSimilarityQO,
       ) => {
         withinSnapshot('semantic')
         const semanticChunks = chunkEntities

@@ -9,8 +9,8 @@
 - project_id → knowledge_bases → knowledge_base_documents → active_document_index_id → chunks / document_relations。
 - documents 與 revisions / indexes 跨專案共用；每個專案成員各自維護有效索引與 requested_generation。
 - jobs / failed_jobs 是 Infrastructure 的 JobModel / FailedJobModel 技術紀錄；document_index_success_receipts 保存成功工作的技術收據，不建立 Domain Job Entity 或 Application/Jobs feature。
-- 業務事件、工作派送、執行、成功、失敗與重試流程屬於 DocumentIndexes/Events 與 Listeners；Worker 負責生命週期、輪詢與事件交付。
-- DocumentIndexExecutionQueue / DocumentIndexFailureArchive / DocumentIndexSuccessArchive 抽象位於 DocumentIndexes/Contracts；ChunkPlanningProvider 位於 Chunks/Contracts。
+- 業務事件與 Listeners 位於各自 owning feature 的 `Application/Events`、`Application/Listeners`；文件索引工作派送、執行、成功、失敗與重試由 `DocumentIndexes` 負責，Worker 位於 `DocumentIndexes/Interfaces/Console/Workers`。
+- DocumentIndexExecutionQueue / DocumentIndexFailureArchive / DocumentIndexSuccessArchive 抽象位於 `DocumentIndexes/Application/Ports/Out/Gateways`；ChunkPlanningProvider 位於 `Chunks/Application/Ports/Out/Gateways`。
 
 ## 資料庫約束與解讀方式
 
@@ -278,8 +278,24 @@
 
 目前向量欄位固定為 `vector(384)`。RAG Hybrid 全文匹配及相關度排名已獲限定 SQL 授權；詞彙位置儲存與真實 PostgreSQL 排名仍須依行為測試驗證，不可由 schema 推論部署驗收已完成。變更維度、全文實作或清理政策時，需同步檢查程式、migration 與本頁。
 
-- [Migrations（十一個初始 migrations：0000–0009 與 0014 成功收據）](../../database/migrations)
-- [TypeORM Models](../../src/Infrastructure/Persistence/Models)
+- Migrations（十一個初始 migrations：0000–0009 與 0014 成功收據）：
+  [Shared](../../src/Shared/Infrastructure/Persistence/TypeORM/Migrations)、
+  [KnowledgeBases](../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Migrations)、
+  [Documents](../../src/Documents/Infrastructure/Persistence/TypeORM/Migrations)、
+  [DocumentRevisions](../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Migrations)、
+  [DocumentIndexes](../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Migrations)、
+  [KnowledgeBaseDocuments](../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Migrations)、
+  [Chunks](../../src/Chunks/Infrastructure/Persistence/TypeORM/Migrations)、
+  [DocumentRelations](../../src/DocumentRelations/Infrastructure/Persistence/TypeORM/Migrations)
+- TypeORM Models（依 owning feature）：
+  [KnowledgeBases](../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models)、
+  [Documents](../../src/Documents/Infrastructure/Persistence/TypeORM/Models)、
+  [DocumentRevisions](../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Models)、
+  [DocumentIndexes](../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models)、
+  [KnowledgeBaseDocuments](../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models)、
+  [Chunks](../../src/Chunks/Infrastructure/Persistence/TypeORM/Models)、
+  [DocumentRelations](../../src/DocumentRelations/Infrastructure/Persistence/TypeORM/Models)
+- [DataSource composition](../../src/Bootstrap/Persistence/TypeORM/DataSource.ts)
 - [當前狀態與待辦](/Users/xiang/Documents/Worker/BackEnd/Rag-Service/CONTEXT.md#驗收邊界與後續工作)
 - [ORM 與向量查詢例外](/Users/xiang/Documents/Worker/BackEnd/Rag-Service/CODING_STANDARDS.md#orm-與向量查詢例外)
 - [RAG Hybrid 全文 SQL 例外](/Users/xiang/Documents/Worker/BackEnd/Rag-Service/CODING_STANDARDS.md#rag-hybrid-全文匹配與相關度排名)

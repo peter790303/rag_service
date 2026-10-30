@@ -1,3 +1,5 @@
-import type { StartDocumentPruningRetentionDTO } from '../DataTransferObjects/start-document-pruning-retention.dto.ts'
-
-export type StartDocumentPruningRetentionCommand = StartDocumentPruningRetentionDTO
+export type StartDocumentPruningRetentionCommand = {
+  documentId: string
+  now: Date
+  lockedDocumentIds: readonly string[]
+}

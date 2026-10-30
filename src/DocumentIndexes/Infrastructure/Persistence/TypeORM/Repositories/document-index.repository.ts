@@ -6,17 +6,17 @@ import { LessThanOrEqual } from 'typeorm'
 import { PersistenceTransaction } from '../../../../../Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { DocumentIndexRepository as DocumentIndexRepositoryContract } from '../../../../Application/Ports/Out/Repositories/document-index.repository.ts'
 import type {
-  CreateBuildingDocumentIndexQueryObject,
-  SaveDocumentIndexLifecycleQueryObject,
-  SetDocumentIndexUnreferencedSinceQueryObject,
+  CreateBuildingDocumentIndexQO,
+  SaveDocumentIndexLifecycleQO,
+  SetDocumentIndexUnreferencedSinceQO,
 } from '../../../../Application/QueryObjects/document-index.query-object.ts'
 import type {
-  DocumentIndexDocumentQueryObject,
-  DocumentIndexDocumentsQueryObject,
-  DocumentIndexGarbageCandidatesQueryObject,
-  DocumentIndexIdQueryObject,
-  DocumentIndexRevisionPipelineQueryObject,
-  DocumentIndexRevisionQueryObject,
+  DocumentIndexDocumentQO,
+  DocumentIndexDocumentsQO,
+  DocumentIndexGarbageCandidatesQO,
+  DocumentIndexIdQO,
+  DocumentIndexRevisionPipelineQO,
+  DocumentIndexRevisionQO,
 } from '../../../../Application/QueryObjects/document-index.query-object.ts'
 import type { DocumentIndex } from '../../../../Domain/Entities/document-index.ts'
 import { DocumentIndexPersistenceMapper } from '../Mappers/document-index.persistence.mapper.ts'
@@ -34,7 +34,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
   }
 
   async findByDocumentRevisionIdAndPipelineHash(
-    documentIndexRevisionPipelineQO: DocumentIndexRevisionPipelineQueryObject,
+    documentIndexRevisionPipelineQO: DocumentIndexRevisionPipelineQO,
   ): Promise<DocumentIndex | null> {
     const persistedDocumentIndex = await this.documentIndexModelRepository.findOneBy({
       revisionId: documentIndexRevisionPipelineQO.revisionId,
@@ -46,11 +46,11 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
       : DocumentIndexPersistenceMapper.toDocumentIndex(persistedDocumentIndex)
   }
 
-  async createBuildingIndex(createBuildingDocumentIndexQO: CreateBuildingDocumentIndexQueryObject): Promise<void> {
+  async createBuildingIndex(createBuildingDocumentIndexQO: CreateBuildingDocumentIndexQO): Promise<void> {
     await this.documentIndexModelRepository.insert(createBuildingDocumentIndexQO)
   }
 
-  async lockByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQueryObject): Promise<DocumentIndex | null> {
+  async lockByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQO): Promise<DocumentIndex | null> {
     const persistedDocumentIndex = await this.documentIndexModelRepository.findOne({
       where: { id: documentIndexIdQO.documentIndexId },
       lock: { mode: 'pessimistic_write' },
@@ -61,7 +61,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
       : DocumentIndexPersistenceMapper.toDocumentIndex(persistedDocumentIndex)
   }
 
-  async lockByDocumentIndexIdSkipLocked(documentIndexIdQO: DocumentIndexIdQueryObject): Promise<DocumentIndex | null> {
+  async lockByDocumentIndexIdSkipLocked(documentIndexIdQO: DocumentIndexIdQO): Promise<DocumentIndex | null> {
     const persistedDocumentIndex = await this.documentIndexModelRepository.findOne({
       where: { id: documentIndexIdQO.documentIndexId },
       lock: { mode: 'pessimistic_write', onLocked: 'skip_locked' },
@@ -72,7 +72,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
       : DocumentIndexPersistenceMapper.toDocumentIndex(persistedDocumentIndex)
   }
 
-  async findByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQueryObject): Promise<DocumentIndex | null> {
+  async findByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQO): Promise<DocumentIndex | null> {
     const persistedDocumentIndex = await this.documentIndexModelRepository.findOneBy({
       id: documentIndexIdQO.documentIndexId,
     })
@@ -83,14 +83,14 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
   }
 
   async updateByDocumentIndexIdWithLifecycleFields(
-    saveDocumentIndexLifecycleQO: SaveDocumentIndexLifecycleQueryObject,
+    saveDocumentIndexLifecycleQO: SaveDocumentIndexLifecycleQO,
   ): Promise<void> {
     const { documentIndexId, ...lifecycleFields } = saveDocumentIndexLifecycleQO
     await this.documentIndexModelRepository.update({ id: documentIndexId }, lifecycleFields)
   }
 
   async updateByDocumentIndexIdWithUnreferencedSince(
-    setDocumentIndexUnreferencedSinceQO: SetDocumentIndexUnreferencedSinceQueryObject,
+    setDocumentIndexUnreferencedSinceQO: SetDocumentIndexUnreferencedSinceQO,
   ): Promise<void> {
     await this.documentIndexModelRepository.update(
       { id: setDocumentIndexUnreferencedSinceQO.documentIndexId },
@@ -98,7 +98,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
     )
   }
 
-  async findByDocumentId(documentIndexDocumentQO: DocumentIndexDocumentQueryObject): Promise<DocumentIndex[]> {
+  async findByDocumentId(documentIndexDocumentQO: DocumentIndexDocumentQO): Promise<DocumentIndex[]> {
     const persistedDocumentIndexes = await this.documentIndexModelRepository.findBy({
       documentId: documentIndexDocumentQO.documentId,
     })
@@ -106,7 +106,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
     return persistedDocumentIndexes.map(DocumentIndexPersistenceMapper.toDocumentIndex)
   }
 
-  async findByRevisionId(documentIndexRevisionQO: DocumentIndexRevisionQueryObject): Promise<DocumentIndex[]> {
+  async findByRevisionId(documentIndexRevisionQO: DocumentIndexRevisionQO): Promise<DocumentIndex[]> {
     const persistedDocumentIndexes = await this.documentIndexModelRepository.findBy({
       revisionId: documentIndexRevisionQO.revisionId,
     })
@@ -115,7 +115,7 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
   }
 
   async findByUnreferencedSinceLessThanOrEqualOrderByIdAsc(
-    documentIndexGarbageCandidatesQO: DocumentIndexGarbageCandidatesQueryObject,
+    documentIndexGarbageCandidatesQO: DocumentIndexGarbageCandidatesQO,
   ): Promise<DocumentIndex[]> {
     const persistedDocumentIndexes = await this.documentIndexModelRepository.find({
       where: { unreferencedSince: LessThanOrEqual(documentIndexGarbageCandidatesQO.cutoff) },
@@ -125,12 +125,12 @@ export class DocumentIndexRepository extends DocumentIndexRepositoryContract {
     return persistedDocumentIndexes.map(DocumentIndexPersistenceMapper.toDocumentIndex)
   }
 
-  async deleteByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQueryObject): Promise<void> {
+  async deleteByDocumentIndexId(documentIndexIdQO: DocumentIndexIdQO): Promise<void> {
     await this.documentIndexModelRepository.delete({ id: documentIndexIdQO.documentIndexId })
   }
 
   async findByDocumentIdsOrderByCreatedAtAscAndIdAsc(
-    documentIndexDocumentsQO: DocumentIndexDocumentsQueryObject,
+    documentIndexDocumentsQO: DocumentIndexDocumentsQO,
   ): Promise<DocumentIndex[]> {
     if (!documentIndexDocumentsQO.documentIds.length) return []
 

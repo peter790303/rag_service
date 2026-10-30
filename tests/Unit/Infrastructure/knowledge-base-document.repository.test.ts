@@ -3,10 +3,10 @@ import test from 'node:test'
 
 import { DataSource, type EntityManager, IsNull } from 'typeorm'
 
-import type { KnowledgeBaseDocumentActivationQueryObject } from '../../../src/KnowledgeBases/Application/QueryObjects/knowledge-base-document.query-object.ts'
-import { KnowledgeBaseDocument } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
-import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
-import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
+import type { KnowledgeBaseDocumentActivationQO } from '../../../src/KnowledgeBaseDocuments/Application/QueryObjects/knowledge-base-document.query-object.ts'
+import { KnowledgeBaseDocument } from '../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
+import { KnowledgeBaseDocumentModel } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base-document.repository.ts'
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 
 const createRepositoryManagerStub = (): EntityManager => new DataSource({ type: 'postgres' }).manager
@@ -115,7 +115,7 @@ test('knowledgeBaseDocument activation retains generation and null/index CAS fen
   const knowledgeBaseDocumentRepository = new KnowledgeBaseDocumentRepository(
     new PersistenceTransaction(manager.connection),
   )
-  const knowledgeBaseDocumentActivationQO: KnowledgeBaseDocumentActivationQueryObject = {
+  const knowledgeBaseDocumentActivationQO: KnowledgeBaseDocumentActivationQO = {
     knowledgeBaseId: 'kb-1',
     documentId: 'document-1',
     requestedGeneration: '2',

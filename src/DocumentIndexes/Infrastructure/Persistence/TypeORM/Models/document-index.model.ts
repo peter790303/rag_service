@@ -10,13 +10,13 @@ import {
   type Relation,
 } from 'typeorm'
 
-import { ChunkModel } from './chunk.model.ts'
 import { FailedJobModel } from './failed-job.model.ts'
 import { JobModel } from './job.model.ts'
-import { DocumentRelationModel } from '../../../../../Documents/Infrastructure/Persistence/TypeORM/Models/document-relation.model.ts'
-import { DocumentRevisionModel } from '../../../../../Documents/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { ChunkModel } from '../../../../../Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { DocumentRelationModel } from '../../../../../DocumentRelations/Infrastructure/Persistence/TypeORM/Models/document-relation.model.ts'
+import { DocumentRevisionModel } from '../../../../../DocumentRevisions/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
 import { DocumentModel } from '../../../../../Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
-import { KnowledgeBaseDocumentModel } from '../../../../../KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../../../KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
 import type { DocumentIndexStatus } from '../../../../Domain/Enums/document-index-status.enum.ts'
 
 @Entity('document_indexes')

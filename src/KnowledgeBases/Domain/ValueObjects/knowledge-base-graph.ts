@@ -1,4 +1,4 @@
-import type { DocumentRelationTypeEnum } from '../../../Documents/Domain/Enums/document-relation-type.enum.ts'
+import type { DocumentRelationTypeEnum } from '../../../DocumentRelations/Domain/Enums/document-relation-type.enum.ts'
 import type { DocumentSourceTypeEnum } from '../../../Documents/Domain/Enums/document-source-type.enum.ts'
 import { InvalidKnowledgeBaseStateException } from '../Exceptions/invalid-knowledge-base-state.exception.ts'
 

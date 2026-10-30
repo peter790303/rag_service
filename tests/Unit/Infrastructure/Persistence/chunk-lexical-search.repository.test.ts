@@ -3,11 +3,11 @@ import test from 'node:test'
 
 import type { DataSource, EntityManager } from 'typeorm'
 
-import type { InsertChunksQueryObject } from '../../../../src/DocumentIndexes/Application/QueryObjects/insert-chunks.query-object.ts'
-import { Chunk } from '../../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
-import type { ChunkLexicalQueryRowDTO } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/chunk-search-result.adapter.ts'
-import { ChunkModel } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
-import { ChunkRepository } from '../../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import type { InsertChunksQO } from '../../../../src/Chunks/Application/QueryObjects/insert-chunks.query-object.ts'
+import { Chunk } from '../../../../src/Chunks/Domain/Entities/chunk.ts'
+import type { ChunkLexicalQueryRowDTO } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Mappers/chunk-search-result.adapter.ts'
+import { ChunkModel } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { ChunkRepository } from '../../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
 import { ReadTransactionDataSourceMismatchException } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/Exceptions/read-transaction-data-source-mismatch.exception.ts'
 import { ReadTransactionNotActiveException } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/Exceptions/read-transaction-not-active.exception.ts'
 import { PersistenceTransaction } from '../../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
@@ -41,13 +41,13 @@ test('chunk inserts derive the persisted lexical representation from original co
       ),
     ),
   })
-  const writes: (InsertChunksQueryObject['chunks'][number] & { searchVector: string })[][] = []
+  const writes: (InsertChunksQO['chunks'][number] & { searchVector: string })[][] = []
   const manager = {
     getRepository(model: typeof ChunkModel) {
       assert.equal(model, ChunkModel)
 
       return {
-        insert: async (values: (InsertChunksQueryObject['chunks'][number] & { searchVector: string })[]) =>
+        insert: async (values: (InsertChunksQO['chunks'][number] & { searchVector: string })[]) =>
           void writes.push(values),
         save() {
           assert.fail('new chunks must not overwrite an existing primary key through save')

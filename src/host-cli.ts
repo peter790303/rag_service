@@ -1,5 +1,5 @@
 import { loadHostCliBridgeConfig } from '../config/host-cli-bridge.config.ts'
-import { createHostCliBridgeServer } from './DocumentIndexes/Infrastructure/External/ChunkPlanning/host-cli-bridge.server.ts'
+import { createHostCliBridgeServer } from './Chunks/Infrastructure/External/ChunkPlanning/host-cli-bridge.server.ts'
 
 try {
   const config = loadHostCliBridgeConfig()

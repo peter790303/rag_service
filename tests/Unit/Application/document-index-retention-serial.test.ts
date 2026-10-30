@@ -10,8 +10,8 @@ import { StartDocumentIndexPruningRetentionCommandHandler } from '../../../src/D
 import { CancelKnowledgeBaseDocumentDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/cancel-knowledge-base-document-document-indexing.listener.ts'
 import type { DocumentIndexExecutionQueue } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.queue.ts'
 import type { DocumentIndexRepository } from '../../../src/DocumentIndexes/Application/Ports/Out/Repositories/document-index.repository.ts'
-import type { InspectKnowledgeBaseDocumentRetentionQueryHandlerContract } from '../../../src/KnowledgeBases/Application/Contracts/inspect-knowledge-base-document-retention.query.handler.contract.ts'
-import { KnowledgeBaseDocumentPruningStartedEvent } from '../../../src/KnowledgeBases/Application/Events/knowledge-base-document-pruning-started.event.ts'
+import type { InspectKnowledgeBaseDocumentRetentionQueryHandlerContract } from '../../../src/KnowledgeBaseDocuments/Application/Contracts/inspect-knowledge-base-document-retention.query.handler.contract.ts'
+import { KnowledgeBaseDocumentPruningStartedEvent } from '../../../src/KnowledgeBaseDocuments/Application/Events/knowledge-base-document-pruning-started.event.ts'
 
 const createDeferred = (): { promise: Promise<void>; resolve: () => void } => {
   let resolvePromise = (): void => {}

@@ -1,11 +1,11 @@
 import { Column, CreateDateColumn, Entity, Generated, OneToMany, PrimaryColumn, Unique, type Relation } from 'typeorm'
 
-import { DocumentRelationModel } from './document-relation.model.ts'
-import { DocumentRevisionModel } from './document-revision.model.ts'
 import { DocumentIndexModel } from '../../../../../DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
 import { FailedJobModel } from '../../../../../DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/failed-job.model.ts'
 import { JobModel } from '../../../../../DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
-import { KnowledgeBaseDocumentModel } from '../../../../../KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
+import { DocumentRelationModel } from '../../../../../DocumentRelations/Infrastructure/Persistence/TypeORM/Models/document-relation.model.ts'
+import { DocumentRevisionModel } from '../../../../../DocumentRevisions/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
+import { KnowledgeBaseDocumentModel } from '../../../../../KnowledgeBaseDocuments/Infrastructure/Persistence/TypeORM/Models/knowledge-base-document.model.ts'
 
 @Entity('documents')
 @Unique('UQ_documents_source_identity', ['sourceType', 'sourceKey', 'sourcePath'])

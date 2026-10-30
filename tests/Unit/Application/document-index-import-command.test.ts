@@ -4,7 +4,7 @@ import test from 'node:test'
 import { DocumentIndexingRequestedListener } from '../../../src/DocumentIndexes/Application/Listeners/document-indexing-requested.listener.ts'
 import { ReadDocumentIndexingStatusListener } from '../../../src/DocumentIndexes/Application/Listeners/read-document-indexing-status.listener.ts'
 import { RetryDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/retry-document-indexing.listener.ts'
-import type { UnretriedDocumentIndexFailureTargetQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-failure.query-object.ts'
+import type { UnretriedDocumentIndexFailureTargetParams } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-failure.params.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
 import { DocumentIndexImportCommand } from '../../../src/Documents/Interfaces/Console/Commands/document-index-import-command.ts'
 
@@ -85,7 +85,7 @@ test('internal import retries an unretried failure through the retry listener an
     blockedByFailedJob: true,
   }))
   const retry = context.mock.fn(
-    async (target: UnretriedDocumentIndexFailureTargetQueryObject & { readonly projectId: string }) => {
+    async (target: UnretriedDocumentIndexFailureTargetParams & { readonly projectId: string }) => {
       assert.ok(target)
 
       return { jobId: 'retry-job-1' }

@@ -26,20 +26,20 @@ import { StaleDocumentIndexingFailureException } from '../../../src/DocumentInde
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import { ReadDocumentIndexingStatusListener } from '../../../src/DocumentIndexes/Application/Listeners/read-document-indexing-status.listener.ts'
 import { RetryDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/retry-document-indexing.listener.ts'
-import type { EnqueueDocumentIndexingRetryQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-execution.query-object.ts'
+import type { EnqueueDocumentIndexingRetryParams } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.params.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
+import type { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import { GetDocumentRevisionForIndexRetryQueryHandler } from '../../../src/DocumentRevisions/Application/Queries/get-document-revision-for-index-retry.query.handler.ts'
+import { DocumentRevision } from '../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
 import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
-import type { DocumentRevisionRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-revision.repository.ts'
 import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
 import { GetDocumentForIndexRetryQueryHandler } from '../../../src/Documents/Application/Queries/get-document-for-index-retry.query.handler.ts'
-import { GetDocumentRevisionForIndexRetryQueryHandler } from '../../../src/Documents/Application/Queries/get-document-revision-for-index-retry.query.handler.ts'
-import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import { GetKnowledgeBaseDocumentIndexingStateQueryHandler } from '../../../src/KnowledgeBaseDocuments/Application/Queries/get-knowledge-base-document-indexing-state.query.handler.ts'
 import type { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base.repository.ts'
 import { GetIndexingKnowledgeBaseQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/get-indexing-knowledge-base.query.handler.ts'
-import { GetKnowledgeBaseDocumentIndexingStateQueryHandler } from '../../../src/KnowledgeBases/Application/Queries/get-knowledge-base-document-indexing-state.query.handler.ts'
 import { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'
 import { createKnowledgeServiceConfigFixture } from '../../Support/knowledge-service-config.fixture.ts'
 
@@ -391,7 +391,7 @@ const createRetryJobScenario = (
   } = {},
 ) => {
   const events: string[] = []
-  const queuedJobs: EnqueueDocumentIndexingRetryQueryObject[] = []
+  const queuedJobs: EnqueueDocumentIndexingRetryParams[] = []
   type Dependencies = ConstructorParameters<typeof RetryDocumentIndexingListener>
   let contextReads = 0
   let current: DocumentIndexingRetryContext | null = context
@@ -492,7 +492,7 @@ const createRetryJobScenario = (
       current?.activeJob === null || current?.activeJob === undefined
         ? null
         : createJobRecordFixture(current.activeJob),
-    enqueueRetry: async (createRetryJobQO: EnqueueDocumentIndexingRetryQueryObject) => {
+    enqueueRetry: async (createRetryJobQO: EnqueueDocumentIndexingRetryParams) => {
       events.push('create-job')
 
       if (options.insertionError !== undefined) throw options.insertionError

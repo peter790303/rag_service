@@ -3,11 +3,11 @@ import test from 'node:test'
 
 import { createRepositoryStub } from './document-index-lifecycle.fixture.ts'
 import type { InspectDocumentIndexRetentionQueryHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/inspect-document-index-retention.query.handler.contract.ts'
-import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/Documents/Application/Commands/collect-document-revision-garbage.command.handler.ts'
-import type { CollectDocumentRevisionGarbageDTO } from '../../../src/Documents/Application/DataTransferObjects/document-revision-garbage.dto.ts'
-import { InvalidDocumentRevisionGarbageInputException } from '../../../src/Documents/Application/Exceptions/invalid-document-revision-garbage-input.exception.ts'
-import type { DocumentRevisionRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document-revision.repository.ts'
-import { DocumentRevision } from '../../../src/Documents/Domain/Entities/document-revision.ts'
+import { CollectDocumentRevisionGarbageCommandHandler } from '../../../src/DocumentRevisions/Application/Commands/collect-document-revision-garbage.command.handler.ts'
+import type { CollectDocumentRevisionGarbageDTO } from '../../../src/DocumentRevisions/Application/DataTransferObjects/document-revision-garbage.dto.ts'
+import { InvalidDocumentRevisionGarbageInputException } from '../../../src/DocumentRevisions/Application/Exceptions/invalid-document-revision-garbage-input.exception.ts'
+import type { DocumentRevisionRepository } from '../../../src/DocumentRevisions/Application/Ports/Out/Repositories/document-revision.repository.ts'
+import { DocumentRevision } from '../../../src/DocumentRevisions/Domain/Entities/document-revision.ts'
 
 const revision = new DocumentRevision({
   id: 'revision-1',

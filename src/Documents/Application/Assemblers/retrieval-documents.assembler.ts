@@ -1,9 +1,9 @@
-import type { LoadRetrievalDocumentsDTO } from '../DataTransferObjects/load-retrieval-documents.dto.ts'
 import { InvalidRetrievalDocumentsInputException } from '../Exceptions/invalid-retrieval-documents-input.exception.ts'
+import type { LoadRetrievalDocumentsQuery } from '../Queries/load-retrieval-documents.query.ts'
 
 /** Converts retrieval document request data into a validated DTO. */
 export class RetrievalDocumentsAssembler {
-  static toLoadRetrievalDocumentsDTO(retrievalDocumentsPayload: unknown): LoadRetrievalDocumentsDTO {
+  static toLoadRetrievalDocumentsQuery(retrievalDocumentsPayload: unknown): LoadRetrievalDocumentsQuery {
     if (
       retrievalDocumentsPayload === null ||
       typeof retrievalDocumentsPayload !== 'object' ||

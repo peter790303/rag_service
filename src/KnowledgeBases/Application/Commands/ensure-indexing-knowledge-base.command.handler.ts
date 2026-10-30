@@ -4,37 +4,37 @@ import type { EnsureIndexingKnowledgeBaseCommandHandlerContract } from '../Contr
 import { IndexingKnowledgeBaseInputGuard } from '../Guards/indexing-knowledge-base-input.guard.ts'
 import type { KnowledgeBaseRepository } from '../Ports/Out/Repositories/knowledge-base.repository.ts'
 import type {
-  CreateKnowledgeBaseQueryObject,
-  KnowledgeBaseIdQueryObject,
-  UpdateKnowledgeBaseQueryObject,
+  CreateKnowledgeBaseQO,
+  KnowledgeBaseIdQO,
+  UpdateKnowledgeBaseQO,
 } from '../QueryObjects/knowledge-base.query-object.ts'
 
 /** Verifies project ownership before preparing an indexing request's knowledge base. */
 export class EnsureIndexingKnowledgeBaseCommandHandler implements EnsureIndexingKnowledgeBaseCommandHandlerContract {
   constructor(private readonly knowledgeBases: KnowledgeBaseRepository) {}
 
-  async execute(ensureIndexingKnowledgeBaseDTO: EnsureIndexingKnowledgeBaseCommand): Promise<void> {
+  async execute(ensureIndexingKnowledgeBaseCommand: EnsureIndexingKnowledgeBaseCommand): Promise<void> {
     IndexingKnowledgeBaseInputGuard.assertValid(
-      ensureIndexingKnowledgeBaseDTO.knowledgeBaseId,
-      ensureIndexingKnowledgeBaseDTO.projectId,
-      ensureIndexingKnowledgeBaseDTO.projectName,
+      ensureIndexingKnowledgeBaseCommand.knowledgeBaseId,
+      ensureIndexingKnowledgeBaseCommand.projectId,
+      ensureIndexingKnowledgeBaseCommand.projectName,
     )
 
-    const knowledgeBaseIdQO: KnowledgeBaseIdQueryObject = {
-      knowledgeBaseId: ensureIndexingKnowledgeBaseDTO.knowledgeBaseId,
+    const knowledgeBaseIdQO: KnowledgeBaseIdQO = {
+      knowledgeBaseId: ensureIndexingKnowledgeBaseCommand.knowledgeBaseId,
     }
     let knowledgeBase = await this.knowledgeBases.lockByKnowledgeBaseId(knowledgeBaseIdQO)
 
     if (knowledgeBase === null) {
       const now = new Date()
       const newKnowledgeBase = KnowledgeBase.create({
-        id: ensureIndexingKnowledgeBaseDTO.knowledgeBaseId,
-        projectId: ensureIndexingKnowledgeBaseDTO.projectId,
-        projectName: ensureIndexingKnowledgeBaseDTO.projectName,
+        id: ensureIndexingKnowledgeBaseCommand.knowledgeBaseId,
+        projectId: ensureIndexingKnowledgeBaseCommand.projectId,
+        projectName: ensureIndexingKnowledgeBaseCommand.projectName,
         createdAt: now,
         updatedAt: now,
       })
-      const createKnowledgeBaseQO: CreateKnowledgeBaseQueryObject = {
+      const createKnowledgeBaseQO: CreateKnowledgeBaseQO = {
         knowledgeBaseId: newKnowledgeBase.id,
         projectId: newKnowledgeBase.projectId,
         projectName: newKnowledgeBase.projectName,
@@ -50,12 +50,12 @@ export class EnsureIndexingKnowledgeBaseCommandHandler implements EnsureIndexing
       if (knowledgeBase === null) throw new Error('Knowledge base disappeared after a concurrent create')
     }
 
-    knowledgeBase.assertProject(ensureIndexingKnowledgeBaseDTO.projectId)
+    knowledgeBase.assertProject(ensureIndexingKnowledgeBaseCommand.projectId)
 
-    if (knowledgeBase.projectName === ensureIndexingKnowledgeBaseDTO.projectName) return
+    if (knowledgeBase.projectName === ensureIndexingKnowledgeBaseCommand.projectName) return
 
-    knowledgeBase.synchronizeProjectName(ensureIndexingKnowledgeBaseDTO.projectName, new Date())
-    const updateKnowledgeBaseQO: UpdateKnowledgeBaseQueryObject = {
+    knowledgeBase.synchronizeProjectName(ensureIndexingKnowledgeBaseCommand.projectName, new Date())
+    const updateKnowledgeBaseQO: UpdateKnowledgeBaseQO = {
       knowledgeBaseId: knowledgeBase.id,
       projectId: knowledgeBase.projectId,
       projectName: knowledgeBase.projectName,

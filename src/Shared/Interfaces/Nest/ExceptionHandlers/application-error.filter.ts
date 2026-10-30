@@ -14,9 +14,9 @@ import { PreparedIndexCollectedException } from '../../../../DocumentIndexes/App
 import { StaleDocumentIndexingFailureException } from '../../../../DocumentIndexes/Application/Exceptions/stale-document-indexing-failure.exception.ts'
 import { KnowledgeIndexPendingException } from '../../../../DocumentIndexes/Domain/Exceptions/knowledge-index-pending.exception.ts'
 import { IndexRequestDocumentUnavailableException } from '../../../../Documents/Application/Exceptions/index-request-document-unavailable.exception.ts'
-import { IndexRequestKnowledgeBaseDocumentUnavailableException } from '../../../../KnowledgeBases/Application/Exceptions/index-request-knowledge-base-document-unavailable.exception.ts'
+import { IndexRequestKnowledgeBaseDocumentUnavailableException } from '../../../../KnowledgeBaseDocuments/Application/Exceptions/index-request-knowledge-base-document-unavailable.exception.ts'
+import { KnowledgeBaseDocumentPruneConflictException } from '../../../../KnowledgeBaseDocuments/Domain/Exceptions/knowledge-base-document-prune-conflict.exception.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../../KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
-import { KnowledgeBaseDocumentPruneConflictException } from '../../../../KnowledgeBases/Domain/Exceptions/knowledge-base-document-prune-conflict.exception.ts'
 import { KnowledgeBaseProjectMismatchException } from '../../../../KnowledgeBases/Domain/Exceptions/knowledge-base-project-mismatch.exception.ts'
 import { KnowledgeRetrievalIncompleteException } from '../../../../KnowledgeBases/Domain/Exceptions/knowledge-retrieval-incomplete.exception.ts'
 

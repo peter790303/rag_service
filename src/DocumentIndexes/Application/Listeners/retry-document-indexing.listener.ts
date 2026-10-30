@@ -1,12 +1,12 @@
 import { createHash, randomUUID } from 'node:crypto'
 
 import type { KnowledgeServiceConfig } from '../../../../config/knowledge-service.config.ts'
+import type { GetDocumentRevisionForIndexRetryQueryHandlerContract } from '../../../DocumentRevisions/Application/Contracts/get-document-revision-for-index-retry.query.handler.contract.ts'
 import type { GetDocumentForIndexRetryQueryHandlerContract } from '../../../Documents/Application/Contracts/get-document-for-index-retry.query.handler.contract.ts'
-import type { GetDocumentRevisionForIndexRetryQueryHandlerContract } from '../../../Documents/Application/Contracts/get-document-revision-for-index-retry.query.handler.contract.ts'
 import type { ReserveDocumentForIndexingCommandHandlerContract } from '../../../Documents/Application/Contracts/reserve-document-for-indexing.command.handler.contract.ts'
+import type { GetKnowledgeBaseDocumentIndexingStateQueryHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/get-knowledge-base-document-indexing-state.query.handler.contract.ts'
+import type { ReserveKnowledgeBaseDocumentForIndexingCommandHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/reserve-knowledge-base-document-for-indexing.command.handler.contract.ts'
 import type { GetIndexingKnowledgeBaseQueryHandlerContract } from '../../../KnowledgeBases/Application/Contracts/get-indexing-knowledge-base.query.handler.contract.ts'
-import type { GetKnowledgeBaseDocumentIndexingStateQueryHandlerContract } from '../../../KnowledgeBases/Application/Contracts/get-knowledge-base-document-indexing-state.query.handler.contract.ts'
-import type { ReserveKnowledgeBaseDocumentForIndexingCommandHandlerContract } from '../../../KnowledgeBases/Application/Contracts/reserve-knowledge-base-document-for-indexing.command.handler.contract.ts'
 import { EmbeddingProvider } from '../../../Shared/Application/Ports/Out/Gateways/embedding-provider.ts'
 import type { PersistenceTransaction } from '../../../Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import { ReadRetryDocumentIndexesAssembler } from '../Assemblers/read-retry-document-indexes.assembler.ts'
@@ -32,11 +32,11 @@ import { InvalidIndexRetrySourceContextException } from '../Exceptions/invalid-i
 import { StaleDocumentIndexingFailureException } from '../Exceptions/stale-document-indexing-failure.exception.ts'
 import type { DocumentIndexExecutionQueue } from '../Ports/Out/Gateways/document-index-execution.queue.ts'
 import type { DocumentIndexFailureArchive } from '../Ports/Out/Gateways/document-index-failure.archive.ts'
-import type { DocumentIndexRepository } from '../Ports/Out/Repositories/document-index.repository.ts'
 import type {
-  UnretriedDocumentIndexFailureTargetQueryObject,
-  UnretriedDocumentIndexFailuresQueryObject,
-} from '../QueryObjects/document-index-failure.query-object.ts'
+  UnretriedDocumentIndexFailureTargetParams,
+  UnretriedDocumentIndexFailuresParams,
+} from '../Ports/Out/Gateways/document-index-failure.params.ts'
+import type { DocumentIndexRepository } from '../Ports/Out/Repositories/document-index.repository.ts'
 
 const NON_RETRYABLE_ERROR_CODES = new Set([
   'KNOWLEDGE_JOB_NOT_FOUND',
@@ -176,7 +176,7 @@ export class RetryDocumentIndexingListener {
   ) {}
 
   async retryCurrentTarget(
-    target: UnretriedDocumentIndexFailureTargetQueryObject & { readonly projectId: string },
+    target: UnretriedDocumentIndexFailureTargetParams & { readonly projectId: string },
   ): Promise<RetryDocumentIndexingResultDTO> {
     const failure = await this.documentIndexFailureArchive.findUnretriedTargetFailure(target)
 
@@ -186,7 +186,7 @@ export class RetryDocumentIndexingListener {
   }
 
   async retryUnretriedFailures(
-    query: UnretriedDocumentIndexFailuresQueryObject,
+    query: UnretriedDocumentIndexFailuresParams,
   ): Promise<RetryUnretriedDocumentIndexFailuresResultDTO> {
     const failedJobIds =
       await this.documentIndexFailureArchive.findByRetriedAtIsNullAndFailedAtLessThanOrEqualCutoffOrderByFailedAtAscAndIdAsc(

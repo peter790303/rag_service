@@ -1,19 +1,19 @@
 import type { LoadKnowledgeGraphQuery } from './load-knowledge-graph.query.ts'
-import type { FindGraphChunkCandidatesQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/find-graph-chunk-candidates.query.handler.contract.ts'
-import type { LoadGraphChunksQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/load-graph-chunks.query.handler.contract.ts'
+import type { FindGraphChunkCandidatesQueryHandlerContract } from '../../../Chunks/Application/Contracts/find-graph-chunk-candidates.query.handler.contract.ts'
+import type { LoadGraphChunksQueryHandlerContract } from '../../../Chunks/Application/Contracts/load-graph-chunks.query.handler.contract.ts'
+import type { Chunk } from '../../../Chunks/Domain/Entities/chunk.ts'
 import type { LoadRetrievalDocumentIndexesQueryHandlerContract } from '../../../DocumentIndexes/Application/Contracts/load-retrieval-document-indexes.query.handler.contract.ts'
-import type { Chunk } from '../../../DocumentIndexes/Domain/Entities/chunk.ts'
 import type { DocumentIndex } from '../../../DocumentIndexes/Domain/Entities/document-index.ts'
-import type { LoadRetrievalDocumentRelationsQueryHandlerContract } from '../../../Documents/Application/Contracts/load-retrieval-document-relations.query.handler.contract.ts'
+import type { LoadRetrievalDocumentRelationsQueryHandlerContract } from '../../../DocumentRelations/Application/Contracts/load-retrieval-document-relations.query.handler.contract.ts'
+import type { DocumentRelation } from '../../../DocumentRelations/Domain/Entities/document-relation.ts'
 import type { LoadRetrievalDocumentsQueryHandlerContract } from '../../../Documents/Application/Contracts/load-retrieval-documents.query.handler.contract.ts'
-import type { DocumentRelation } from '../../../Documents/Domain/Entities/document-relation.ts'
 import type { Document } from '../../../Documents/Domain/Entities/document.ts'
 import { DocumentReference } from '../../../Documents/Domain/ValueObjects/document-reference.ts'
+import type { LoadRetrievalKnowledgeBaseDocumentsQueryHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/load-retrieval-knowledge-base-documents.query.handler.contract.ts'
 import type { PersistenceTransaction } from '../../../Shared/Application/Ports/Out/Gateways/persistence-transaction.ts'
 import type { KnowledgeBase } from '../../Domain/Entities/knowledge-base.ts'
 import type { KnowledgeGraphEdge } from '../../Domain/ValueObjects/knowledge-base-graph.ts'
 import { KnowledgeGraphAssembler } from '../Assemblers/knowledge-graph.assembler.ts'
-import type { LoadRetrievalKnowledgeBaseDocumentsQueryHandlerContract } from '../Contracts/load-retrieval-knowledge-base-documents.query.handler.contract.ts'
 import type { LoadKnowledgeGraphDTO } from '../DataTransferObjects/load-knowledge-graph.dto.ts'
 import { InvalidKnowledgeGraphQueryException } from '../Exceptions/invalid-knowledge-graph-query.exception.ts'
 import type { KnowledgeBaseRepository } from '../Ports/Out/Repositories/knowledge-base.repository.ts'
@@ -34,14 +34,14 @@ export class LoadKnowledgeGraphQueryHandler {
     private readonly findGraphCandidates: FindGraphChunkCandidatesQueryHandlerContract,
   ) {}
 
-  async execute(loadKnowledgeGraphDTO: LoadKnowledgeGraphQuery): Promise<KnowledgeBase | null> {
-    this.validateQuery(loadKnowledgeGraphDTO)
+  async execute(loadKnowledgeGraphQuery: LoadKnowledgeGraphQuery): Promise<KnowledgeBase | null> {
+    this.validateQuery(loadKnowledgeGraphQuery)
 
-    return this.persistenceTransaction.runReadOnlySnapshot(() => this.loadGraph(loadKnowledgeGraphDTO))
+    return this.persistenceTransaction.runReadOnlySnapshot(() => this.loadGraph(loadKnowledgeGraphQuery))
   }
 
   private async loadGraph(graphQueryDTO: LoadKnowledgeGraphDTO): Promise<KnowledgeBase | null> {
-    const knowledgeBaseProjectQO = KnowledgeGraphAssembler.toKnowledgeBaseProjectQueryObject(graphQueryDTO.projectId)
+    const knowledgeBaseProjectQO = KnowledgeGraphAssembler.toKnowledgeBaseProjectQO(graphQueryDTO.projectId)
     const knowledgeBase = await this.knowledgeBaseRepository.findByProjectId(knowledgeBaseProjectQO)
 
     if (!knowledgeBase) return null

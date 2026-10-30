@@ -1,11 +1,11 @@
-import type { Chunk } from '../../../DocumentIndexes/Domain/Entities/chunk.ts'
-import type { DocumentRelation } from '../../../Documents/Domain/Entities/document-relation.ts'
+import type { Chunk } from '../../../Chunks/Domain/Entities/chunk.ts'
+import type { DocumentRelation } from '../../../DocumentRelations/Domain/Entities/document-relation.ts'
 import type { Document } from '../../../Documents/Domain/Entities/document.ts'
 import type { KnowledgeGraphEdge, KnowledgeGraphNode } from '../../Domain/ValueObjects/knowledge-base-graph.ts'
-import type { KnowledgeBaseProjectQueryObject } from '../QueryObjects/knowledge-base.query-object.ts'
+import type { KnowledgeBaseProjectQO } from '../QueryObjects/knowledge-base.query-object.ts'
 
 export class KnowledgeGraphAssembler {
-  static toKnowledgeBaseProjectQueryObject(projectId: string): KnowledgeBaseProjectQueryObject {
+  static toKnowledgeBaseProjectQO(projectId: string): KnowledgeBaseProjectQO {
     return { projectId }
   }
 

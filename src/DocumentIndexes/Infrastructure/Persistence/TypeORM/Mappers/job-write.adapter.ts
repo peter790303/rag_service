@@ -3,20 +3,18 @@ import type { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialE
 import { JobExecutionVerificationAdapter } from './job-execution-verification.adapter.ts'
 import type { DocumentIndexExecutionVerificationDTO } from '../../../../Application/DataTransferObjects/document-index-execution-verification.dto.ts'
 import type {
-  EnqueueDocumentIndexExecutionQueryObject,
-  EnqueueDocumentIndexingRetryQueryObject,
-  UpdateDocumentIndexExecutionQueryObject,
-} from '../../../../Application/QueryObjects/document-index-execution.query-object.ts'
-import type { DocumentIndexExecutionStatusFields } from '../../../../Application/QueryObjects/document-index-execution.query-object.ts'
+  EnqueueDocumentIndexExecutionParams,
+  EnqueueDocumentIndexingRetryParams,
+  UpdateDocumentIndexExecutionParams,
+} from '../../../../Application/Ports/Out/Gateways/document-index-execution.params.ts'
+import type { DocumentIndexExecutionStatusFields } from '../../../../Application/Ports/Out/Gateways/document-index-execution.params.ts'
 import type { JobModel } from '../Models/job.model.ts'
 
 /** Converts an explicit status write to the job Model's stored column values. */
 export class JobWriteAdapter {
   static toJobPersistence(
     execution:
-      | EnqueueDocumentIndexExecutionQueryObject
-      | EnqueueDocumentIndexingRetryQueryObject
-      | UpdateDocumentIndexExecutionQueryObject,
+      EnqueueDocumentIndexExecutionParams | EnqueueDocumentIndexingRetryParams | UpdateDocumentIndexExecutionParams,
   ): QueryDeepPartialEntity<JobModel> {
     // JSON evidence is a validated opaque value, replaced as a whole by TypeORM.
     return structuredClone(execution) as QueryDeepPartialEntity<JobModel>

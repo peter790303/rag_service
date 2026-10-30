@@ -26,10 +26,10 @@ import {
   type KnowledgeBaseDocumentPruningTestDependencies,
 } from './document-retention-use-cases.fixture.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
-import type { PruneKnowledgeBaseDocumentsCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/prune-knowledge-base-documents.command.handler.ts'
-import { KnowledgeBaseDocument } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
+import type { PruneKnowledgeBaseDocumentsCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/prune-knowledge-base-documents.command.handler.ts'
+import { KnowledgeBaseDocument } from '../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
+import { KnowledgeBaseDocumentPruneConflictException } from '../../../src/KnowledgeBaseDocuments/Domain/Exceptions/knowledge-base-document-prune-conflict.exception.ts'
 import { KnowledgeBase } from '../../../src/KnowledgeBases/Domain/Entities/knowledge-base.ts'
-import { KnowledgeBaseDocumentPruneConflictException } from '../../../src/KnowledgeBases/Domain/Exceptions/knowledge-base-document-prune-conflict.exception.ts'
 
 class KnowledgeBaseDocumentPruningTestScenario {
   private transactionActive = false

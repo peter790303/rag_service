@@ -9,8 +9,8 @@ import type { DocumentRepository } from '../Ports/Out/Repositories/document.repo
 export class LockDocumentRetentionParentsCommandHandler implements LockDocumentRetentionParentsCommandHandlerContract {
   constructor(private readonly documentRepository: DocumentRepository) {}
 
-  async execute(lockDocumentRetentionParentsDTO: LockDocumentRetentionParentsCommand): Promise<Document[]> {
-    const documentIds = [...new Set(lockDocumentRetentionParentsDTO.documentIds)].sort()
+  async execute(lockDocumentRetentionParentsCommand: LockDocumentRetentionParentsCommand): Promise<Document[]> {
+    const documentIds = [...new Set(lockDocumentRetentionParentsCommand.documentIds)].sort()
     const lockDocument = (documentId: string): Promise<Document | null> =>
       this.documentRepository.lockByDocumentId(RetentionDocumentAssembler.toDocumentIdQO(documentId))
     const isLockedDocument = (document: Document | null): document is Document => document !== null

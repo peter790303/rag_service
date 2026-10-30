@@ -8,7 +8,7 @@ import {
   createRetrievalReadonlyDataSourceOptions,
   RETRIEVAL_READONLY_DATA_SOURCE,
 } from '../../../src/Bootstrap/Nest/Providers/retrieval-readonly-data-source.options.ts'
-import { ChunkRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { ChunkRepository } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
 import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 

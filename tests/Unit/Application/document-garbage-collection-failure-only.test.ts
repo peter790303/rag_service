@@ -24,20 +24,13 @@ test('document retention checks technical references even when every business re
           { execute: async () => null },
           { execute: async () => null },
           createRepositoryStub<GarbageCollectionTestDependencies[1]>({ findByDocumentId: async () => document }),
-          createRepositoryStub<GarbageCollectionTestDependencies[3]>({
-            countDocumentExecutions: async ({ documentId }) => {
+          {
+            execute: async ({ documentId }) => {
               assert.equal(documentId, document.id)
 
-              return scenario.executions
+              return { protectsDocument: scenario.executions > 0 || scenario.failures > 0 }
             },
-          }),
-          createRepositoryStub<GarbageCollectionTestDependencies[6]>({
-            countDocumentFailures: async ({ documentId }) => {
-              assert.equal(documentId, document.id)
-
-              return scenario.failures
-            },
-          }),
+          },
         )
 
         assert.equal(await useCase.execute({ documentId: document.id }), scenario.protected ? document : null)

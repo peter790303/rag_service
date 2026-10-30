@@ -1,42 +1,38 @@
 import type { Document } from '../../../../Domain/Entities/document.ts'
-import type { DocumentGarbageCandidatesQueryObject } from '../../../QueryObjects/document.query-object.ts'
-import type { DocumentIdQueryObject } from '../../../QueryObjects/document.query-object.ts'
-import type { DocumentIdsQueryObject } from '../../../QueryObjects/document.query-object.ts'
+import type { DocumentGarbageCandidatesQO } from '../../../QueryObjects/document.query-object.ts'
+import type { DocumentIdQO } from '../../../QueryObjects/document.query-object.ts'
+import type { DocumentIdsQO } from '../../../QueryObjects/document.query-object.ts'
 import type {
-  DocumentSourceQueryObject,
-  MarkDocumentUnreferencedQueryObject,
-  UpsertDocumentSourceQueryObject,
-  UpsertDocumentSourceTitleQueryObject,
+  DocumentSourceQO,
+  MarkDocumentUnreferencedQO,
+  UpsertDocumentSourceQO,
+  UpsertDocumentSourceTitleQO,
 } from '../../../QueryObjects/document.query-object.ts'
 
 export abstract class DocumentRepository {
-  abstract upsertBySourceTypeAndSourceKeyAndSourcePath(
-    upsertDocumentSourceQO: UpsertDocumentSourceQueryObject,
-  ): Promise<void>
+  abstract upsertBySourceTypeAndSourceKeyAndSourcePath(upsertDocumentSourceQO: UpsertDocumentSourceQO): Promise<void>
 
   abstract upsertTitleBySourceTypeAndSourceKeyAndSourcePath(
-    upsertDocumentSourceTitleQO: UpsertDocumentSourceTitleQueryObject,
+    upsertDocumentSourceTitleQO: UpsertDocumentSourceTitleQO,
   ): Promise<void>
 
-  abstract findBySourceTypeAndSourceKeyAndSourcePath(
-    documentSourceQO: DocumentSourceQueryObject,
-  ): Promise<Document | null>
+  abstract findBySourceTypeAndSourceKeyAndSourcePath(documentSourceQO: DocumentSourceQO): Promise<Document | null>
 
-  abstract lockByDocumentId(documentIdQO: DocumentIdQueryObject): Promise<Document | null>
+  abstract lockByDocumentId(documentIdQO: DocumentIdQO): Promise<Document | null>
 
-  abstract findByDocumentId(documentIdQO: DocumentIdQueryObject): Promise<Document | null>
+  abstract findByDocumentId(documentIdQO: DocumentIdQO): Promise<Document | null>
 
-  abstract lockByDocumentIdSkipLocked(documentIdQO: DocumentIdQueryObject): Promise<Document | null>
+  abstract lockByDocumentIdSkipLocked(documentIdQO: DocumentIdQO): Promise<Document | null>
 
   abstract findByUnreferencedSinceLessThanOrEqual(
-    documentGarbageCandidatesQO: DocumentGarbageCandidatesQueryObject,
+    documentGarbageCandidatesQO: DocumentGarbageCandidatesQO,
   ): Promise<Document[]>
 
   abstract updateUnreferencedSinceByDocumentIdAndUnreferencedSinceIsNull(
-    markDocumentUnreferencedQO: MarkDocumentUnreferencedQueryObject,
+    markDocumentUnreferencedQO: MarkDocumentUnreferencedQO,
   ): Promise<void>
 
-  abstract deleteByDocumentId(documentIdQO: DocumentIdQueryObject): Promise<void>
+  abstract deleteByDocumentId(documentIdQO: DocumentIdQO): Promise<void>
 
-  abstract findByDocumentIds(documentIdsQO: DocumentIdsQueryObject): Promise<Document[]>
+  abstract findByDocumentIds(documentIdsQO: DocumentIdsQO): Promise<Document[]>
 }

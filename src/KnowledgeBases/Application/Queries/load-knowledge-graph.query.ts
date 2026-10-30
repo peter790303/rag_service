@@ -1,3 +1,7 @@
-import type { LoadKnowledgeGraphDTO } from '../DataTransferObjects/load-knowledge-graph.dto.ts'
-
-export type LoadKnowledgeGraphQuery = LoadKnowledgeGraphDTO
+export type LoadKnowledgeGraphQuery = {
+  readonly projectId: string
+  readonly documentId?: string
+  readonly query?: string
+  readonly limit?: number
+  readonly minSimilarity?: number
+}

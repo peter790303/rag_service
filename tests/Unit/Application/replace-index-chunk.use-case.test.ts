@@ -8,23 +8,22 @@ import {
   createJobRecordFixture,
   createRepositoryStub,
 } from './document-index-lifecycle.fixture.ts'
+import { ReplaceIndexChunkCommandHandler } from '../../../src/Chunks/Application/Commands/replace-index-chunk.command.handler.ts'
+import type { MarkdownChunkPlan } from '../../../src/Chunks/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import type { InsertChunksQO } from '../../../src/Chunks/Application/QueryObjects/insert-chunks.query-object.ts'
 import { AuthorizeDocumentIndexChunkReplacementCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/authorize-document-index-chunk-replacement.command.handler.ts'
-import { ReplaceIndexChunkCommandHandler } from '../../../src/DocumentIndexes/Application/Commands/replace-index-chunk.command.handler.ts'
 import type { AuthorizeDocumentIndexChunkReplacementCommandHandlerContract } from '../../../src/DocumentIndexes/Application/Contracts/authorize-document-index-chunk-replacement.command.handler.contract.ts'
-import { AuthorizeDocumentIndexChunkReplacementInputDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/authorize-document-index-chunk-replacement-input.dto.ts'
 import type { DocumentIndexingClaimDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/document-indexing-claim.dto.ts'
-import type { MarkdownChunkPlan } from '../../../src/DocumentIndexes/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
 import { DocumentIndexExecutionStageEnum } from '../../../src/DocumentIndexes/Application/Enums/document-index-execution-stage.enum.ts'
 import { IndexDisappearedBeforeCompletionException } from '../../../src/DocumentIndexes/Application/Exceptions/index-disappeared-before-completion.exception.ts'
 import { InvalidDocumentIndexExecutionLeaseException } from '../../../src/DocumentIndexes/Application/Exceptions/invalid-document-index-execution-lease.exception.ts'
-import type { InsertChunksQueryObject } from '../../../src/DocumentIndexes/Application/QueryObjects/insert-chunks.query-object.ts'
 import type { DocumentIndex } from '../../../src/DocumentIndexes/Domain/Entities/document-index.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
-import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/Documents/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import { ReplacePlannedDocumentRelationsCommandHandler } from '../../../src/DocumentRelations/Application/Commands/replace-planned-document-relations.command.handler.ts'
+import type { ReplacePlannedDocumentRelationsCommandHandlerContract } from '../../../src/DocumentRelations/Application/Contracts/replace-planned-document-relations.command.handler.contract.ts'
+import type { PlannedDocumentRelationWriteQO } from '../../../src/DocumentRelations/Application/QueryObjects/document-relation.query-object.ts'
 import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
-import type { ReplacePlannedDocumentRelationsCommandHandlerContract } from '../../../src/Documents/Application/Contracts/replace-planned-document-relations.command.handler.contract.ts'
-import type { PlannedDocumentRelationWrite } from '../../../src/Documents/Application/QueryObjects/document-relation.query-object.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
 import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
 
 const claimedJobFixture: DocumentIndexingClaimDTO = {
@@ -68,8 +67,8 @@ const chunkReplacementPlanFixture: MarkdownChunkPlan = {
 
 const createReplaceIndexChunkScenario = (index: DocumentIndex | null, requestedGeneration = 1) => {
   const events: string[] = []
-  const insertedChunks: InsertChunksQueryObject['chunks'][number][] = []
-  const savedRelations: PlannedDocumentRelationWrite[] = []
+  const insertedChunks: InsertChunksQO['chunks'][number][] = []
+  const savedRelations: PlannedDocumentRelationWriteQO[] = []
   let transactionCount = 0
   const useCase = new ReplaceIndexChunkCommandHandler(
     {
@@ -180,12 +179,20 @@ test('orchestrates public feature contracts inside the chunk transaction without
   const events: string[] = []
   let transactionActive = false
   const prepareReplacement: AuthorizeDocumentIndexChunkReplacementCommandHandlerContract = {
-    execute: async (authorizeReplacementDTO) => {
+    execute: async (authorizeReplacementCommand) => {
       assert.equal(transactionActive, true)
-      assert.ok(authorizeReplacementDTO instanceof AuthorizeDocumentIndexChunkReplacementInputDTO)
-      assert.deepEqual(authorizeReplacementDTO.delivery, claimedJobFixture)
-      assert.notEqual(authorizeReplacementDTO.delivery, claimedJobFixture)
-      assert.notEqual(authorizeReplacementDTO.delivery.leaseExpiresAt, claimedJobFixture.leaseExpiresAt)
+      assert.deepEqual(authorizeReplacementCommand.delivery, {
+        id: claimedJobFixture.id,
+        knowledgeBaseId: claimedJobFixture.knowledgeBaseId,
+        documentId: claimedJobFixture.documentId,
+        documentIndexId: claimedJobFixture.documentIndexId,
+        generation: claimedJobFixture.generation,
+        attempts: claimedJobFixture.attempts,
+        leaseToken: claimedJobFixture.leaseToken,
+        leaseExpiresAt: claimedJobFixture.leaseExpiresAt,
+      })
+      assert.notEqual(authorizeReplacementCommand.delivery, claimedJobFixture)
+      assert.notEqual(authorizeReplacementCommand.delivery.leaseExpiresAt, claimedJobFixture.leaseExpiresAt)
       events.push('prepare-replacement')
 
       return createBuildingDocumentIndexFixture()

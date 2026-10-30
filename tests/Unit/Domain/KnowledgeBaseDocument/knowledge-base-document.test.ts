@@ -4,9 +4,9 @@ import test from 'node:test'
 import {
   KnowledgeBaseDocument,
   type KnowledgeBaseDocumentState,
-} from '../../../../src/KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
-import { InvalidKnowledgeBaseDocumentIndexGenerationException } from '../../../../src/KnowledgeBases/Domain/Exceptions/invalid-knowledge-base-document-index-generation.exception.ts'
-import { InvalidKnowledgeBaseDocumentStateException } from '../../../../src/KnowledgeBases/Domain/Exceptions/invalid-knowledge-base-document-state.exception.ts'
+} from '../../../../src/KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
+import { InvalidKnowledgeBaseDocumentIndexGenerationException } from '../../../../src/KnowledgeBaseDocuments/Domain/Exceptions/invalid-knowledge-base-document-index-generation.exception.ts'
+import { InvalidKnowledgeBaseDocumentStateException } from '../../../../src/KnowledgeBaseDocuments/Domain/Exceptions/invalid-knowledge-base-document-state.exception.ts'
 
 const restoreKnowledgeBaseDocument = (requestedGeneration = '8'): KnowledgeBaseDocument =>
   new KnowledgeBaseDocument({

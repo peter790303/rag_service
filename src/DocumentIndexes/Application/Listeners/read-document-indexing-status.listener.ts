@@ -1,4 +1,4 @@
-import type { GetKnowledgeBaseDocumentIndexingStateQueryHandlerContract } from '../../../KnowledgeBases/Application/Contracts/get-knowledge-base-document-indexing-state.query.handler.contract.ts'
+import type { GetKnowledgeBaseDocumentIndexingStateQueryHandlerContract } from '../../../KnowledgeBaseDocuments/Application/Contracts/get-knowledge-base-document-indexing-state.query.handler.contract.ts'
 import { ReadStatusDocumentIndexesAssembler } from '../Assemblers/read-status-document-indexes.assembler.ts'
 import type { DocumentIndexingStatusFacts } from '../DataTransferObjects/document-indexing-status-facts.dto.ts'
 import type { DocumentIndexingStatusSourceDTO } from '../DataTransferObjects/document-indexing-status-source.dto.ts'

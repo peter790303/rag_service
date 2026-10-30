@@ -1,4 +1,4 @@
-import type { Chunk } from '../../../DocumentIndexes/Domain/Entities/chunk.ts'
+import type { Chunk } from '../../../Chunks/Domain/Entities/chunk.ts'
 
 export type RetrievalChunk = Chunk
 export type HybridChunkCandidate = {

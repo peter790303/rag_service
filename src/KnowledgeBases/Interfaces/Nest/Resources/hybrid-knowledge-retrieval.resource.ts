@@ -1,4 +1,4 @@
-import type { Chunk } from '../../../../DocumentIndexes/Domain/Entities/chunk.ts'
+import type { Chunk } from '../../../../Chunks/Domain/Entities/chunk.ts'
 import type { KnowledgeBase } from '../../../Domain/Entities/knowledge-base.ts'
 import type {
   KnowledgeBaseRetrievalDocument,

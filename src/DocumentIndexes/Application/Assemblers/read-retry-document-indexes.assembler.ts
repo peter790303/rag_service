@@ -1,6 +1,6 @@
-import type { DocumentRevision } from '../../../Documents/Domain/Entities/document-revision.ts'
+import type { DocumentRevision } from '../../../DocumentRevisions/Domain/Entities/document-revision.ts'
 import type { Document } from '../../../Documents/Domain/Entities/document.ts'
-import type { KnowledgeBaseDocument } from '../../../KnowledgeBases/Domain/Entities/knowledge-base-document.ts'
+import type { KnowledgeBaseDocument } from '../../../KnowledgeBaseDocuments/Domain/Entities/knowledge-base-document.ts'
 import type { KnowledgeBase } from '../../../KnowledgeBases/Domain/Entities/knowledge-base.ts'
 import type { DocumentIndex } from '../../Domain/Entities/document-index.ts'
 import type { DocumentIndexExecutionRecordDTO } from '../DataTransferObjects/document-index-execution-record.dto.ts'

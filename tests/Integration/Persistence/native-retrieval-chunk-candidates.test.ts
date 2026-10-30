@@ -4,20 +4,20 @@ import { test } from 'node:test'
 
 import type { DataSource, EntityManager } from 'typeorm'
 
-import type { FindLexicalChunkCandidatesDTO } from '../../../src/DocumentIndexes/Application/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
-import { FindLexicalChunkCandidatesQueryHandler } from '../../../src/DocumentIndexes/Application/Queries/find-lexical-chunk-candidates.query.handler.ts'
+import type { FindLexicalChunkCandidatesDTO } from '../../../src/Chunks/Application/DataTransferObjects/find-lexical-chunk-candidates.dto.ts'
+import { FindLexicalChunkCandidatesQueryHandler } from '../../../src/Chunks/Application/Queries/find-lexical-chunk-candidates.query.handler.ts'
 import type {
-  ChunkLexicalSearchQueryObject,
-  ChunkVectorSimilarityQueryObject,
-} from '../../../src/DocumentIndexes/Application/QueryObjects/chunk.query-object.ts'
-import { Chunk } from '../../../src/DocumentIndexes/Domain/Entities/chunk.ts'
+  ChunkLexicalSearchQO,
+  ChunkVectorSimilarityQO,
+} from '../../../src/Chunks/Application/QueryObjects/chunk.query-object.ts'
+import { Chunk } from '../../../src/Chunks/Domain/Entities/chunk.ts'
+import { ChunkModel } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
+import { ChunkRepository } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
 import { LexicalSearchQueryAdapter } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Mappers/lexical-search-query.adapter.ts'
-import { ChunkModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
 import { DocumentIndexModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/document-index.model.ts'
-import { ChunkRepository } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
+import { DocumentRevisionModel } from '../../../src/DocumentRevisions/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
 import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
-import { DocumentRevisionModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document-revision.model.ts'
 import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
@@ -207,14 +207,14 @@ test(
       const lexicalResult = await persistenceTransaction.runReadOnlySnapshot(async () => {
         const manager = persistenceTransaction.manager
         assert.ok(manager.queryRunner?.isTransactionActive)
-        const lexicalQueryObject: ChunkLexicalSearchQueryObject = {
+        const lexicalQO: ChunkLexicalSearchQO = {
           documentIndexIds: [scopeA],
           queryText: 'architecture',
           limit: 3,
         }
 
         return persistenceTransaction.bind(manager, () =>
-          chunkRepository.findByDocumentIndexIdsOrderByLexicalScoreDescAndIdAsc(lexicalQueryObject),
+          chunkRepository.findByDocumentIndexIdsOrderByLexicalScoreDescAndIdAsc(lexicalQO),
         )
       })
 
@@ -320,7 +320,7 @@ test(
       scopeB,
       outsideScope,
     } = await createCandidateFixture()
-    const semanticIn = (manager: EntityManager, chunkVectorSimilarityQO: ChunkVectorSimilarityQueryObject) =>
+    const semanticIn = (manager: EntityManager, chunkVectorSimilarityQO: ChunkVectorSimilarityQO) =>
       persistenceTransaction.bind(manager, () =>
         chunkRepository.findByDocumentIndexIdsOrderByVectorCosineDistanceAscAndIdAsc(chunkVectorSimilarityQO),
       )

@@ -10,14 +10,14 @@ import type { DocumentIndexExecutionRecordDTO } from '../../../src/DocumentIndex
 import { DocumentIndexExecutionClaimConflictException } from '../../../src/DocumentIndexes/Application/Exceptions/document-index-execution-claim-conflict.exception.ts'
 import { DOCUMENT_INDEX_EXECUTION_STATUS } from '../../../src/DocumentIndexes/Application/Helpers/document-index-execution-lifecycle.helper.ts'
 import { DispatchDocumentIndexingListener } from '../../../src/DocumentIndexes/Application/Listeners/dispatch-document-indexing.listener.ts'
-import type { DocumentIndexExecutionStatusFields } from '../../../src/DocumentIndexes/Application/QueryObjects/document-index-execution.query-object.ts'
+import type { DocumentIndexExecutionStatusFields } from '../../../src/DocumentIndexes/Application/Ports/Out/Gateways/document-index-execution.params.ts'
 import { DocumentIndexStatusEnum } from '../../../src/DocumentIndexes/Domain/Enums/document-index-status.enum.ts'
 import { ReserveDocumentForIndexingCommandHandler } from '../../../src/Documents/Application/Commands/reserve-document-for-indexing.command.handler.ts'
 import type { DocumentRepository } from '../../../src/Documents/Application/Ports/Out/Repositories/document.repository.ts'
-import { ActivateKnowledgeBaseDocumentIndexCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/activate-knowledge-base-document-index.command.handler.ts'
-import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBases/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
-import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBases/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
-import type { KnowledgeBaseDocumentActivationQueryObject } from '../../../src/KnowledgeBases/Application/QueryObjects/knowledge-base-document.query-object.ts'
+import { ActivateKnowledgeBaseDocumentIndexCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/activate-knowledge-base-document-index.command.handler.ts'
+import { ReserveKnowledgeBaseDocumentForIndexingCommandHandler } from '../../../src/KnowledgeBaseDocuments/Application/Commands/reserve-knowledge-base-document-for-indexing.command.handler.ts'
+import type { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocuments/Application/Ports/Out/Repositories/knowledge-base-document.repository.ts'
+import type { KnowledgeBaseDocumentActivationQO } from '../../../src/KnowledgeBaseDocuments/Application/QueryObjects/knowledge-base-document.query-object.ts'
 
 type ClaimJobDependencies = ConstructorParameters<typeof DispatchDocumentIndexingListener>
 const epoch = new Date('2020-01-01T00:00:00.000Z')
@@ -162,7 +162,7 @@ test('applies recovery, stale generation, activation and claim decisions through
     executionVerification: { lease_expires_at: epoch.toISOString() },
   })
   const discarded: string[] = []
-  const activations: KnowledgeBaseDocumentActivationQueryObject[] = []
+  const activations: KnowledgeBaseDocumentActivationQO[] = []
   const locks: string[] = []
   const recoveryEvents: string[] = []
   const recoveryTransactions: number[] = []

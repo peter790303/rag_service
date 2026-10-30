@@ -1,3 +1,10 @@
-import type { HybridRetrieveDTO } from '../DataTransferObjects/hybrid-retrieve.dto.ts'
-
-export type RetrieveKnowledgeBaseContentQuery = HybridRetrieveDTO
+export type RetrieveKnowledgeBaseContentQuery = {
+  projectId: string
+  queryText: string
+  queryVector?: number[]
+  embeddingModelId?: string
+  topK?: number
+  limit?: number
+  documentReference?: string
+  includeNonEffective?: boolean
+}

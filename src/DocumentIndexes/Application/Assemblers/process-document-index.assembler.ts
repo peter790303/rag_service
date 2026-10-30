@@ -1,21 +1,35 @@
-import { ChunkDocumentIndexRequiredException } from '../../Domain/Exceptions/chunk-document-index-required.exception.ts'
+import type { ReplaceIndexChunkCommand } from '../../../Chunks/Application/Commands/replace-index-chunk.command.ts'
+import type { MarkdownChunkPlan } from '../../../Chunks/Application/DataTransferObjects/markdown-chunk-plan.dto.ts'
+import { InvalidChunkReplacementTimestampException } from '../../../Chunks/Application/Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
+import { ChunkDocumentIndexRequiredException } from '../../../Chunks/Domain/Exceptions/chunk-document-index-required.exception.ts'
 import type { DocumentIndexingDeliveryDTO } from '../DataTransferObjects/document-indexing-delivery.dto.ts'
-import type { MarkdownChunkPlan } from '../DataTransferObjects/markdown-chunk-plan.dto.ts'
-import type { ReplaceIndexChunkInputDTO } from '../DataTransferObjects/replace-index-chunk-input.dto.ts'
-import { InvalidChunkReplacementTimestampException } from '../Exceptions/invalid-chunk-replacement-timestamp.exception.ts'
 
 export class ProcessDocumentIndexAssembler {
-  static toReplaceIndexChunkInputDTO(
+  static toReplaceIndexChunkCommand(
     job: DocumentIndexingDeliveryDTO,
     markdownChunkPlan: MarkdownChunkPlan,
     chunkEmbeddings: readonly number[][],
     now: Date,
-  ): ReplaceIndexChunkInputDTO {
+  ): ReplaceIndexChunkCommand {
     if (typeof job?.documentIndexId !== 'string' || !job.documentIndexId.trim())
       throw new ChunkDocumentIndexRequiredException()
 
     if (!(now instanceof Date) || !Number.isFinite(now.getTime())) throw new InvalidChunkReplacementTimestampException()
 
-    return { job, markdownChunkPlan, chunkEmbeddings, now }
+    return {
+      job: {
+        id: job.id,
+        knowledgeBaseId: job.knowledgeBaseId,
+        documentId: job.documentId,
+        documentIndexId: job.documentIndexId,
+        generation: job.generation,
+        attempts: job.attempts,
+        leaseToken: job.leaseToken,
+        leaseExpiresAt: job.leaseExpiresAt,
+      },
+      markdownChunkPlan,
+      chunkEmbeddings,
+      now,
+    }
   }
 }

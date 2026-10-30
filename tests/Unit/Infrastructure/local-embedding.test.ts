@@ -4,23 +4,23 @@ import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
-import { mapEmbeddingResponse } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Adapters/embedding-response.adapter.ts'
+import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
+import { mapEmbeddingResponse } from '../../../src/Shared/Infrastructure/External/Embedding/Adapters/embedding-response.adapter.ts'
 import {
   createTokenWindows,
   poolWindowVectors,
-} from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Adapters/local-embedding-vector.adapter.ts'
-import { LocalEmbeddingExecutionException } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Exceptions/local-embedding-execution.exception.ts'
-import { LocalEmbeddingRequestAbortedException } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Exceptions/local-embedding-request-aborted.exception.ts'
-import { LocalEmbeddingRequestTimedOutException } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Exceptions/local-embedding-request-timed-out.exception.ts'
-import { LocalEmbeddingSpecialTokensUnsupportedException } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Exceptions/local-embedding-special-tokens-unsupported.exception.ts'
-import { LocalEmbeddingTokenWindowCapacityException } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Exceptions/local-embedding-token-window-capacity.exception.ts'
-import { LocalEmbeddingTokenizerUnsupportedException } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Exceptions/local-embedding-tokenizer-unsupported.exception.ts'
-import { LocalEmbeddingVectorMagnitudeException } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Exceptions/local-embedding-vector-magnitude.exception.ts'
-import { LocalEmbeddingWindowVectorsException } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/Exceptions/local-embedding-window-vectors.exception.ts'
-import { acquireLocalEmbeddingCapacity } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/local-embedding-capacity.ts'
-import { executeLocalEmbedding } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/local-embedding-execution.ts'
-import { LocalEmbeddingClient } from '../../../src/DocumentIndexes/Infrastructure/External/Embedding/local-embedding.client.ts'
-import { KnowledgeEmbeddingUnavailableException } from '../../../src/KnowledgeBases/Application/Exceptions/knowledge-embedding-unavailable.exception.ts'
+} from '../../../src/Shared/Infrastructure/External/Embedding/Adapters/local-embedding-vector.adapter.ts'
+import { LocalEmbeddingExecutionException } from '../../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-execution.exception.ts'
+import { LocalEmbeddingRequestAbortedException } from '../../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-request-aborted.exception.ts'
+import { LocalEmbeddingRequestTimedOutException } from '../../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-request-timed-out.exception.ts'
+import { LocalEmbeddingSpecialTokensUnsupportedException } from '../../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-special-tokens-unsupported.exception.ts'
+import { LocalEmbeddingTokenWindowCapacityException } from '../../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-token-window-capacity.exception.ts'
+import { LocalEmbeddingTokenizerUnsupportedException } from '../../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-tokenizer-unsupported.exception.ts'
+import { LocalEmbeddingVectorMagnitudeException } from '../../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-vector-magnitude.exception.ts'
+import { LocalEmbeddingWindowVectorsException } from '../../../src/Shared/Infrastructure/External/Embedding/Exceptions/local-embedding-window-vectors.exception.ts'
+import { acquireLocalEmbeddingCapacity } from '../../../src/Shared/Infrastructure/External/Embedding/local-embedding-capacity.ts'
+import { executeLocalEmbedding } from '../../../src/Shared/Infrastructure/External/Embedding/local-embedding-execution.ts'
+import { LocalEmbeddingClient } from '../../../src/Shared/Infrastructure/External/Embedding/local-embedding.client.ts'
 
 const request = { model: 'original/model', revision: 'pinned', cacheDir: '/unused', texts: ['first'] }
 const workerUrl = new URL('../../Support/local-embedding-worker.fixture.js', import.meta.url)
@@ -69,7 +69,7 @@ test('embedding capacity admits one request at a time in arrival order', async (
 
 test('inference workers do not inherit host entry-point flags or NODE_OPTIONS preloads', async () => {
   const executionUrl = new URL(
-    '../../../src/DocumentIndexes/Infrastructure/External/Embedding/local-embedding-execution.js',
+    '../../../src/Shared/Infrastructure/External/Embedding/local-embedding-execution.js',
     import.meta.url,
   )
   const preloadUrl = new URL('../../Support/local-embedding-host-preload.fixture.js', import.meta.url)

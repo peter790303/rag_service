@@ -7,9 +7,9 @@ import type { DocumentRepository } from '../Ports/Out/Repositories/document.repo
 export class ReserveDocumentForIndexingCommandHandler implements ReserveDocumentForIndexingCommandHandlerContract {
   constructor(private readonly documents: DocumentRepository) {}
 
-  async execute(reserveDocumentForIndexingDTO: ReserveDocumentForIndexingCommand): Promise<Document | null> {
-    const documentIdQO = { documentId: reserveDocumentForIndexingDTO.documentId }
-    const document = reserveDocumentForIndexingDTO.skipLocked
+  async execute(reserveDocumentForIndexingCommand: ReserveDocumentForIndexingCommand): Promise<Document | null> {
+    const documentIdQO = { documentId: reserveDocumentForIndexingCommand.documentId }
+    const document = reserveDocumentForIndexingCommand.skipLocked
       ? await this.documents.lockByDocumentIdSkipLocked(documentIdQO)
       : await this.documents.lockByDocumentId(documentIdQO)
 

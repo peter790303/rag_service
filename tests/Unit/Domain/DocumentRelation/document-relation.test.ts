@@ -4,9 +4,9 @@ import { describe, it } from 'node:test'
 import {
   DocumentRelation,
   type DocumentRelationState,
-} from '../../../../src/Documents/Domain/Entities/document-relation.ts'
-import { DocumentRelationTypeEnum } from '../../../../src/Documents/Domain/Enums/document-relation-type.enum.ts'
-import { InvalidDocumentRelationStateException } from '../../../../src/Documents/Domain/Exceptions/invalid-document-relation-state.exception.ts'
+} from '../../../../src/DocumentRelations/Domain/Entities/document-relation.ts'
+import { DocumentRelationTypeEnum } from '../../../../src/DocumentRelations/Domain/Enums/document-relation-type.enum.ts'
+import { InvalidDocumentRelationStateException } from '../../../../src/DocumentRelations/Domain/Exceptions/invalid-document-relation-state.exception.ts'
 
 const relationState = (overrides: Partial<DocumentRelationState> = {}): DocumentRelationState => ({
   id: 'relation-1',

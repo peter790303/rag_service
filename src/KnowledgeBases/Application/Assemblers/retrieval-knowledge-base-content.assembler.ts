@@ -1,4 +1,4 @@
-import type { DocumentRelation } from '../../../Documents/Domain/Entities/document-relation.ts'
+import type { DocumentRelation } from '../../../DocumentRelations/Domain/Entities/document-relation.ts'
 import type {
   KnowledgeBaseRelationResolution,
   KnowledgeBaseRetrievalState,

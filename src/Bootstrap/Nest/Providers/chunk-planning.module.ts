@@ -1,26 +1,13 @@
 import { Module } from '@nestjs/common'
 
 import { KnowledgeServiceConfigModule } from './knowledge-service-config.module.ts'
-import { KNOWLEDGE_SERVICE_CONFIG, type KnowledgeServiceConfig } from '../../../../config/knowledge-service.config.ts'
-import { ChunkPlanningProvider } from '../../../DocumentIndexes/Application/Ports/Out/Gateways/chunk-planning-provider.ts'
-import { HostCliChunkPlanningClient } from '../../../DocumentIndexes/Infrastructure/External/ChunkPlanning/host-cli-chunk-planning.client.ts'
-import { HttpChunkPlanningClient } from '../../../DocumentIndexes/Infrastructure/External/ChunkPlanning/http-chunk-planning.client.ts'
+import { PlanMarkdownChunksQueryHandlerContract } from '../../../Chunks/Application/Contracts/plan-markdown-chunks.query.handler.contract.ts'
+import { ChunkPlanningProvider } from '../../../Chunks/Application/Ports/Out/Gateways/chunk-planning-provider.ts'
+import { chunkPlanningProviders } from '../../../Chunks/Infrastructure/Nest/Providers/chunk-planning.providers.ts'
 
 @Module({
   imports: [KnowledgeServiceConfigModule],
-  providers: [
-    HttpChunkPlanningClient,
-    HostCliChunkPlanningClient,
-    {
-      provide: ChunkPlanningProvider,
-      inject: [KNOWLEDGE_SERVICE_CONFIG, HostCliChunkPlanningClient, HttpChunkPlanningClient],
-      useFactory: (
-        config: KnowledgeServiceConfig,
-        cli: HostCliChunkPlanningClient,
-        http: HttpChunkPlanningClient,
-      ): ChunkPlanningProvider => (config.chunkingTransport === 'http' ? http : cli),
-    },
-  ],
-  exports: [ChunkPlanningProvider],
+  providers: chunkPlanningProviders,
+  exports: [ChunkPlanningProvider, PlanMarkdownChunksQueryHandlerContract],
 })
 export class ChunkPlanningModule {}
