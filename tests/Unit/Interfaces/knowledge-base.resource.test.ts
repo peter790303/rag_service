@@ -16,7 +16,10 @@ import { DocumentRelationTypeEnum } from '../../../src/DocumentRelations/Domain/
 import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/document-source-type.enum.ts'
 import { PruneKnowledgeBaseDocumentsResource } from '../../../src/KnowledgeBaseDocuments/Interfaces/Nest/Resources/prune-knowledge-base-documents.resource.ts'
 import { RetrievalKnowledgeBaseContentAssembler } from '../../../src/KnowledgeBases/Application/Assemblers/retrieval-knowledge-base-content.assembler.ts'
-import { HybridKnowledgeRetrievalResource } from '../../../src/KnowledgeBases/Interfaces/Nest/Resources/hybrid-knowledge-retrieval.resource.ts'
+import {
+  exhaustiveRetrievePage,
+  HybridKnowledgeRetrievalResource,
+} from '../../../src/KnowledgeBases/Interfaces/Nest/Resources/hybrid-knowledge-retrieval.resource.ts'
 import { createRestoredKnowledgeBaseDocumentFixture } from '../Application/document-index-lifecycle.fixture.ts'
 import { createRetrievalKnowledgeBaseContentInputFixture } from '../Application/retrieval-knowledge-base-content.fixture.ts'
 import { createRetrievalChunkFixture } from '../Application/retrieve-knowledge-base-content.use-case.fixtures.ts'
@@ -279,6 +282,7 @@ test('retrieval resource whitelists entity and evidence boundaries, preserving d
         content: 'Guide content',
       },
     ],
+    truncated: false,
   }
   const resource = HybridKnowledgeRetrievalResource.toHybridKnowledgeRetrievalResource(knowledgeBase)
 
@@ -305,7 +309,7 @@ test('retrieval resource keeps UTC ISO output when the index date uses localized
 })
 
 test('retrieval resource preserves empty result collections for absent knowledge bases and evidence', () => {
-  const expected = { matches: [], fullContentDocuments: [] }
+  const expected = { matches: [], fullContentDocuments: [], truncated: false }
   assert.deepEqual(HybridKnowledgeRetrievalResource.toHybridKnowledgeRetrievalResource(null), expected)
   assert.deepEqual(
     HybridKnowledgeRetrievalResource.toHybridKnowledgeRetrievalResource(
@@ -313,6 +317,27 @@ test('retrieval resource preserves empty result collections for absent knowledge
     ),
     expected,
   )
+})
+
+test('exhaustive retrieve sorts stably and marks a capped page as truncated', () => {
+  const ordered = exhaustiveRetrievePage([
+    { chunk: { source: 'obsidian', documentReference: 'b.md', chunkIndex: 0, id: 'z' } },
+    { chunk: { source: 'repository', documentReference: 'a.md', chunkIndex: 1, id: 'b' } },
+    { chunk: { source: 'repository', documentReference: 'a.md', chunkIndex: 0, id: 'a' } },
+  ])
+  assert.deepEqual(
+    ordered.matches.map(({ chunk }) => chunk.id),
+    ['z', 'a', 'b'],
+  )
+  assert.equal(ordered.truncated, false)
+
+  const capped = exhaustiveRetrievePage(
+    Array.from({ length: 1001 }, (_, chunkIndex) => ({
+      chunk: { source: 'repository', documentReference: 'a.md', chunkIndex, id: `chunk-${chunkIndex}` },
+    })),
+  )
+  assert.equal(capped.matches.length, 1000)
+  assert.equal(capped.truncated, true)
 })
 
 test('index, retry, and prune resources preserve status results and omit undeclared fields', () => {

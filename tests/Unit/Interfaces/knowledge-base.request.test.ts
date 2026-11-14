@@ -59,13 +59,14 @@ test('optional retrieval fields reject null instead of bypassing their declared 
     limit: null,
     documentReference: null,
     includeNonEffective: null,
+    exhaustive: null,
   })
 
   assert.deepEqual(
     validateSync(request)
       .map((error) => error.property)
       .sort(),
-    ['documentReference', 'embeddingModelId', 'includeNonEffective', 'limit', 'queryVector', 'topK'],
+    ['documentReference', 'embeddingModelId', 'exhaustive', 'includeNonEffective', 'limit', 'queryVector', 'topK'],
   )
 })
 
@@ -157,6 +158,7 @@ test('retrieval DTO preserves declared optional values and omits undefined or un
     limit: undefined,
     documentReference: undefined,
     includeNonEffective: undefined,
+    exhaustive: undefined,
     internalField: 'hidden',
   })
 
@@ -170,6 +172,7 @@ test('retrieval DTO preserves declared optional values and omits undefined or un
     limit: 2,
     documentReference: '',
     includeNonEffective: false,
+    exhaustive: true,
   })
   const expected = {
     projectId: 'project-1',
@@ -180,6 +183,7 @@ test('retrieval DTO preserves declared optional values and omits undefined or un
     limit: 2,
     documentReference: '',
     includeNonEffective: false,
+    exhaustive: true,
   }
 
   assert.deepEqual(request.toDTO(), expected)

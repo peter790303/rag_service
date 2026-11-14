@@ -36,6 +36,8 @@ export class HybridKnowledgeRetrievalRequest implements HybridRetrieveDTO {
 
   @ValidateIf(isPresent) @IsBoolean() includeNonEffective?: boolean
 
+  @ValidateIf(isPresent) @IsBoolean() exhaustive?: boolean
+
   toDTO(): HybridRetrieveDTO {
     const requestDTO: HybridRetrieveDTO = {
       projectId: this.projectId,
@@ -53,6 +55,8 @@ export class HybridKnowledgeRetrievalRequest implements HybridRetrieveDTO {
     if (this.documentReference !== undefined) requestDTO.documentReference = this.documentReference
 
     if (this.includeNonEffective !== undefined) requestDTO.includeNonEffective = this.includeNonEffective
+
+    if (this.exhaustive !== undefined) requestDTO.exhaustive = this.exhaustive
 
     return requestDTO
   }

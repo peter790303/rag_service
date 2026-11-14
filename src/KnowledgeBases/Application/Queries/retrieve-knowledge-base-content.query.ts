@@ -7,4 +7,5 @@ export type RetrieveKnowledgeBaseContentQuery = {
   limit?: number
   documentReference?: string
   includeNonEffective?: boolean
+  exhaustive?: boolean
 }

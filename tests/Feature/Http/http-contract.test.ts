@@ -55,7 +55,7 @@ import { createRestoredKnowledgeBaseDocumentFixture } from '../../Unit/Applicati
 let authenticated = true
 let serviceError: Error | null = null
 let onIndexingRequested: ((event: DocumentIndexingRequestedEvent) => Promise<void>) | null = null
-const retrievalResponse = { matches: [], fullContentDocuments: [] }
+const retrievalResponse = { matches: [], fullContentDocuments: [], truncated: false }
 const indexResponse: DocumentIndexRequestResult = {
   documentId: 'document-1',
   revisionId: 'revision-1',

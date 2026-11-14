@@ -86,8 +86,10 @@ export class RetrieveKnowledgeBaseContentQueryHandler {
     const queryEmbeddingModelId = retrievalRequest.queryVector
       ? retrievalRequest.embeddingModelId
       : this.embeddingProvider.modelId
-    const retrievalMatchLimit = retrievalRequest.topK ?? retrievalRequest.limit ?? 10
-    const candidateLimit = Math.min(200, Math.max(20, retrievalMatchLimit * 4))
+    const retrievalMatchLimit = retrievalRequest.exhaustive
+      ? 1001
+      : (retrievalRequest.topK ?? retrievalRequest.limit ?? 10)
+    const candidateLimit = retrievalRequest.exhaustive ? 1001 : Math.min(200, Math.max(20, retrievalMatchLimit * 4))
     const {
       snapshot,
       candidates,
