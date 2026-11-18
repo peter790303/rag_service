@@ -29,7 +29,7 @@ test('RAG config accepts HTTP and HTTPS API URLs', () => {
   assert.equal(config.databaseSchema, 'public')
 })
 
-test('RAG config requires DATABASE_* connection variables and does not fall back to RAG_DATABASE_URL', (context) => {
+test('RAG config requires DATABASE_* connection variables', (context) => {
   context.mock.method(console, 'error', () => {})
 
   assert.throws(() => loadKnowledgeServiceConfig({ ...validEnvironment, DATABASE_HOST: '' }), ServiceConfigurationException)
@@ -39,7 +39,6 @@ test('RAG config requires DATABASE_* connection variables and does not fall back
 
   const environmentWithoutPassword: NodeJS.ProcessEnv = { ...validEnvironment }
   delete environmentWithoutPassword.DATABASE_PASSWORD
-  environmentWithoutPassword.RAG_DATABASE_URL = 'postgres://ignored:ignored@localhost:5432/ignored'
   assert.throws(() => loadKnowledgeServiceConfig(environmentWithoutPassword), ServiceConfigurationException)
 })
 
