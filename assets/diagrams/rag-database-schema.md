@@ -1,8 +1,8 @@
 # RAG Database Schema
 
-> 定義核對：2026-10-19；程式基準 `71f401aa35e878fab54ad4dd8bfe7aaea552a265`。以已註冊 migrations 與 TypeORM Model 為依據，包含 **10 張表、104 個欄位、14 組實體 FK**。此處未驗證任何執行環境的 migration 套用狀態。
+> 定義核對：2026-11-18，程式基準 `22350408f2897c9d759540d503913aefe8407fa4`。以已註冊 migrations 與 TypeORM Model 為依據，包含 **10 張表、104 個欄位、14 組實體 FK**。此處未驗證任何執行環境的 migration 套用狀態。
 
-[互動結構圖](rag-database-schema.html) · [SVG 圖](rag-database-schema.svg)
+[互動矩陣版](rag-database-schema.html) · [外鍵關聯矩陣（SVG）](rag-database-schema.svg)
 
 ## 讀取與責任邊界
 
@@ -178,7 +178,7 @@
 | `lease_token`            | `uuid`        | NULL · CHECK                     | running 必須有值；queued 必須 NULL                        |
 | `lease_expires_at`       | `timestamptz` | NULL                             | 獨立租約到期欄；初始 migration 0008 建立；允許 NULL         |
 | `idempotency_key`        | `text`        | UNIQUE · NULL                    | 非 NULL key 不得重複                                      |
-| `retry_of_failed_job_id` | `uuid`        | NULL · 複合 FK                   | 手動重試的失敗紀錄來源                                    |
+| `retry_of_failed_job_id` | `uuid`        | NULL · 複合 FK                   | 可參照失敗紀錄，現行重試寫入 NULL                                    |
 | `payload`                | `jsonb`       | NOT NULL · CHECK object          | 工作輸入                                                  |
 | `execution_state`        | `jsonb`       | NULL · CHECK object              | 可選的執行進度或結果狀態                                  |
 | `execution_verification` | `jsonb`       | NULL · CHECK object              | running 租約驗證；含 claim_token 與 lease_expires_at 字串 |
@@ -198,7 +198,7 @@
 
 ### failed_jobs — Infrastructure 最終失敗紀錄
 
-封存已達執行上限的失敗與重試輸入；保留歷史，供人工重試流程使用。
+封存已達執行上限的失敗與重試輸入，供人工重試使用。成功排入重試工作時移除原失敗紀錄。
 
 | 欄位                | 型別          | 約束／預設值                        | 意義                           |
 | ------------------- | ------------- | ----------------------------------- | ------------------------------ |
@@ -214,7 +214,7 @@
 | `blocked_reasons`   | `jsonb`       | NOT NULL · DEFAULT [] · CHECK array | 阻塞原因列表                   |
 | `retry_payload`     | `jsonb`       | NOT NULL · CHECK object             | 重新派送所需輸入               |
 | `failed_at`         | `timestamptz` | NOT NULL · DEFAULT now()            | 最終失敗時間                   |
-| `retried_at`        | `timestamptz` | NULL                                | 已使用人工重試入口的時間       |
+| `retried_at`        | `timestamptz` | NULL                                | 可記錄重試時間，現行重試刪除此列       |
 | `created_at`        | `timestamptz` | NOT NULL · DEFAULT now()            | 建立時間                       |
 | `updated_at`        | `timestamptz` | NOT NULL · DEFAULT now()            | 更新時間；後續更新由寫入端維護 |
 
@@ -246,6 +246,18 @@
 
 ## 實體 FK
 
+| 參照表 | 箭頭指向的資料表 |
+| --- | --- |
+| `document_revisions` | `documents` |
+| `document_indexes` | `document_revisions` |
+| `knowledge_base_documents` | `knowledge_bases`、`documents`、`document_indexes` |
+| `chunks` | `document_indexes` |
+| `document_relations` | `document_indexes`、`documents` |
+| `jobs` | `knowledge_bases`、`knowledge_base_documents`、`document_indexes`、`failed_jobs` |
+| `failed_jobs` | `knowledge_bases`、`document_indexes` |
+
+`document_index_success_receipts` 是獨立的成功收據表，沒有實體外鍵關聯。
+
 箭頭由參照表指向被參照表；複合 FK 同時約束專案、文件或索引的範圍。所有 FK 均為 `ON DELETE RESTRICT`。
 
 | 參照欄位                                                                          | 目標欄位                                                             |
@@ -271,7 +283,7 @@
 - queued 領取後進入 running 並建立租約；執行次數從 1 到 4，亦即首次執行加最多 3 次自動重試。
 - 前 3 次失敗重新排程同一 jobs.id；第 4 次最終失敗以交易封存 failed_jobs 並移除 jobs；成功啟用時在同一交易寫入成功收據及移除 jobs。
 - 成功收據保存當時 project_id 及工作目標，允許完成後繼續查詢狀態；後續世代與成員移除不改寫歷史成功。尚未定義收據清理期限，需評估持續累積的容量。
-- 人工重試建立新工作，attempts 從 0 開始，retry_of_failed_job_id 保留來源；失敗紀錄保留歷史。一次性重試與世代驗證屬於應用政策。
+- 人工重試在同一交易建立新工作並刪除原 failed_jobs 紀錄。新工作的 attempts 為 0，retry_of_failed_job_id 寫入 NULL，API 回應包含原失敗紀錄 ID。
 - 持久化派送、交易提交後交付、租約驗證、冪等與重試需由流程共同維護；FK / CHECK 本身不保證整個工作流程完成。
 
 ## 目前限制與來源
@@ -296,6 +308,3 @@
   [Chunks](../../src/Chunks/Infrastructure/Persistence/TypeORM/Models)、
   [DocumentRelations](../../src/DocumentRelations/Infrastructure/Persistence/TypeORM/Models)
 - [DataSource composition](../../src/Bootstrap/Persistence/TypeORM/DataSource.ts)
-- [當前狀態與待辦](/Users/xiang/Documents/Worker/BackEnd/Rag-Service/CONTEXT.md#驗收邊界與後續工作)
-- [ORM 與向量查詢例外](/Users/xiang/Documents/Worker/BackEnd/Rag-Service/CODING_STANDARDS.md#orm-與向量查詢例外)
-- [RAG Hybrid 全文 SQL 例外](/Users/xiang/Documents/Worker/BackEnd/Rag-Service/CODING_STANDARDS.md#rag-hybrid-全文匹配與相關度排名)

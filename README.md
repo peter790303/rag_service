@@ -40,6 +40,14 @@ API 接收請求與提供結果，背景程序處理索引工作及相關回收�
 對話管理、任務規劃與回答生成由使用此服務的應用程式負責。
 本服務提供知識上下文，不直接生成對話答案。
 
+## 資料庫結構
+
+[各表外鍵總覽](assets/diagrams/rag-database-schema.md#實體-fk) · [欄位與約束說明](assets/diagrams/rag-database-schema.md) · [互動矩陣版](assets/diagrams/rag-database-schema.html)（下載 HTML 後以瀏覽器開啟）
+
+左側列出來源表，上方列出被參照表。圓點代表單欄外鍵，菱形代表複合外鍵。
+
+[![RAG 資料庫結構圖](assets/diagrams/rag-database-schema.svg)](assets/diagrams/rag-database-schema.svg)
+
 ## Obsidian 索引維護
 
 ```bash
