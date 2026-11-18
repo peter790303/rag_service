@@ -4,3 +4,4 @@ dist/
 coverage/
 .local/
 .claude-flow/
+.cache/*
