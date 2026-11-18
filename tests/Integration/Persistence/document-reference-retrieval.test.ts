@@ -32,6 +32,7 @@ import { EmbeddingProvider } from '../../../src/Shared/Application/Ports/Out/Gat
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 const lexicalFormatter = new LexicalSearchQueryAdapter()
 const profiles = {
@@ -81,7 +82,7 @@ class TransactionInspectingKnowledgeBaseRepository extends KnowledgeBaseReposito
 
 test(
   'document reference restricts vector candidates before the retrieval limit',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async (context) => {
     const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const persistenceTransaction = new PersistenceTransaction(dataSource, retrievalDataSource)

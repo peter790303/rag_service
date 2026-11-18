@@ -14,10 +14,11 @@ import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocum
 import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 test(
   'knowledgeBaseDocument full writes preserve false and zero while a stale detach preserves later configuration writes',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, cleanup } = await createPersistenceTestDatabase()
     const transaction = new PersistenceTransaction(dataSource)
@@ -123,7 +124,7 @@ test(
 
 test(
   'document source upserts retain persisted identity and creation time while applying explicit title operations',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, cleanup } = await createPersistenceTestDatabase()
     const transaction = new PersistenceTransaction(dataSource)

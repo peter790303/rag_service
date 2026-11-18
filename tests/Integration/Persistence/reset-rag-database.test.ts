@@ -16,10 +16,11 @@ import {
   type ImportManifestEntry,
 } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/reset-rag-database.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 test(
   'RAG reset deletes indexed source records while preserving schema migrations and unrelated tables',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { schema, dataSource, cleanup } = await createPersistenceTestDatabase()
 
@@ -214,7 +215,7 @@ test(
 
 test(
   'RAG reset aborts without deleting data when a queued job becomes running during the manifest snapshot',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, cleanup } = await createPersistenceTestDatabase()
 

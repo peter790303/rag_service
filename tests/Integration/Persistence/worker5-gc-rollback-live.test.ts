@@ -47,6 +47,7 @@ import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocum
 import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 const targetSchema = 'codex_live_20261019_w5_gc'
 const evidencePath = process.env.RAG_TODO_GC_EVIDENCE_PATH
@@ -65,8 +66,8 @@ const tableNames = [
 type RowCounts = Record<(typeof tableNames)[number], number>
 
 test('GC rollback restores collected indexes and a retry collects only in the dedicated schema', async (context) => {
-  if (!process.env.RAG_DATABASE_URL) {
-    context.skip('RAG_DATABASE_URL is required for the isolated live GC check')
+  if (!hasKnowledgeDatabaseEnv()) {
+    context.skip('DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER and DATABASE_PASSWORD are required for the isolated live GC check')
 
     return
   }

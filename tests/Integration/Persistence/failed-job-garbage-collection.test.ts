@@ -41,10 +41,11 @@ import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastruct
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { DocumentIndexPersistenceFixture } from '../../Support/document-index-persistence.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 test(
   'expired failed jobs are collected only when no retry job references them',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const persistenceTransaction = new PersistenceTransaction(dataSource)

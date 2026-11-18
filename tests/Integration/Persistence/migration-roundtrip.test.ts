@@ -14,6 +14,7 @@ import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/docu
 import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
 import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 const tableExistence = (queryRunner: QueryRunner, tablePaths: string[]): Promise<boolean[]> =>
   firstValueFrom(
@@ -25,7 +26,7 @@ const tableExistence = (queryRunner: QueryRunner, tablePaths: string[]): Promise
 
 test(
   'reversible migrations roll back while forward-only effects persist across reapply',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { schema, dataSource, cleanup } = await createPersistenceTestDatabase()
     const queryRunner = dataSource.createQueryRunner()

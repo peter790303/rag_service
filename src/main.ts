@@ -11,7 +11,7 @@ const bootstrap = async (): Promise<void> => {
   const httpApplication = await NestFactory.create(AppModule)
   httpApplication.useGlobalFilters(new ApplicationErrorFilter())
   httpApplication.useGlobalPipes(createGlobalValidationPipe())
-  await httpApplication.listen(config.port)
+  await httpApplication.listen(config.port, config.host)
 }
 
 void bootstrap()

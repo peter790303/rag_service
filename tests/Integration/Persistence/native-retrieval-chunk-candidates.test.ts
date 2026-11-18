@@ -21,6 +21,7 @@ import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/docu
 import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 const createEmbeddingVectorFixture = (x: number, y: number): number[] => [x, y, ...Array<number>(382).fill(0)]
 const createChunkIdFixture = (ordinal: number): string => `20000000-0000-4000-8000-${String(ordinal).padStart(12, '0')}`
@@ -144,7 +145,7 @@ const createCandidateFixture = async () => {
 
 test(
   'repository writes persist repeated lexical terms with their source token positions',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, cleanup, persistenceTransaction, chunkRepository, scopeA, scopeB } =
       await createCandidateFixture()
@@ -240,7 +241,7 @@ test(
 
 test(
   'native PostgreSQL tsvector persistence accepts escaped lexemes and enforces position and lexeme bounds',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, cleanup, scopeA } = await createCandidateFixture()
     const formatter = new LexicalSearchQueryAdapter()
@@ -308,7 +309,7 @@ test(
 
 test(
   'native semantic candidate rankings share the TypeORM read-only snapshot and retain connection ownership',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async (context) => {
     const {
       dataSource,
@@ -527,7 +528,7 @@ test(
 
 test(
   'public lexical candidate rankings retain database top-K, scores, complete projections and snapshot requirements',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async (context) => {
     const {
       dataSource,

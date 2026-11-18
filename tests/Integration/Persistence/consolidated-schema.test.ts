@@ -6,10 +6,11 @@ import { DocumentSourceTypeEnum } from '../../../src/Documents/Domain/Enums/docu
 import { DocumentModel } from '../../../src/Documents/Infrastructure/Persistence/TypeORM/Models/document.model.ts'
 import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 test(
   'fresh baseline enforces project identity, allows duplicate display names and persists nullable current titles',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { schema, dataSource, cleanup } = await createPersistenceTestDatabase()
     const runner = dataSource.createQueryRunner()

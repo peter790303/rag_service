@@ -9,6 +9,7 @@ function invalidConfiguration(diagnostic: string): never {
 
 export interface KnowledgeServiceConfig {
   port: number
+  host: string
   databaseUrl: string
   databaseSchema: string
   embeddingTransport: 'local' | 'http'
@@ -37,26 +38,79 @@ export interface KnowledgeServiceConfig {
 export const KNOWLEDGE_SERVICE_CONFIG = Symbol('RAG_CONFIG')
 
 export interface KnowledgeDatabaseConfig {
+  host: string
+  port: number
+  database: string
+  username: string
+  password: string
   databaseUrl: string
   databaseSchema: string
 }
 
+const toPostgresConnectionUrl = (
+  host: string,
+  port: number,
+  database: string,
+  username: string,
+  password: string,
+): string => {
+  const connectionUrl = new URL('postgres://127.0.0.1/placeholder')
+  connectionUrl.hostname = host
+  connectionUrl.port = String(port)
+  connectionUrl.username = username
+  connectionUrl.password = password
+  connectionUrl.pathname = `/${database}`
+
+  return connectionUrl.toString()
+}
+
+export const hasKnowledgeDatabaseEnv = (env: NodeJS.ProcessEnv = process.env): boolean =>
+  Boolean(
+    env.DATABASE_HOST?.trim() &&
+      env.DATABASE_PORT &&
+      env.DATABASE_NAME?.trim() &&
+      env.DATABASE_USER?.trim() &&
+      env.DATABASE_PASSWORD !== undefined,
+  )
+
 export const loadKnowledgeDatabaseConfig = (env: NodeJS.ProcessEnv = process.env): KnowledgeDatabaseConfig => {
-  const databaseUrl = env.RAG_DATABASE_URL?.trim()
+  const host = env.DATABASE_HOST?.trim()
+  const rawPort = env.DATABASE_PORT
+  const port = Number(rawPort)
+  const database = env.DATABASE_NAME?.trim()
+  const username = env.DATABASE_USER?.trim()
+  const password = env.DATABASE_PASSWORD
+  const schema = env.DATABASE_SCHEMA?.trim()
 
-  if (!databaseUrl) invalidConfiguration('RAG_DATABASE_URL is required')
-
-  let parsedDatabaseUrl: URL
-  try {
-    parsedDatabaseUrl = new URL(databaseUrl)
-  } catch {
-    invalidConfiguration('RAG_DATABASE_URL must be a valid URL')
+  if (
+    !host ||
+    !database ||
+    !username ||
+    password === undefined ||
+    rawPort === undefined ||
+    rawPort.trim() === '' ||
+    !/^\d+$/.test(rawPort) ||
+    port < 1 ||
+    port > 65535
+  ) {
+    invalidConfiguration(
+      'DATABASE_HOST, DATABASE_PORT, DATABASE_NAME, DATABASE_USER and DATABASE_PASSWORD are required',
+    )
   }
 
-  if (!['postgres:', 'postgresql:'].includes(parsedDatabaseUrl.protocol))
-    invalidConfiguration('RAG_DATABASE_URL must use PostgreSQL')
+  if (schema !== undefined && schema !== '' && !/^[a-z_][a-z0-9_]*$/.test(schema)) {
+    invalidConfiguration('DATABASE_SCHEMA must be a lowercase PostgreSQL schema identifier')
+  }
 
-  return { databaseUrl, databaseSchema: env.RAG_DB_SCHEMA?.trim() || 'public' }
+  return {
+    host,
+    port,
+    database,
+    username,
+    password,
+    databaseUrl: toPostgresConnectionUrl(host, port, database, username, password),
+    databaseSchema: schema || 'public',
+  }
 }
 
 const positiveInteger = (name: string, candidateValue: string | undefined, fallback: number): number => {
@@ -155,8 +209,13 @@ export const loadKnowledgeServiceConfig = (env: NodeJS.ProcessEnv = process.env)
     invalidConfiguration('RAG_SERVICE_AUTH_SECRET must contain at least 32 characters')
   }
 
+  const host = env.RAG_BIND_ADDRESS?.trim() ?? ''
+
+  if (!host) invalidConfiguration('RAG_BIND_ADDRESS is required')
+
   return {
     port: positiveInteger('PORT', env.PORT, 30700),
+    host,
     databaseUrl,
     databaseSchema,
     embeddingTransport,

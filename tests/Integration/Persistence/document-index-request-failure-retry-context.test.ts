@@ -4,7 +4,7 @@ import { test } from 'node:test'
 
 import { concatMap, firstValueFrom, from, toArray } from 'rxjs'
 
-import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
+import { hasKnowledgeDatabaseEnv, type KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
 import { ReplaceIndexChunkCommandHandler } from '../../../src/Chunks/Application/Commands/replace-index-chunk.command.handler.ts'
 import { PlanMarkdownChunksQueryHandlerContract } from '../../../src/Chunks/Application/Contracts/plan-markdown-chunks.query.handler.contract.ts'
 import { ChunkModel } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
@@ -69,6 +69,7 @@ import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 const config: KnowledgeServiceConfig = {
   port: 30700,
+  host: '127.0.0.1',
   databaseUrl: 'postgres://unused',
   databaseSchema: 'public',
   embeddingModel: 'integration-test-model',
@@ -268,7 +269,7 @@ const createArchivedRequest = async (
 test(
   'persisted request → terminal archive → manual retry preserves the source context',
   {
-    skip: !process.env.RAG_DATABASE_URL,
+    skip: !hasKnowledgeDatabaseEnv(),
   },
   async (t) => {
     await firstValueFrom(
@@ -328,7 +329,7 @@ test(
 
 test(
   'retry failed jobs command queues an eligible failure once and reports it skipped on the next run',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const fixture = await createArchivedRequest({ source: 'repository' })
 
@@ -369,7 +370,7 @@ test(
 
 test(
   'retry removes the failed job only when enqueue and archive removal commit together',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const fixture = await createArchivedRequest({ source: 'repository' })
 
@@ -393,7 +394,7 @@ test(
 
 test(
   'manual retry runs through the process listener and persists chunks and vectors before READY',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const fixture = await createArchivedRequest({ source: 'repository' })
 
@@ -485,7 +486,7 @@ test(
 test(
   'persisted manual retry rejects context drift, source drift and invalid archived input',
   {
-    skip: !process.env.RAG_DATABASE_URL,
+    skip: !hasKnowledgeDatabaseEnv(),
   },
   async (t) => {
     await firstValueFrom(
@@ -548,7 +549,7 @@ test(
 
 test(
   'persisted retry rolls back a sentinel write when the locked revision disappears',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     let revisionReads = 0
     let sentinelObservedInTransaction = false

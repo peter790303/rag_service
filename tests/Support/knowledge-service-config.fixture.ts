@@ -4,6 +4,7 @@ export const createKnowledgeServiceConfigFixture = (
   overrides: Partial<KnowledgeServiceConfig> = {},
 ): KnowledgeServiceConfig => ({
   port: 30700,
+  host: '127.0.0.1',
   databaseUrl: 'postgresql://unused@localhost/unused',
   databaseSchema: 'public',
   embeddingModel: 'test-model',

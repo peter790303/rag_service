@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { createHash, randomUUID } from 'node:crypto'
 import { test } from 'node:test'
 
-import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
+import { hasKnowledgeDatabaseEnv, type KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
 import { CollectIndexChunkGarbageCommandHandler } from '../../../src/Chunks/Application/Commands/collect-index-chunk-garbage.command.handler.ts'
 import { ChunkModel } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
 import { ChunkRepository } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
@@ -70,6 +70,7 @@ import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 const config: KnowledgeServiceConfig = {
   port: 30700,
+  host: '127.0.0.1',
   databaseUrl: 'postgres://unused',
   databaseSchema: 'public',
   embeddingModel: 'integration-test-model',
@@ -119,7 +120,7 @@ const failureDecision = (
 
 test(
   'job failure lifecycle: 3 retries then terminal archive, followed by manual retry',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const persistenceTransaction = new PersistenceTransaction(dataSource)
@@ -462,7 +463,7 @@ test(
 
 test(
   'knowledgeBaseDocument prune and garbage collection lifecycle in isolated schema',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const persistenceTransaction = new PersistenceTransaction(dataSource)

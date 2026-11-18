@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import { In } from 'typeorm'
 
 import { CHUNKING_PROFILE_VERSION, RELATION_PROFILE_VERSION } from '../../../config/chunk-planning-profile.config.ts'
-import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
+import { hasKnowledgeDatabaseEnv, type KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
 import { CollectIndexChunkGarbageCommandHandler } from '../../../src/Chunks/Application/Commands/collect-index-chunk-garbage.command.handler.ts'
 import { ReplaceIndexChunkCommandHandler } from '../../../src/Chunks/Application/Commands/replace-index-chunk.command.handler.ts'
 import { ChunkModel } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
@@ -75,6 +75,7 @@ import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 const config: KnowledgeServiceConfig = {
   port: 30700,
+  host: '127.0.0.1',
   databaseUrl: 'postgres://unused',
   databaseSchema: 'public',
   embeddingModel: 'integration-test-model',
@@ -98,7 +99,7 @@ const config: KnowledgeServiceConfig = {
 
 test(
   'requesting an already active ready index reuses it without a new generation or job',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const persistenceTransaction = new PersistenceTransaction(dataSource)

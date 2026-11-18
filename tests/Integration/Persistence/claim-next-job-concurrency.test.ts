@@ -4,7 +4,7 @@ import { test } from 'node:test'
 
 import type { DataSource } from 'typeorm'
 
-import type { KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
+import { hasKnowledgeDatabaseEnv, type KnowledgeServiceConfig } from '../../../config/knowledge-service.config.ts'
 import { ReplaceIndexChunkCommandHandler } from '../../../src/Chunks/Application/Commands/replace-index-chunk.command.handler.ts'
 import { ChunkModel } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Models/chunk.model.ts'
 import { ChunkRepository } from '../../../src/Chunks/Infrastructure/Persistence/TypeORM/Repositories/chunk.repository.ts'
@@ -53,6 +53,7 @@ const lexicalFormatter = new LexicalSearchQueryAdapter()
 
 const config: KnowledgeServiceConfig = {
   port: 30700,
+  host: '127.0.0.1',
   databaseUrl: 'postgres://unused',
   databaseSchema: 'public',
   embeddingModel: 'integration-test-model',
@@ -74,7 +75,7 @@ const config: KnowledgeServiceConfig = {
   serviceAuthSecret: 'integration-test-secret',
 }
 
-test('concurrent workers claim a queued job exactly once', { skip: !process.env.RAG_DATABASE_URL }, async () => {
+test('concurrent workers claim a queued job exactly once', { skip: !hasKnowledgeDatabaseEnv() }, async () => {
   const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
 
   try {
@@ -927,7 +928,7 @@ async function createReadyIndexReuseFixture(dataSource: DataSource) {
 
 test(
   'shared READY activation preserves nonzero job attempts in its success receipt',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, cleanup } = await createPersistenceTestDatabase()
 
@@ -968,7 +969,7 @@ test(
 
 test(
   'shared READY activation rolls back a saved receipt when queued-job CAS deletion fails',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, cleanup } = await createPersistenceTestDatabase()
 
