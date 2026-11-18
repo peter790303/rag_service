@@ -6,11 +6,29 @@ import type {
   KnowledgeBaseRetrievalRelation,
 } from '../../../Domain/ValueObjects/knowledge-base-retrieval.ts'
 
+type StableRetrievedMatch = {
+  chunk: { source: string; documentReference: string; chunkIndex: number; id: string }
+}
+
+const compareText = (left: string, right: string): number => (left < right ? -1 : left > right ? 1 : 0)
+
+export const exhaustiveRetrievePage = <TMatch extends StableRetrievedMatch>(matches: readonly TMatch[]) => {
+  const ordered = [...matches].sort(
+    (left, right) =>
+      compareText(left.chunk.source, right.chunk.source) ||
+      compareText(left.chunk.documentReference, right.chunk.documentReference) ||
+      left.chunk.chunkIndex - right.chunk.chunkIndex ||
+      compareText(left.chunk.id, right.chunk.id),
+  )
+
+  return { matches: ordered.slice(0, 1000), truncated: ordered.length > 1000 }
+}
+
 export class HybridKnowledgeRetrievalResource {
-  static toHybridKnowledgeRetrievalResource(knowledgeBase: KnowledgeBase | null) {
+  static toHybridKnowledgeRetrievalResource(knowledgeBase: KnowledgeBase | null, exhaustive = false) {
     const retrieval = knowledgeBase?.retrieval
 
-    if (knowledgeBase === null || !retrieval) return { matches: [], fullContentDocuments: [] }
+    if (knowledgeBase === null || !retrieval) return { matches: [], fullContentDocuments: [], truncated: false }
 
     const matches = retrieval.matches.map((match) =>
       HybridKnowledgeRetrievalResource.toRetrievalMatchResource(knowledgeBase.projectId, match),
@@ -19,7 +37,13 @@ export class HybridKnowledgeRetrievalResource {
       HybridKnowledgeRetrievalResource.toRetrievalFullContentDocumentResource(knowledgeBase.projectId, document),
     )
 
-    return { matches, fullContentDocuments }
+    if (exhaustive) {
+      const page = exhaustiveRetrievePage(matches)
+
+      return { ...page, fullContentDocuments }
+    }
+
+    return { matches, fullContentDocuments, truncated: false }
   }
 
   private static toRetrievalMatchResource(projectId: string, match: KnowledgeBaseRetrievalMatch) {

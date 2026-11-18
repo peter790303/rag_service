@@ -6,12 +6,13 @@ import { tmpdir } from 'node:os'
 import { resolve } from 'node:path'
 import { test } from 'node:test'
 
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 import { JobModel } from '../../../src/DocumentIndexes/Infrastructure/Persistence/TypeORM/Models/job.model.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
 
 test(
   'import CLI submits through internal Nest services without auth secret or reachable HTTP API',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const database = await createPersistenceTestDatabase()
     const fixtureDirectory = await mkdtemp(resolve(tmpdir(), 'rag-internal-import-'))
@@ -41,8 +42,7 @@ test(
 
       const childEnvironment = { ...process.env }
       delete childEnvironment.RAG_SERVICE_AUTH_SECRET
-      childEnvironment.RAG_DB_SCHEMA = database.schema
-      childEnvironment.RAG_DATABASE_URL = process.env.RAG_DATABASE_URL
+      childEnvironment.DATABASE_SCHEMA = database.schema
       childEnvironment.RAG_IMPORT_TIMEOUT_MS = '1000'
       childEnvironment.RAG_IMPORT_MANIFEST = resolve(fixtureDirectory, 'unused-default-manifest.json')
       childEnvironment.RAG_SERVICE_BASE_URL = 'http://127.0.0.1:1'

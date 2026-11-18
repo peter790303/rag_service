@@ -30,6 +30,7 @@ import { KnowledgeBaseDocumentRepository } from '../../../src/KnowledgeBaseDocum
 import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Models/knowledge-base.model.ts'
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 type PgStatActivityRow = {
   pid: number
@@ -150,7 +151,7 @@ const lockScope = (documentId: string, retentionCutoff: Date) => ({
 
 test(
   'index GC rechecks a knowledge-base reference committed while both writers wait for the index lock',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const persistenceTransaction = new PersistenceTransaction(dataSource)
@@ -226,7 +227,7 @@ test(
 
 test(
   'index GC rereads the retention cutoff after waiting for a concurrent cutoff update',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const persistenceTransaction = new PersistenceTransaction(dataSource)
@@ -287,7 +288,7 @@ test(
 
 test(
   'index GC preserves an index when a leased retry job is inserted ahead of its row lock',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const persistenceTransaction = new PersistenceTransaction(dataSource)

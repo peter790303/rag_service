@@ -15,10 +15,13 @@ export class KnowledgeBaseRetrievalController {
   async retrieve(
     @Body() body: HybridKnowledgeRetrievalRequest,
   ): Promise<ReturnType<typeof HybridKnowledgeRetrievalResource.toHybridKnowledgeRetrievalResource>> {
+    const requestDTO = body.toDTO()
+
     return HybridKnowledgeRetrievalResource.toHybridKnowledgeRetrievalResource(
       await this.retrieveKnowledgeBaseContentUseCase.execute(
-        KnowledgeBaseRequestAssembler.toRetrieveKnowledgeBaseContentQuery(body.toDTO()),
+        KnowledgeBaseRequestAssembler.toRetrieveKnowledgeBaseContentQuery(requestDTO),
       ),
+      requestDTO.exhaustive ?? false,
     )
   }
 }

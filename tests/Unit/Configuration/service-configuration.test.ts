@@ -5,7 +5,12 @@ import { loadKnowledgeServiceConfig } from '../../../config/knowledge-service.co
 import { ServiceConfigurationException } from '../../../src/KnowledgeBases/Application/Exceptions/service-configuration.exception.ts'
 
 const validEnvironment = {
-  RAG_DATABASE_URL: 'postgres://localhost:5432/rag_service',
+  DATABASE_HOST: 'localhost',
+  DATABASE_PORT: '5432',
+  DATABASE_NAME: 'rag_service',
+  DATABASE_USER: 'rag',
+  DATABASE_PASSWORD: 'secret',
+  RAG_BIND_ADDRESS: '127.0.0.1',
   RAG_EMBEDDING_TRANSPORT: 'http',
   RAG_EMBEDDING_API_URL: 'https://embedding.example.test/v1/embeddings',
   RAG_CHUNKING_TRANSPORT: 'http',
@@ -16,9 +21,49 @@ const validEnvironment = {
 test('RAG config accepts HTTP and HTTPS API URLs', () => {
   const config = loadKnowledgeServiceConfig(validEnvironment)
 
+  assert.equal(config.host, '127.0.0.1')
   assert.equal(config.embeddingApiUrl, validEnvironment.RAG_EMBEDDING_API_URL)
   assert.equal(config.chunkingApiUrl, validEnvironment.RAG_CHUNKING_API_URL)
   assert.equal(config.externalRequestTimeoutMs, 30000)
+  assert.equal(config.databaseUrl, 'postgres://rag:secret@localhost:5432/rag_service')
+  assert.equal(config.databaseSchema, 'public')
+})
+
+test('RAG config requires DATABASE_* connection variables', (context) => {
+  context.mock.method(console, 'error', () => {})
+
+  assert.throws(() => loadKnowledgeServiceConfig({ ...validEnvironment, DATABASE_HOST: '' }), ServiceConfigurationException)
+  assert.throws(() => loadKnowledgeServiceConfig({ ...validEnvironment, DATABASE_PORT: '' }), ServiceConfigurationException)
+  assert.throws(() => loadKnowledgeServiceConfig({ ...validEnvironment, DATABASE_NAME: '' }), ServiceConfigurationException)
+  assert.throws(() => loadKnowledgeServiceConfig({ ...validEnvironment, DATABASE_USER: '' }), ServiceConfigurationException)
+
+  const environmentWithoutPassword: NodeJS.ProcessEnv = { ...validEnvironment }
+  delete environmentWithoutPassword.DATABASE_PASSWORD
+  assert.throws(() => loadKnowledgeServiceConfig(environmentWithoutPassword), ServiceConfigurationException)
+})
+
+test('RAG config reads DATABASE_SCHEMA and rejects an invalid identifier', (context) => {
+  context.mock.method(console, 'error', () => {})
+
+  const withSchema = loadKnowledgeServiceConfig({ ...validEnvironment, DATABASE_SCHEMA: 'rag_app' })
+  assert.equal(withSchema.databaseSchema, 'rag_app')
+  assert.throws(
+    () => loadKnowledgeServiceConfig({ ...validEnvironment, DATABASE_SCHEMA: 'Public' }),
+    ServiceConfigurationException,
+  )
+})
+
+test('RAG config requires a bind address', (context) => {
+  context.mock.method(console, 'error', () => {})
+
+  const environmentWithoutBindAddress: NodeJS.ProcessEnv = { ...validEnvironment }
+  delete environmentWithoutBindAddress.RAG_BIND_ADDRESS
+
+  assert.throws(() => loadKnowledgeServiceConfig(environmentWithoutBindAddress), ServiceConfigurationException)
+  assert.throws(
+    () => loadKnowledgeServiceConfig({ ...validEnvironment, RAG_BIND_ADDRESS: '   ' }),
+    ServiceConfigurationException,
+  )
 })
 
 test('HTTP chunking transport ignores host CLI bridge authentication settings', () => {

@@ -27,6 +27,7 @@ import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/P
 import { KnowledgeBaseRepository } from '../../../src/KnowledgeBases/Infrastructure/Persistence/TypeORM/Repositories/knowledge-base.repository.ts'
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 class SnapshotCheckingKnowledgeBaseRepository extends KnowledgeBaseRepository {
   constructor(private readonly transaction: PersistenceTransaction) {
@@ -45,7 +46,7 @@ class SnapshotCheckingKnowledgeBaseRepository extends KnowledgeBaseRepository {
 
 test(
   'graph reads persisted active indexes in an isolated read-only snapshot with project and model boundaries',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async () => {
     const { dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const transaction = new PersistenceTransaction(dataSource, retrievalDataSource)

@@ -7,11 +7,23 @@ const mockDatabaseLifecycle = (
   context: TestContext,
   failure: 'initialize' | 'schema' | 'migration' | 'readonly' | null,
 ) => {
-  const originalDatabaseUrl = process.env.RAG_DATABASE_URL
-  process.env.RAG_DATABASE_URL = 'postgresql://test:test@localhost/test'
+  const originalDatabaseEnv = {
+    DATABASE_HOST: process.env.DATABASE_HOST,
+    DATABASE_PORT: process.env.DATABASE_PORT,
+    DATABASE_NAME: process.env.DATABASE_NAME,
+    DATABASE_USER: process.env.DATABASE_USER,
+    DATABASE_PASSWORD: process.env.DATABASE_PASSWORD,
+  }
+  process.env.DATABASE_HOST = 'localhost'
+  process.env.DATABASE_PORT = '5432'
+  process.env.DATABASE_NAME = 'test'
+  process.env.DATABASE_USER = 'test'
+  process.env.DATABASE_PASSWORD = 'test'
   context.after(() => {
-    if (originalDatabaseUrl === undefined) delete process.env.RAG_DATABASE_URL
-    else process.env.RAG_DATABASE_URL = originalDatabaseUrl
+    for (const [key, value] of Object.entries(originalDatabaseEnv)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
   })
   const cause = new Error(`failure at ${failure}`)
   const initialized: DataSource[] = []

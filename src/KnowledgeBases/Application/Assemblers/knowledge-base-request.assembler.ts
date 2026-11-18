@@ -30,6 +30,7 @@ export class KnowledgeBaseRequestAssembler {
       ...(requestDTO.limit !== undefined ? { limit: requestDTO.limit } : {}),
       ...(requestDTO.documentReference !== undefined ? { documentReference: requestDTO.documentReference } : {}),
       ...(requestDTO.includeNonEffective !== undefined ? { includeNonEffective: requestDTO.includeNonEffective } : {}),
+      ...(requestDTO.exhaustive !== undefined ? { exhaustive: requestDTO.exhaustive } : {}),
     }
   }
 }

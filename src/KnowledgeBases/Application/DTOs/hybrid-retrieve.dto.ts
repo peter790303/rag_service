@@ -7,4 +7,5 @@ export type HybridRetrieveDTO = {
   limit?: number
   documentReference?: string
   includeNonEffective?: boolean
+  exhaustive?: boolean
 }

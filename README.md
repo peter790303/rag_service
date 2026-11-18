@@ -40,6 +40,14 @@ API 接收請求與提供結果，背景程序處理索引工作及相關回收�
 對話管理、任務規劃與回答生成由使用此服務的應用程式負責。
 本服務提供知識上下文，不直接生成對話答案。
 
+## 資料庫結構
+
+[各表外鍵總覽](assets/diagrams/rag-database-schema.md#實體-fk) · [欄位與約束說明](assets/diagrams/rag-database-schema.md) · [互動矩陣版](assets/diagrams/rag-database-schema.html)（下載 HTML 後以瀏覽器開啟）
+
+左側列出來源表，上方列出被參照表。圓點代表單欄外鍵，菱形代表複合外鍵。
+
+[![RAG 資料庫結構圖](assets/diagrams/rag-database-schema.svg)](assets/diagrams/rag-database-schema.svg)
+
 ## Obsidian 索引維護
 
 ```bash
@@ -50,7 +58,7 @@ npm run retry:failed-jobs -- --project <project_id>
 npm run retry:failed-jobs -- --id <failed_job_id>
 ```
 
-- `.env` 設定 `OBSIDIAN_ROOT`（vault 絕對路徑）與 `RAG_DATABASE_URL`（容器內使用 `database`，host 使用 `127.0.0.1:30684`）。Compose 會掛載 `.env` 與 vault。
+- `.env` 設定 `OBSIDIAN_ROOT`（vault 絕對路徑）與資料庫連線：`DATABASE_HOST`、`DATABASE_PORT`、`DATABASE_NAME`、`DATABASE_USER`、`DATABASE_PASSWORD`（與 agent-teams 相同）。可選的 `DATABASE_SCHEMA` 未設定時使用 `public`。Compose 會把容器內的 host/port 覆寫成 `database:5432`；在 host 上使用 `127.0.0.1` 與已發佈的 `30684` 埠。Compose 會掛載 `.env` 與 vault。
 - 匯入時需保持 worker 運作；使用 host Codex 切塊時，在 host 執行 `npm run start:host-cli`。Docker 連線需設定 `RAG_HOST_CLI_BIND_ADDRESS=0.0.0.0`，host 與 worker 共用至少 32 字元的 `RAG_HOST_CLI_SHARED_SECRET`。
 - Host bridge 預設同時執行一個 Codex CLI；`RAG_HOST_CLI_MAX_CONCURRENCY` 可設為正整數提高上限。超出上限的請求會以 `HOST_CLI_BUSY` 回覆，worker 只會在 `RAG_EXTERNAL_REQUEST_TIMEOUT_MS` 設定的整體請求期限內重試此原因。
 - 每個 worker 同時處理一個工作；匯入每批最多排入 8 個並等待完成後再送下一批。需要擴充處理量時，在 host 的專案根目錄執行 `docker compose up -d --no-deps --scale worker=4 worker`，用 `docker compose ps worker` 查看 worker 狀態。

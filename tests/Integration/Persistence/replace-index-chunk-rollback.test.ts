@@ -36,6 +36,7 @@ import { KnowledgeBaseModel } from '../../../src/KnowledgeBases/Infrastructure/P
 import { PersistenceTransaction } from '../../../src/Shared/Infrastructure/Persistence/TypeORM/persistence-transaction.ts'
 import { createMarkdownChunkPlan } from '../../Support/markdown-chunk-plan.fixture.ts'
 import { createPersistenceTestDatabase } from '../persistence-test-database.ts'
+import { hasKnowledgeDatabaseEnv } from '../../../config/knowledge-service.config.ts'
 
 const lexicalFormatter = new LexicalSearchQueryAdapter()
 const replacementPlan: MarkdownChunkPlan = {
@@ -96,7 +97,7 @@ class ConstraintFailingRelationRepository extends DocumentRelationRepository {
 
 test(
   'replacement guards preserve persisted rows and a relation constraint failure rolls back all replacement writes',
-  { skip: !process.env.RAG_DATABASE_URL },
+  { skip: !hasKnowledgeDatabaseEnv() },
   async (t) => {
     const { schema, dataSource, retrievalDataSource, cleanup } = await createPersistenceTestDatabase()
     const persistenceTransaction = new PersistenceTransaction(dataSource)
